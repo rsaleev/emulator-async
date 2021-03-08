@@ -1,10 +1,10 @@
 
 import struct
-from src.protocols.shtrih.command import ShtrihCommand, ShtrihCommandInterface
+from src.protocols.shtrih.command import ShtrihCommand
 
 
 
-class Withdraw(ShtrihCommand, ShtrihCommandInterface):
+class Withdraw(ShtrihCommand):
    
    
         # count as bytearray element, where B[0] => STX
@@ -21,7 +21,7 @@ class Withdraw(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._doc_number)
         return bytes(arr)
 
-class Deposit(ShtrihCommand, ShtrihCommandInterface):
+class Deposit(ShtrihCommand):
 
     # count as bytearray element, where B[0] => STX
     _length = bytearray((0x05,))# B[1] LEN - 1 byte

@@ -1,34 +1,51 @@
 import struct
-from src.protocols.shtrih.command import ShtrihCommand, ShtrihCommandInterface
+from src.protocols.shtrih.command import ShtrihCommand
+from src.db.models.receipt import Receipt
+from src.devices.printer import PrinterDeviceProxy
+import re
+from functools import partial
+import asyncio
+
 class PrinterNotDefined(Exception):
     pass
 
 class PrinterPrintingError(Exception):
     pass
 
-class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
+class PrintDefaultLine(ShtrihCommand):
 
     _length = bytearray((0x03,))
     _command_code = bytearray((0x17,))
             
     @classmethod
-    def handle(cls) -> bytearray:
+    async def handle(cls, payload) -> bytearray:
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        return arr
+        tasks = []
+        tasks.append(cls._device.write())
     
     @classmethod
-    def dispense(cls, printer, data:bytearray):
-        printer.print_bytes(data[5:], font='a')
+    async def dispense(cls, payload:bytearray):
+        task = PrinterDeviceProxy.PrintBytes.handle(data) #type: ignore 
+        return task
 
 
-    @classmethod(cls, )
+
+    @classmethod
+    def _line_parser(cls, payload:bytearray):
+        line_to_print = bytes(payload).decode('cp1251')
+        # CHECK FOR RECEIPT ITEM
+        regex = r'(code\W\W\W|код\W\W\W)(\d*)'
+        line = re.search(regex, line_to_print, flags=re.IGNORECASE)
+        if line:
+            num = line.group(2)
+            return num 
        
 
-class Cut(ShtrihCommand,ShtrihCommandInterface):
+class Cut(ShtrihCommand):
 
     _length = bytearray((0x03,))
     _command_code = bytearray((0x25,))
@@ -49,7 +66,7 @@ class Cut(ShtrihCommand,ShtrihCommandInterface):
         pass
 
 
-class GraphicLine(ShtrihCommand, ShtrihCommandInterface):
+class GraphicLine(ShtrihCommand):
 
     _length =  bytearray((0x03,))
     _command_code = bytearray((0xC5,))
@@ -61,6 +78,7 @@ class GraphicLine(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
+        return arr
 
     @classmethod
     def dispense(cls)->None:

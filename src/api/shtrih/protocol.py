@@ -3,19 +3,19 @@ from functools import reduce
 from ..shtrih.commands import COMMANDS
 import asyncio
 from typing import Union
-
-
+from src.api.shtrih.device import ShtrihProxyDevice
 
 
 
 class ShtrihProto:
+
+    device = ShtrihProxyDevice()
 
     ENQ = bytearray((0x05,))
     STX = bytearray((0x02,))
     ACK = bytearray((0x06,))
     NAK = bytearray((0x15,))
     PING = bytearray((0x00,))
-   
    
     @classmethod
     def crc_calc(cls, payload:bytearray) -> bytearray:
@@ -33,7 +33,7 @@ class ShtrihProto:
 
 
     @classmethod
-    async def handle(cls, payload:bytearray) -> Union[bytearray, None]:
+    def handle(cls, payload:bytearray) -> Union[bytearray, None]:
         """process [summary]
 
         [extended_summary]
@@ -41,13 +41,16 @@ class ShtrihProto:
         Args:
             payload (bytearray): [description]
         """
-        cmd = payload[0:1]
+
+        length = payload[1:2]
+        cmd = payload[2:3]
         if cmd == bytearray(0xFF):
-            cmd = payload[0:2]
-        cmd_handler = next((cmd for cmd in COMMANDS if cmd._command_code == cmd), None)
+            cmd = payload[2:4]
+        data = payload[len(length)+len(cmd):-1]
+        cmd_handler = next((handler for handler in COMMANDS if handler._command_code == cmd), None)
         if cmd_handler:
             output = cls.STX
-            output.extend(cmd_handler.handle())
+            output.extend(cmd_handler.handle(device, data))
             output.extend(cls.crc_calc(output))
             return output
         else:

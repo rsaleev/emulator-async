@@ -1,0 +1,18 @@
+
+
+
+
+
+
+[printer]
+
+[printer.mode]
+continuous = true
+
+[printer.settings]
+charset_input = 'cp1251'
+charset_output = 'cp866'
+font = 'b'
+
+
+

@@ -1,5 +1,5 @@
-from src.protocols.shtrih.command import ShtrihCommand, ShtrihCommandInterface
-
+from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
+from src.db.models.receipt import Receipt
 class OpenSale(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x03,))
     _command_code = bytearray((0x80,))

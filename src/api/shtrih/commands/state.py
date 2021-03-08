@@ -1,7 +1,7 @@
 
 from bitarray import bitarray
 import struct
-import datetime
+from datetime import datetime
 from src.protocols.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 class FullState(ShtrihCommand, ShtrihCommandInterface):
 
@@ -28,12 +28,12 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         
     # SETTERS 
     @classmethod
-    def set_date(cls, arg:datetime=datetime.datetime.now()) -> bytes:
-        return struct.pack('<3B',arg.day, arg.month, arg.year%100)
+    def set_date(cls) -> bytes:
+        return struct.pack('<3B',datetime.now().day, datetime.now().month, datetime.now().year%100)
         
     @classmethod
-    def set_time(cls, arg:datetime=datetime.datetime.now()) -> bytes:
-        return struct.pack('<3B', arg.hour, arg.minute, arg.second)
+    def set_time(cls) -> bytes:
+        return struct.pack('<3B', datetime.now().hour, datetime.now().minute, datetime.now().second)
 
     @classmethod
     def set_sale_num(cls, arg:int=0) -> bytes:
@@ -66,7 +66,7 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
 
     # prepare payload for sending
     @classmethod
-    def handle(cls, state:object) ->bytearray:
+    async def handle(cls) ->bytearray:
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -77,18 +77,15 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._fw_date)
         arr.extend(cls.set_sale_num())
         arr.extend(cls.set_doc_num())
-        arr.extend(cls.set_flags(state.paper, state.cover, state.jam))
-        if state.gateway == 0:
-            arr.extend(cls.set_mode(8))
-        else:
-            arr.extend(cls.set_mode(state.mode))
-        arr.extend(cls.set_submode(state.submode))
+        arr.extend(cls.set_flags(1, 0, 0))
+        arr.extend(cls.set_mode(2))
+        arr.extend(cls.set_submode(0))
         arr.extend(cls._port)
         arr.extend(cls._printer_fw_version)
         arr.extend(cls._printer_fw_build)
         arr.extend(cls._printer_fw_date)
-        arr.extend(cls.set_date(datetime.datetime.now()))
-        arr.extend(cls.set_time(datetime.datetime.now()))
+        arr.extend(cls.set_date())
+        arr.extend(cls.set_time())
         arr.extend(cls._printer_flags)
         arr.extend(cls._factory_num)
         arr.extend(cls._last_shift_num)
