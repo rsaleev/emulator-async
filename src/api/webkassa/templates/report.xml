@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding='utf-8'?>
+<report>
+    <companyData>
+        <name align='center' text='normal'>{{ company_name }}</name>
+        <br></br>
+        <inn align='center' text='normal'>{{ response.TaxPayerIN }}</inn>
+        <br></br>
+    </companyData>
+    <hLineDelimiter align='left' text='normal'>{{ horizontal_delimiter*54 }}</hLineDelimiter>
+    <br></br>
+    <reportType align='center' text='normal'> {{ report_type }} </reportType>
+    <br></br>
+    <hLineDelimiter align='left' text='normal'>{{ horizontal_delimiter*54 }}</hLineDelimiter>
+    <br></br>
+    <reportNum align='left' text='normal'>Документ N{{ response.ReportNumber }}{{ tab*20 }}Код кассира {{ response.CashierCode }}</reportNum>
+    <br></br>
+    <reportShift align='center' text='normal'> Смена N{{ response.ShiftNumber }}</reportShift>
+    <br></br>
+    <reportShiftPeriod align='center' text='normal'>{{ response.StartOn }} - {{ response.CloseOn }}</reportShiftPeriod>
+    <br></br>
+    <reportNonNullableStart align='left' text='normal'>НЕОБНУЛЯЕМАЯ СУММА НА НАЧАЛО СМЕНЫ</reportNonNullableStart>
+    <br></br>
+    <nonNullableSales align='right' text='normal'> Продаж{{ f_sp(7,f_cur(response.StartNonNullable.Sell))*tab }}{{ f_cur(response.StartNonNullable.Sell) }}</nonNullableSales>
+    <br></br>
+    <nonNullableBuys align='right' text='normal'> Покупок{{ f_sp(8,f_cur(response.StartNonNullable.Buy))*tab }}{{ f_cur(response.StartNonNullable.Buy) }}</nonNullableBuys>
+    <br></br>
+    <nonNullableSaleReturns align='right' text='normal'> Возвратов продаж{{ f_sp(17, f_cur(response.StartNonNullable.ReturnSell))*tab }}{{ f_cur(response.StartNonNullable.ReturnSell) }}</nonNullableSaleReturns>
+    <br></br>       
+    <nonNullableBuyReturns align='right' text='normal'> Возвратов покупок{{ f_sp(18, f_cur(response.StartNonNullable.ReturnBuy))*tab }}{{ f_cur(response.StartNonNullable.ReturnBuy) }}</nonNullableBuyReturns>
+    <br></br>
+    <reportOperations align='left' text='normal'>{{ tab*20 }}Количество{{ tab*21 }}Сумма</reportOperations>
+    <br></br>
+    <saleCount align='left' text='normal'>ПРОДАЖА{{ tab*17 }}{{ response.Sell.Count }}{{ f_sp(24+c_l(response.Sell.Count), f_cur(response.Sell.Taken-response.Sell.Change))*tab }}{{ f_cur(response.Sell.Taken-response.Sell.Change) }}</saleCount>
+    <br></br>
+    {% for result in response.Sell.PaymentsByTypesApiModel %}
+        {% if result.Type == 0 %}
+        <saleCashActual align='left' text='normal'> Наличные{{ f_sp(9, f_cur(result.Sum))*tab }}{{ f_cur(result.Sum) }}</saleCashActual>
+        <br></br>
+        {% elif result.Type == 1 %}
+        <saleCreditActual align='left' text='normal'> Безналичные{{ f_sp(11, f_cur(result.Sum))*tab }}{{ f_cur(result.Sum) }}</saleCreditActual>
+        <br></br>
+        {% endif %}
+    {% endfor %}
+    <saleTotalTaken align='left' text='normal'> Получено{{ f_sp(9, f_cur(response.Sell.Taken))*tab }}{{ f_cur(response.Sell.Taken) }} </saleTotalTaken>
+    <br></br>
+    <saleChange align='left' text='normal'> Сдачи{{ f_sp(6, f_cur(response.Sell.Change))*tab }}{{ f_cur(response.Sell.Change) }}</saleChange>
+    <br></br>
+    <saleVAT align='left' text='normal'> НДС{{ f_sp(4, f_cur(response.Sell.VAT))*tab }}{{ f_cur(response.Sell.VAT) }}</saleVAT>
+    <br></br>
+    <buyCountNonNull align='left' text='normal'>ПОКУПКА{{ tab*17 }}{{ response.Buy.Count }}{{ f_sp(24+c_l(response.Buy.Count), f_cur(response.Buy.Taken))*tab }}{{ f_cur(response.Buy.Taken) }}</buyCountNonNull>
+    <br></br>
+    <returnSellCountNonNull align='left' text='normal'>ВОЗВРАТ ПРОДАЖИ{{ 9*tab }}{{ response.ReturnSell.Count }}{{ f_sp(24+c_l(response.ReturnSell.Count), f_cur(response.ReturnSell.Taken))*tab }}{{ f_cur(response.ReturnSell.Taken) }}</returnSellCountNonNull>
+    <br></br> 
+    <returnBuyCountNonNull align='left' text='normal'>ВОЗВРАТ ПОКУПКИ{{ 9*tab }}{{ response.ReturnBuy.Count }}{{ f_sp(24+c_l(response.ReturnBuy.Count), f_cur(response.ReturnBuy.Taken))*tab }}{{ f_cur(response.ReturnBuy.Taken) }}</returnBuyCountNonNull>
+    <br></br>
+    <reportDeposit align='right' text='normal'>Внесения{{ f_sp(8, f_cur(response.PutMoneySum))*tab }}{{ f_cur(response.PutMoneySum) }}</reportDeposit>
+    <br></br>
+    <reportWithdraw align='right' text='normal'>Изъятия{{ f_sp(7, f_cur(response.TakeMoneySum))*tab }}{{ f_cur(response.TakeMoneySum) }}</reportWithdraw>
+    <br></br>
+    <cashBox align='right' text='normal'>НАЛИЧНЫЕ В КАССЕ{{ f_sp(16, f_cur(response.SumInCashbox))*tab }}{{ f_cur(response.SumInCashbox) }}</cashBox>
+    <br></br>
+    <reportNonNullableEnd align='left' text='normal'>НЕОБНУЛЯЕМАЯ СУММА НА КОНЕЦ СМЕНЫ</reportNonNullableEnd>
+    <br></br>
+    <nonNullableSales align='right' text='normal'> Продаж{{ f_sp(7, f_cur(response.EndNonNullable.Sell))*tab }}{{ f_cur(response.EndNonNullable.Sell) }}</nonNullableSales>
+    <br></br>
+    <nonNullableBuys align='right' text='normal'> Покупок{{ f_sp(8, f_cur(response.EndNonNullable.Buy))*tab }}{{ f_cur(response.EndNonNullable.Buy) }}</nonNullableBuys>
+    <br></br>
+    <nonNullableSaleReturns align='right' text='normal'> Возвратов продаж{{ f_sp(17, f_cur(response.EndNonNullable.ReturnSell))*tab }}{{ f_cur(response.EndNonNullable.ReturnSell) }}</nonNullableSaleReturns>
+    <br></br>
+    <nonNullableBuyReturns align='right' text='normal'> Вовзратов покупок{{ f_sp(18, f_cur(response.EndNonNullable.ReturnBuy))*tab }}{{ f_cur(response.EndNonNullable.ReturnBuy) }}</nonNullableBuyReturns>
+    <br></br>
+    <controlSum align='left' text='normal'>Контрольное значение{{ f_sp(20, response.ControlSum)*tab }}{{ response.ControlSum }}</controlSum>
+    <br></br>
+    <totalDocs align='left' text='normal'>Количество документов сформированных за смену:{{ response.DocumentCount }}</totalDocs>
+    <br></br>
+    {% if response.OfflineMode %}
+    <offlineMode align='left' text='normal'>Отчет сформирован в автономном режиме</offlineMode>
+    <br></br>
+    {% endif %} 
+    <hLineDelimiter align='left' text='normal'>{{ horizontal_delimiter*54 }}</hLineDelimiter>
+    <br></br>
+    <cashboxIn align='center' text='normal'>ИНК ОФД: {{ response.CashboxIN }}</cashboxIn>
+    <br></br>
+    <cashboxRn align='center' text='normal'>Код ККМ КГД (РНМ): {{ response.CashboxRN }}</cashboxRn>
+    <br></br>
+    <cashboxSn align='center' text='normal'>ЗНМ: {{ response.CashboxSN }}</cashboxSn>
+    <br></br>
+    <hLineDelimiter align='left' text='normal'>{{ horizontal_delimiter*54 }}</hLineDelimiter>
+    <br></br>
+    <EndOfDoc align='center' text='normal'>{{ '***'}} Конец отчета {{ '***' }}</EndOfDoc>
+    <br></br>
+</report>
+
+
+
+    
+
+
+
+
+    

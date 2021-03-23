@@ -1,7 +1,6 @@
 import toml
 import os
 from dotenv import load_dotenv
-from src.utils.logger import CustomLogger
 
 path = os.path.abspath(os.getcwd())
 load_dotenv(f'{path}/webcassa.env')

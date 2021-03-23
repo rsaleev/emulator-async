@@ -1,0 +1,21 @@
+<report>
+    <collectionType align='center' text='normal'>{{ 'ВЫГРУЗКА' if operation_type ==0 else 'ЗАГРУЗКА' }}</collectionType>
+    <docNumber align='left' text='normal'>Документ №{{ request.external_check_number}}</docNumber>
+    <cashNumber align='left' text='normal'>Касса №{{ request.cashbox.identity_number }}</cashNumber>
+    # if operation_type == 0
+        <collectionOutput align='left' text='normal'>ВЫГРУЖЕНО НАЛИЧНЫХ: {{ f_cur(request.sum) }}</collectionOutput>
+    # elif operation_type == 1
+        <collectionOutput align='left' text='normal'>ЗАГРУЖЕНО НАЛИЧНЫХ: {{ f_cur(request.sum) }}</collectionOutput>
+    # endif
+    <moneyInside align='left' text='normal'>Сумма денежных средств после совершения операции:
+    <moneyInsideSum align='right' text='normal'>{{ f_cur(response.sum) }}</moneyInsideSum>
+    <cashboxData>
+        <cashboxRN align='left' text='normal'>РН:{{ response.cashbox.registration_number }}</cashboxRN>
+        <cashboxUN align='left' text='normal'>УИН:{{ response.cashbox.unique_number }}</cashboxUN>
+        <cashboxAddress align='left' text='normal'>Адрес: {{response.cashbox.address }}</casxhboxAddress>
+    </cashboxData>
+    <ofdData>
+        <name>Оператор фискальных данных{{ name }}</name>
+    </ofdData>
+    <footer align='center' text='bold'>НЕФИСКАЛЬНЫЙ ДОКУМЕНТ</footer>
+</report>

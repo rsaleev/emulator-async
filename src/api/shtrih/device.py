@@ -1,22 +1,36 @@
-from src.api.device import AbstractDevice
 from src.api.shtrih.protocol import ShtrihProto
 import asyncio
 import aioserial
 import os
 import asyncio
+from src.api.shtrih import logger
 
-
-
-class ShtrihProxyDevice(AbstractDevice):
-    pass
-
-class ShtrihDevice(AbstractDevice, ShtrihProto):
+class ShtrihDevice(ShtrihProto):
 
     def __init__(self):
-    
         self.device = None
         self.buffer = asyncio.Queue()
 
+class ShtrihProxyDevice(ShtrihProto):
+    device = None
+    buffer = None
+    
+    @classmethod
+    def init_proxy(cls, device:object, buffer:object):
+        cls.device = device
+        cls.buffer = buffer
+
+    @classmethod
+    async def send(cls, arr:bytearray) -> None:
+        crc = cls.crc_calc(arr)
+        arr.extend(crc)
+        output = bytearray()
+        output.extend(cls.STX)
+        output.extend(arr)
+        await cls.buffer.put(output) #type: ignore
+        await cls.device.write(output) #type: ignore
+        await logger.debug(f'OUTPUT:{output}')
+    
 class ShtrihSerialDevice(ShtrihDevice):
 
     def __init__(self):

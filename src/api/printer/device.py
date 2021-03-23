@@ -1,96 +1,85 @@
-
 from src.api.printer.protocol import PrinterProto
-from src.api.device import AbstractDevice
-from escpos.printer import Dummy
-import asyncio 
-from functools import partial
-from src.api.printer.commands import COMMANDS
+from src.api.printer.command import PrinterCommand
+from escpos.printer import Usb, USBNotFoundError
+from usb.core import USBError, USBTimeoutError
+from src.db.models.state import States
+from src.api.printer import sync_logger
+import os
+import asyncio
+import time
 
-
-
-class PrinterDevice(AbstractDevice, PrinterProto):
+class UsbPrinter(PrinterProto):
     def __init__(self):
-        AbstractDevice.__init__(self)
-        PrinterProto.__init__(self)
+        super().__init__()
         self.device = None
-        self.buffered = False
-        self.buffer = Dummy()
-        self.loop = asyncio.get_event_loop()
+      
+    def discover(self):
+        self.device = Usb(idVendor=int(os.environ.get('PRINTER_VENDOR_ID'),16), #type:ignore
+                            idProduct=int(os.environ.get('PRINTER_PRODUCT_ID'),16), #type:ignore
+                            in_ep=int(os.environ.get('PRINTER_IN_EP'),16), #type:ignore
+                            out_ep=int(os.environ.get('PRINTER_OUT_EP'),16), #type:ignore
+                            timeout=int(os.environ.get('PRINTER_TIMEOUT'))) #type:ignore
+        if self.device:
+            self.device.hw('INIT')
+            PrinterCommand.set_device(self.device)
+            PrinterCommand.set_buffer(self.buffer)
+            return self.device
+      
 
-    async def write(self, data):
-        """write [summary]
+    def connect(self):
+        while not self.device:
+            try:
+                self.discover()
+            except Exception as e:
+                time.sleep(3)
+            else:
+                sync_logger.info('Connection to printing device established')
+        self.device.profile.profile_data['media']['width']['pixels'] = int(os.environ.get("PRINTER_PAPER_WIDTH"), 540) #type:ignore
 
-        [extended_summary]
-
-        Args:
-            data ([type]): [description]
-        """
-        if self.buffered:
-            self.buffer._raw(data)
-            return None
-        else:
-            self.loop.create_task(cls.loop.run_in_executor(None, partial(self.device.write, data))) # type: ignore
+    def reconnect(self):
+        self.device=None
+        self.connect()
         
+    def close(self):
+        try:
+            self.device.hw('INIT')
+            self.device.close()
+        except:
+            pass
 
-    async def read(self, size:int):
-        """read [summary]
-
-        [extended_summary]
+    def read(self, size:int):
+        """method for reading incoming data from usb port
 
         Args:
-            size (int): [description]
+            size (int): number of bytes to read
+
+        Returns:
+            List[int]: array of bytes converted to int
         """
-        self.loop.create_task(cls.loop.run_in_executor(None, partial(cls.device.read, size))) # type: ignore
+        while True:
+            try:
+                output = self.device.device.read(self.device.in_ep, size, self.device.timeout) #type:ignore
+                return output
+            except (USBError, USBNotFoundError) as e:
+                sync_logger.exception(e)
+                self.reconnect()
+                continue
+            except USBTimeoutError as e:
+                sync_logger.exception(e)
+                self.reconnect()
+                continue
 
-    async def _raw(self, data):
-        return self.write(data)
+    def _raw(self, data):
+        while True:
+            try:
+                self.device.device.write(self.device.out_ep, data) #type:ignore
+            except (USBError, USBNotFoundError) as e:
+                sync_logger.exception(e)
+                self.reconnect()
+                continue
+            except USBTimeoutError as e:
+                sync_logger.exception(e)
+                self.reconnect()
+                continue
 
-class PrinterProxyDevice(PrinterDevice, PrinterProto):
-    __slots__ = ('obj', '_callbacks')
-
-    def __init__(self):
-        self._callbacks = []
-        self.initialize(None)
-
-    def initialize(self, obj):
-        self.obj = obj
-        for callback in self._callbacks:
-            callback(obj)
-
-    def attach_callback(self, callback):
-        self._callbacks.append(callback)
-        return callback
-
-    def passthrough(method):
-        def inner(self, *args, **kwargs):
-            if self.obj is None:
-                raise AttributeError('Cannot use uninitialized Proxy.')
-            return getattr(self.obj, method)(*args, **kwargs)
-        return inner
-
-    def __getattr__(self, attr):
-        if self.obj is None:
-            raise AttributeError('Cannot use uninitialized Proxy.')
-        return getattr(self.obj, attr)
-
-    def __setattr__(self, attr, value):
-        if attr not in self.__slots__:
-            raise AttributeError('Cannot set attribute on proxy.')
-        return super(PrinterProxyDevice, self).__setattr__(attr, value)
-
-    def write(self, data):
-        return super().write(data)
-
-    def read(self, size: int):
-        return super().read(size)
-
-class PrinterUsbDevice(PrinterDevice, PrinterProto):
-
-    @classmethod
-    async def discover(cls):
-        pass
-
-
-    @classmethod
-    async def _raw(cls, data):
-        pass
+       

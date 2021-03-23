@@ -1,15 +1,10 @@
 import operator
 from functools import reduce
-from ..shtrih.commands import COMMANDS
-import asyncio
-from typing import Union
-from src.api.shtrih.device import ShtrihProxyDevice
 
 
 
 class ShtrihProto:
 
-    device = ShtrihProxyDevice()
 
     ENQ = bytearray((0x05,))
     STX = bytearray((0x02,))
@@ -29,32 +24,32 @@ class ShtrihProto:
         Returns:
             bytearray: [description]
         """
-        return bytearray(reduce(operator.xor, payload))
+        return bytearray((reduce(operator.xor, payload),))
 
 
-    @classmethod
-    def handle(cls, payload:bytearray) -> Union[bytearray, None]:
-        """process [summary]
+    # @classmethod
+    # def handle(cls, payload:bytearray) -> Union[bytearray, None]:
+    #     """process [summary]
 
-        [extended_summary]
+    #     [extended_summary]
 
-        Args:
-            payload (bytearray): [description]
-        """
+    #     Args:
+    #         payload (bytearray): [description]
+    #     """
 
-        length = payload[1:2]
-        cmd = payload[2:3]
-        if cmd == bytearray(0xFF):
-            cmd = payload[2:4]
-        data = payload[len(length)+len(cmd):-1]
-        cmd_handler = next((handler for handler in COMMANDS if handler._command_code == cmd), None)
-        if cmd_handler:
-            output = cls.STX
-            output.extend(cmd_handler.handle(device, data))
-            output.extend(cls.crc_calc(output))
-            return output
-        else:
-            return None
+    #     length = payload[1:2]
+    #     cmd = payload[2:3]
+    #     if cmd == bytearray(0xFF):
+    #         cmd = payload[2:4]
+    #     data = payload[len(length)+len(cmd):-1]
+    #     cmd_handler = next((handler for handler in COMMANDS if handler._command_code == cmd), None)
+    #     if cmd_handler:
+    #         output = cls.STX
+    #         output.extend(cmd_handler.handle(data))
+    #         output.extend(cls.crc_calc(output))
+    #         return output
+    #     else:
+    #         return None
        
 
 

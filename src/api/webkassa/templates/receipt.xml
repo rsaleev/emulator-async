@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding='utf-8'?>
+<receipt>
+    <name align='center' text='normal'>{{ company.name }}</name> 
+    <br></br>
+    <INN align='center' text='normal'>ИНН {{ company.inn }}</INN>
+    <br></br>
+    <hLineDelimiter align='left' text='normal'>{{ horizontal_delimiter*54 }}</hLineDelimiter>
+    <br></br>
+    <shiftData align='center' text='normal'>Касса {{ response.cashbox.identity_number }} | Смена {{ response.shift_number }}</shiftData>
+    <br></br>
+    <receiptIndex align='center' text='normal'>Порядковый номер чека N{{ response.check_order_number }}</receiptIndex>
+    <br></br>
+    <receiptNo align='left' text='normal'>Чек N {{ response.check_number }}</receiptNo>
+    <br></br>
+    <operationType align='left' text='normal'>ПРОДАЖА</operationType>
+    <br></br>
+    <hLineDelimiter align='left' text='normal'>{{ horizontal_delimiter*54 }}</hLineDelimiter>
+    <br></br>
+    <positionName align='left' text='normal'>{{ 1 }}.{{ request.positions[0].position_name }}</positionName> 
+    <br></br>
+    <positionQty align='right' text='normal'>{{ whitespace*3 }}{{ f_qty(request.positions[0].count) }} x {{ f_cur(request.positions[0].price) }}{{ whitespace*f_sp(6+c_l(f_qty(request.positions[0].count))+c_l(f_cur(request.positions[0].price)),f_cur(request.positions[0].price)) }}{{ f_cur(request.positions[0].price) }}</positionQty>
+    <br></br>
+    <positionCost align='right' text='normal'>{{ whitespace*3 }}Стоимость{{ whitespace*f_sp(12, f_cur(request.positions[0].price)) }}{{ f_cur(request.positions[0].price) }}</positionCost>
+    <br></br>
+    <hDotDelimiter align='left' text='normal'>{{ whitespace*3 }}{{ dot_delimiter*37 }}</hDotDelimiter>
+    <br></br>
+    {% if request.payments[0].payment_type==0 %}
+    <paymentCredit align='right' text='normal'>Наличный расчет:{{ whitespace*17 }}{{ f_cur(request.payments[0].sum) }}</paymentCredit>
+    <br></br>
+    {% else %}  
+    <paymentCredit align='right' text='normal'>Безналичный расчет:{{ whitespace*17 }}{{ f_cur(request.payments[0].sum) }}</paymentCredit>
+    <br></br>
+    {% endif %}
+    {% if request.change %}
+    <paymentChange align='right' text='normal'>Сдача:{{ whitespace*17 }}{{ f_cur(request.change) }}</paymentChange>
+    <br></br>
+    {% endif %}
+    <paymentType align='right' text='bold'>ИТОГО {{ whitespace*17 }}{{ f_cur(request.payments[0].sum-request.change) }}</paymentType>
+    <br></br>
+    <paymentTax align='right' text='normal'>в т.ч. НДС {{ request.positions[0].tax_percent }}{% raw %}%{% endraw %}{{ whitespace*17}}{{ f_cur(request.positions[0].tax) }}</paymentTax>
+    <br></br>
+    <hLineDelimiter align='left' text='normal'>{{ horizontal_delimiter*54 }}</hLineDelimiter>
+    <br></br>
+    <fiscalData align='left' text='normal'>Фискальный признак:{{ response.check_number }}</fiscalData>
+    <br></br>
+    <fiscalDate align='left' text='normal'>{{ response.date_time }}</fiscalDate>
+    <br></br>
+    <fiscalAddress align='left' text='normal'>{{ response.cashbox.address }}</fiscalAddress>
+    <br></br>
+    <fiscalOperator align='left' text='normal'>Оператор фискальных данных: {{ response.cashbox.ofd.name }}</fiscalOperator>
+    <br></br>
+    <fiscalWeb align='left' text='normal'>Для проверки чека зайдите на сайт 
+    http://consumer.oofd.kz</fiscalWeb>
+    <br></br>
+    {% if response.offline_mode %}
+        <fiscalMode align='left' text='normal'>Чек сформирован в автономном режиме</fiscalMode>
+        <br></br>
+    {% endif %}
+    <hLineDelimiter align='left' text='normal'>{{ horizontal_delimiter*54 }}</hLineDelimiter>
+    <br></br>
+    <fiscalRequired align='center' text='bold'> ФИСКАЛЬНЫЙ ЧЕК  ФП</fiscalRequired>
+    <br></br>
+    <cassaUniqueNumber align='center' text='normal'>ИНК: {{ response.cashbox.identity_number}}</cassaUniqueNumber>
+    <br></br>
+    <cassaRegistrationNumber align='center' text='normal'>РНК: {{ response.cashbox.registration_number }}</cassaRegistrationNumber> 
+    <br></br>
+    <cassaIdentityNumber align='center' text='normal'>ЗНК: {{ response.cashbox.unique_number }}</cassaIdentityNumber> 
+    <br></br>
+    <footer align='center' text='normal'>WEBKASSA.KZ</footer>
+</receipt>
+

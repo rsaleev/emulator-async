@@ -1,9 +1,16 @@
 
-from src.api.command import AbstractCommand
-from src.devices.printer import PrinterDeviceProxy
-
-class PrinterCommand(AbstractCommand):
-    device = PrinterDeviceProxy()
+   
     
-class PrinterCommandInterface:
-    pass
+class PrinterCommand:
+    device = None
+    buffer = None
+
+    @classmethod
+    def set_device(cls, arg:object):
+        cls.device = arg
+
+    @classmethod
+    def set_buffer(cls, arg:object):
+        cls.buffer = arg
+    
+

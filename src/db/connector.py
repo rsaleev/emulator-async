@@ -1,22 +1,11 @@
-from peewee_async import PooledMySQLDatabase, Manager
-from src.db.models import persistent_proxy
-from src.db.models.token import Token
-from src.db.models.shift import Shift
-from src.db.models.receipt import Receipt
-from src.db.models.state import States
-import os
-import asyncio
-from playhouse.sqliteq import SqliteQueueDatabase
+from tortoise import Tortoise
 
-
-class MysqlDB:
+class DBConnector:
 
     def __init__(self):
-        self.database = persistent_proxy
-        self.loop = asyncio.get_running_loop()
-        self.manager = None
-
-    def connect(self):
+        pass
+        
+    async def connect(self):
         """connect [summary]
 
         [extended_summary]
@@ -24,13 +13,12 @@ class MysqlDB:
         Returns:
             [type]: [description]
         """
-        database = PooledMySQLDatabase(database=os.getenv('MYSQL_DB'), user=os.getenv('MYSQL_LOGIN'), password=os.getenv('MYSQL_PASSWORD') )
-        self.database.initialize(database)
-        tables = [Token, Shift, Receipt, States]
-        for t in tables:
-            t.create_table(True)
-        self.manager = Manager(self.database, loop=asyncio.get_running_loop())
-        return self.manager
-
-    def disconnect(self):
-        self.database.close()
+        # Here we connect to a SQLite DB file.
+        # also specify the app name of "models"
+        # which contain models from "app.models"
+        await Tortoise.init(
+            db_url='sqlite://db.sqlite3',
+            modules={'models': ['src.db.models.token', 'src.db.models.shift' ,'src.db.models.receipt', 'src.db.models.state']}
+        )
+        # Generate the schema
+        await Tortoise.generate_schemas()

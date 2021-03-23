@@ -1,6 +1,6 @@
 
 import struct
-from src.protocols.shtrih.command import ShtrihCommand
+from src.api.shtrih.command import ShtrihCommand
 
 
 
