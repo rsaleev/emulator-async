@@ -1,6 +1,5 @@
 from src.api.printer.command import PrinterCommand
 from src import config
-from src.api.printer import async_logger, sync_logger
 import asyncio 
 
 
@@ -19,8 +18,7 @@ class PrintText(PrinterCommand):
     @classmethod
     async def handle(cls, payload:str, buffer=True):
         loop = asyncio.get_running_loop()
-        task = asyncio.create_task(loop.run_in_executor(None, cls._print_text, payload))
-        return task
+        await loop.run_in_executor(None, cls._print_text, payload, buffer)
 
     @classmethod
     def _print_text(cls, payload:str, buffer:bool):
@@ -64,7 +62,7 @@ class PrintBytes(PrinterCommand):
 
 
     @classmethod
-    async def handle(cls, payload:bytearray, buffer=True) -> asyncio.Task:
+    async def handle(cls, payload:bytearray, buffer=True) ->None:
       
         """
         Method for printing bytes with method _raw()
@@ -74,34 +72,35 @@ class PrintBytes(PrinterCommand):
             buffer (bool, optional): [description]. Defaults to True.
         """
         loop = asyncio.get_running_loop()
-        task = asyncio.create_task(loop.run_in_executor(None, cls._print_bytes, payload))
-        return task
+        await loop.run_in_executor(None, cls._print_bytes, payload, buffer)
 
 
     @classmethod
     def _print_bytes(cls, payload:bytearray, buffer:bool) -> None:
         bits = bin(payload[0])[2:].zfill(8)
         if buffer:
-            try:
-                cls.buffer.set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  #type: ignore
-                        height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=cls.double_width, double_height=cls.double_heigth, 
-                        custom_size=cls.custom_size)  #type: ignore
-                if config['printer']['text']['send_encoding']:
-                    if cls.encoding_output == 'cp1251':
-                        cls.buffer._raw(cls.codepage_command.extend(cls.CP1251)) #type: ignore
-                    elif cls.encoding_output == 'cp866':
-                        cls.buffer._raw(cls.codepage_command.extend(cls.CP866)) #type: ignore
-                content_decoded = payload[1:].decode(cls.encoding_input)
-                if bits[6]:
-                    content_decoded=f'{content_decoded}\n'
-                content_encoded = content_decoded.encode(cls.encoding_output)
-                cls.buffer._raw(content_encoded)  #type: ignore
-            except Exception as e:
-                sync_logger.exception(e)
+            cls.buffer.set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  #type: ignore
+                    height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=cls.double_width, double_height=cls.double_heigth, 
+                    custom_size=cls.custom_size)  #type: ignore
+            if config['printer']['text']['send_encoding']:
+                if cls.encoding_output == 'cp1251':
+                    cls.buffer._raw(cls.codepage_command.extend(cls.CP1251)) #type: ignore
+                elif cls.encoding_output == 'cp866':
+                    cls.buffer._raw(cls.codepage_command.extend(cls.CP866)) #type: ignore
+            content_decoded = payload[1:].decode(cls.encoding_input)
+            if bits[6]:
+                content_decoded=f'{content_decoded}\n'
+            content_encoded = content_decoded.encode(cls.encoding_output)
+            cls.buffer._raw(content_encoded)  #type: ignore
         else:
             cls.device.set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  #type: ignore
                      height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=False, double_height=False, 
                     custom_size=cls.custom_size) 
+            if config['printer']['text']['send_encoding']:
+                    if cls.encoding_output == 'cp1251':
+                        cls.buffer._raw(cls.codepage_command.extend(cls.CP1251)) #type: ignore
+                    elif cls.encoding_output == 'cp866':
+                        cls.buffer._raw(cls.codepage_command.extend(cls.CP866)) #type: ignore
             content_decoded = payload[1:].decode(cls.encoding_input)
             if bits[6]:
                 content_decoded=f'{content_decoded}\n'

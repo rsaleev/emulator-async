@@ -15,23 +15,20 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
             
     @classmethod
     async def handle(cls, payload:bytearray):
-        tasks = [cls.process(), cls.dispense(payload)]
-        await asyncio.gather(*tasks)
-
-    @classmethod
-    async def process(cls):
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        await cls.send(arr)
-
+        return arr
     
     @classmethod
-    async def dispense(cls, payload:bytearray):
-        await cls._parse_custom_line(payload)
-        await PrintBytes.handle(payload=payload[4:])
+    async def dispatch(cls, payload:bytearray):
+        task_parse = asyncio.create_task(cls._parse_custom_line(payload))
+        task_print = PrintBytes.handle(payload=payload[4:])
+        tasks = [task_parse, task_print]
+        return tasks
+
 
     @classmethod
     async def _parse_custom_line(cls, payload:bytearray):
@@ -45,27 +42,22 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
         except Exception as e:
             await logger.exception(e)
             
-class Cut(ShtrihCommand,ShtrihCommandInterface):
+class Cut(ShtrihCommand, ShtrihCommandInterface):
 
     _length = bytearray((0x03,))
     _command_code = bytearray((0x25,))
    
     @classmethod
     async def handle(cls, payload:bytearray):
-        tasks = [cls.process(), cls.dispense(payload)]
-        await asyncio.gather(*tasks)
-        
-    @classmethod
-    async def process(cls):
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        await cls.send(arr)
-
+        return arr 
+        
 
     @classmethod
-    async def dispense(cls, payload:bytearray) -> None:
+    async def dispatch(cls, payload:bytearray) -> None:
         await CutPresent.handle()
     

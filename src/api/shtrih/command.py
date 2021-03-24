@@ -1,11 +1,7 @@
 from abc import ABC, abstractclassmethod
 import struct
-from src.api.shtrih.device import ShtrihProxyDevice
-from src.api.shtrih.protocol import ShtrihProto
-from src.api.shtrih import logger
 
-
-class ShtrihCommand(ShtrihProxyDevice,ShtrihProto):
+class ShtrihCommand:
     _password = bytearray((0x30,))
     _error_code = bytearray((0x00,))
 
@@ -18,42 +14,19 @@ class ShtrihCommand(ShtrihProxyDevice,ShtrihProto):
         return struct.pack('<B', v)
 
 
-   
-
-
 class ShtrihCommandInterface(ABC):
     
-
-
     @abstractclassmethod
     async def handle():
         """
-        Method for handling incoming data:
-        Raises:
-            NotImplementedError: [description]
+        Method for preparing response on comman:
         """
-        raise NotImplementedError
+        pass
 
 
     @abstractclassmethod
-    async def process():
+    async def dispatch():
         """
-        Method for handling incoming data:
-        Raises:
-            NotImplementedError: [description]
+        Method for processing data to external systems: API, DB, etc.
         """
-        raise NotImplementedError
-
-    
-
-
-
-    @abstractclassmethod
-    async def dispense():
-        """
-        Method for processing data in external systems: API, DB, etc.
-
-        Raises:
-            NotImplementedError: [description]
-        """
-        raise NotImplementedError
+        pass

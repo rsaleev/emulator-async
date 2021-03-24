@@ -1,8 +1,12 @@
-import toml
 import os
+from src.utils.logger import AsynchronousLogger
 from dotenv import load_dotenv
+import toml
 
-path = os.path.abspath(os.getcwd())
-load_dotenv(f'{path}/webcassa.env')
-#logger = CustomLogger(f"{path}/logs/application.log")
-config = toml.load(f'{path}/config.toml')
+load_dotenv(f'{os.path.abspath(os.getcwd())}/webcassa.env')
+config = toml.load(f'{os.environ.get("CONFIG")}')
+logger = AsynchronousLogger(f'{os.environ.get("LOG_PATH")}/emulator.log')
+
+
+
+

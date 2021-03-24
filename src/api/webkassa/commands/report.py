@@ -202,14 +202,14 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
                                 request_data=request,
                                 response_model=ZXReportResponse,
                                 callback_error=cls.exc_callback)
-        
-            await Shift.filter(id=1).update(open_date=datetime.now(),
-                                 total_docs=0)
-            await States.filter(id=1).update(mode=2)
+            if response:
+                shift_task =  Shift.filter(id=1).update(open_date=datetime.now(),
+                                    total_docs=0)
+                states_task =  States.filter(id=1).update(mode=2)
+                await asyncio.gather(shift_task, states_task)
         except Exception as e:
-            raise e
+            await logger.exception(e)
        
-
     @classmethod
     async def exc_callback(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
@@ -260,20 +260,17 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient, WebcassaGateway):
                 
                 return rendered
         except Exception as e:
-            raise e
+            await logger.exception(e)
 
     @classmethod
     async def exc_callback(cls, exc, payload):
-        if isinstance(exc, ShiftAlreadyClosed):
-            tasks = []
-            tasks.append(Shift.filter(id=1).update(open_date=datetime.now(),
-                                 total_docs=0))
-            tasks.append(States.filter(id=1).update(mode=2))
-            await asyncio.gather(*tasks)
+        if isinstance(exc, CredentialsError):
+            await States.filter(id=1).update(gateway=0)
             return False
-        elif isinstance(exc, CredentialsError):
+        elif isinstance(exc, UnrecoverableError):
+            await States.filter(id=1).update(gateway=0)
+            return False
+        elif isinstance(exc, ExpiredTokenError):
             await WebkassaClientToken.handle()
             payload.token = await Token.get(id=1)
             return True
-        elif isinstance(exc, UnrecoverableError):
-            return False

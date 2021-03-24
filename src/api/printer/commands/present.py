@@ -15,9 +15,7 @@ class CutPresent(PrinterCommand):
     @classmethod
     async def handle(cls, payload=None):
         loop = asyncio.get_running_loop()
-        tasks = []
-        tasks.append(asyncio.create_task(loop.run_in_executor(None, cls._present)))
-        return tasks
+        await loop.run_in_executor(None, cls._present)
 
     @classmethod
     def _present(cls):

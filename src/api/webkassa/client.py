@@ -1,5 +1,4 @@
 from typing import Any, List, Optional
-import requests
 from pydantic import BaseModel
 from src import config
 from src.api.webkassa import logger

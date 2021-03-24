@@ -2,10 +2,8 @@ from src.api.printer.protocol import PrinterProto
 from src.api.printer.command import PrinterCommand
 from escpos.printer import Usb, USBNotFoundError
 from usb.core import USBError, USBTimeoutError
-from src.db.models.state import States
-from src.api.printer import sync_logger
+from src.api.printer import logger
 import os
-import asyncio
 import time
 
 class UsbPrinter(PrinterProto):
@@ -33,7 +31,7 @@ class UsbPrinter(PrinterProto):
             except Exception as e:
                 time.sleep(3)
             else:
-                sync_logger.info('Connection to printing device established')
+                logger.info('Connection to printing device established')
         self.device.profile.profile_data['media']['width']['pixels'] = int(os.environ.get("PRINTER_PAPER_WIDTH"), 540) #type:ignore
 
     def reconnect(self):
@@ -61,11 +59,11 @@ class UsbPrinter(PrinterProto):
                 output = self.device.device.read(self.device.in_ep, size, self.device.timeout) #type:ignore
                 return output
             except (USBError, USBNotFoundError) as e:
-                sync_logger.exception(e)
+                logger.exception(e)
                 self.reconnect()
                 continue
             except USBTimeoutError as e:
-                sync_logger.exception(e)
+                logger.exception(e)
                 self.reconnect()
                 continue
 
@@ -74,11 +72,11 @@ class UsbPrinter(PrinterProto):
             try:
                 self.device.device.write(self.device.out_ep, data) #type:ignore
             except (USBError, USBNotFoundError) as e:
-                sync_logger.exception(e)
+                logger.exception(e)
                 self.reconnect()
                 continue
             except USBTimeoutError as e:
-                sync_logger.exception(e)
+                logger.exception(e)
                 self.reconnect()
                 continue
 

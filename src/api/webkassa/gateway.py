@@ -1,2 +1,0 @@
-class WebkassaClient:
-    pass

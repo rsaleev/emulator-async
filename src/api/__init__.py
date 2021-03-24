@@ -1,16 +1,16 @@
-from src.api.printer.device import UsbPrinter
-from src.api.printer.command import PrinterCommand
-from src.api.shtrih.device import ShtrihSerialDevice
+import os
+from src.utils.logger import AsynchronousLogger
+from dotenv import load_dotenv
+import toml
 
+path = os.path.abspath(os.getcwd())
 
+if not os.path.isdir(f'{path}/logs'):
+    os.mkdir(f'{path}/logs')
 
-printer = UsbPrinter()
-PrinterCommand.set_buffer(printer.buffer)
-PrinterCommand.set_device(printer.device)
-
-
-shtrih = ShtrihSerialDevice()
-
+load_dotenv(f'{path}/webcassa.env')
+config = toml.load(f'{path}/config.toml')
+logger = AsynchronousLogger(f'{path}/logs/appliaction.log')
 
 
 

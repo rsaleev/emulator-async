@@ -3,7 +3,7 @@ from tortoise import Tortoise
 class DBConnector:
 
     def __init__(self):
-        pass
+        self.db = None
         
     async def connect(self):
         """connect [summary]
@@ -22,3 +22,5 @@ class DBConnector:
         )
         # Generate the schema
         await Tortoise.generate_schemas()
+        self.db = Tortoise._connections
+        return self

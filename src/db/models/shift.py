@@ -1,4 +1,3 @@
-from src.db.models import persistent_proxy
 from datetime import datetime
 from tortoise.models import Model
 from tortoise.fields.data import IntField, DatetimeField
@@ -12,5 +11,4 @@ class Shift(Model):
 
     class Meta:
         # dynamically define DB
-        database =  persistent_proxy
         table_name = 'shift'

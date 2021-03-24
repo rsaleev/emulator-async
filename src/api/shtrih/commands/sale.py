@@ -14,21 +14,16 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x80,))
 
     @classmethod
-    async def handle(cls, payload)->None:
-        tasks = [cls.process(), cls.dispense(payload)]
-        await asyncio.gather(*tasks)
-
-    @classmethod
-    async def process(cls):
+    async def handle(cls, payload:bytearray)->bytearray:
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        await cls.send(arr)
+        return arr
 
     @classmethod
-    async def dispense(cls, payload) ->None:
+    async def dispense(cls, payload:bytearray) ->None:
         count = struct.unpack('<iB',payload[4:9])[0]//10**3
         price = struct.unpack('<iB', payload[9:14])[0]//10**2     
         tax_percent = config['webkassa']['taxgroup'][str(payload[14])]
@@ -48,21 +43,16 @@ class OpenReceipt(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x8D,))
 
     @classmethod
-    async def handle(cls, payload)->None:
-        tasks = [cls.process()]
-        await asyncio.gather(*tasks)
-
-    @classmethod
-    async def process(cls)-> None:
+    async def handle(cls, payload:bytearray)->bytearray:
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        await cls.send(arr)
+        return arr
 
     @classmethod
-    def dispense(cls) ->None:
+    async def dispense(cls) ->None:
         pass
 
 class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
@@ -70,12 +60,7 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x88,))
 
     @classmethod
-    async def handle(cls, payload:bytearray)->None:
-        tasks = [cls.process()]
-        await asyncio.gather(*tasks)
-
-    @classmethod
-    async def process(cls):
+    async def handle(cls, payload:bytearray)->bytearray:
         # pre
         Receipt.filter(ack=False).delete()
         await States.filter(id=1).update(gateway=1)
@@ -88,43 +73,42 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
         return arr
     
     @classmethod
-    def dispense(cls, payload:bytearray) ->None:
+    async def dispense(cls, payload:bytearray) ->None:
         pass
 
 class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
     
-    _length = bytearray((0x03,))# B[1] LEN - 1 byte
+    _length = bytearray((0x08,))# B[1] LEN - 1 byte
     _command_code = bytearray((0x85,)) #B[2] - 1 byte
-    _weblink = bytearray((ord('N'), ord('/'), ord('A')))
 
     @classmethod
-    async def handle(cls, payload) -> None:
+    async def handle(cls, payload:bytearray) -> bytearray:
+        receipt = await Receipt.get()
+        payment = struct.unpack('<iB', payload[4:9])[0]//10**2
+        change = int(payment - receipt.price)
+        change_output = bytearray(struct.pack('<iB', change*10**2,0))
+        arr = bytearray()
+        arr.extend(cls._length)
+        arr.extend(cls._command_code)
+        arr.extend(cls._password)
+        arr.extend(change_output)
+        # new logic 
         if config['emulator']['post_sale']:
             try:
-                await cls.dispense(payload)
+                await cls.dispatch(payload)
             except:
                 cls.set_error(0x03)
             else:
                 cls.set_error(0x00)
             finally:
-                await cls.process()
+                return arr
         else:
-            tasks = [cls.process(), cls.dispatch]
-            await asyncio.gather(*tasks)
-
-    @classmethod
-    async def process(cls):
-        arr = bytearray()
-        arr.extend(cls._length)
-        arr.extend(cls._command_code)
-        arr.extend(cls._password)
-        arr.extend(cls._weblink)
-        await cls.send(arr)
+            return arr
 
     @classmethod
     async def dispatch(cls, payload):
-            await cls._set_sale(payload)
-            await WebkassaClientSale.handle()
+        await cls._set_sale(payload)
+        await WebkassaClientSale.handle()
 
     @classmethod
     async def _set_sale(cls, payload):

@@ -1,5 +1,4 @@
-from requests.exceptions import ConnectionError
-#unrecoverable server error
+
 class UnrecoverableError(Exception):
     pass
 

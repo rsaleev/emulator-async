@@ -1,7 +1,6 @@
-import struct
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
-from src.db.models.state import States
-from src.db.models.shift import Shift
+from src.api.webkassa.commands import WebkassaClientCloseShift
+from src.db.models import States, Shift
 from datetime import datetime
 import asyncio
 
@@ -10,23 +9,15 @@ class OpenShift(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0xE8,))
     
     @classmethod
-    async def handle(cls, payload:bytearray) -> None:
-        tasks = []
-
-        
-    @classmethod
-    async def process(cls):    
+    async def handle(cls, payload:bytearray) -> bytearray: 
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._password)
-        crc = cls.crc_calc(arr)
-        arr.extend(crc)
-        output = bytearray()
-        output.extend(cls.STX)
+        return arr
     
     @classmethod
-    async def dispense(cls):
+    async def dispatch(cls, payload:bytearray):
         tasks = [] 
         tasks.append(States.filter(id=1).update(mode=2))
         tasks.append(Shift.filter(id=1).update(open_date=datetime.now(), total_docs=0))
@@ -35,16 +26,22 @@ class OpenShift(ShtrihCommand, ShtrihCommandInterface):
 class CloseShift(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x05,))
     _command_code = bytearray((0xFF,0x43))
-    
 
     @classmethod
-    def handle(cls) -> bytearray:
+    async def handle(cls, payload:bytearray) -> bytearray:
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._password)
         return arr
+        
     
     @classmethod
-    def dispense(cls):
-        pass
+    async def dispense(cls, payload:bytearray):
+        tasks = [] 
+        tasks.append(States.filter(id=1).update(mode=2))
+        tasks.append(Shift.filter(id=1).update(open_date=datetime.now(), total_docs=0))
+        tasks.append(WebkassaClientCloseShift.handle())
+        await asyncio.gather(*tasks)
+
+        

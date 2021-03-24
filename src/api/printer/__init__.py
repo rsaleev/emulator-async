@@ -1,6 +1,4 @@
-from src.utils.logger import SynchronousLogger, AsynchronousLogger
+from src.utils.logger import SynchronousLogger
+import os
 
-
-
-sync_logger = SynchronousLogger("printer.log", name='synced_printer_logger')
-async_logger = AsynchronousLogger("printer.log", name='async_printer_logger')
+logger = SynchronousLogger(f'{os.environ.get("LOG_PATH")}/webcassa.log')

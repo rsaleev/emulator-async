@@ -1,7 +1,6 @@
-from asyncio.unix_events import AbstractChildWatcher
 from src.api.printer.command import PrinterCommand
 from src.db.models.state import States
-from src.api.printer import async_logger, sync_logger
+from src.api.printer import logger
 import asyncio
 import time
 class PrinterFullStatusQuery(PrinterCommand):
@@ -12,12 +11,12 @@ class PrinterFullStatusQuery(PrinterCommand):
 
 
     @classmethod
-    async def handle(cls, payload) ->None: 
+    async def handle(cls, payload=None) ->None: 
         loop = asyncio.get_running_loop()
         try:
             await loop.run_in_executor(None, cls.device._raw, cls.command)  #type: ignore
             status = await loop.run_in_executor(None, cls.device.read, 6) #type:ignore
-            await async_logger.debug(f'STATUS:{status}')
+            logger.debug(f'STATUS:{status}')
             paper = cls._set_paper_status(status[2])
             cover = cls._set_cover_status(status[3])
             rec_err = cls._set_rec_status(status[4]) 
@@ -95,21 +94,18 @@ class PrintBuffer(PrinterCommand):
     @classmethod
     async def handle(cls, payload=None):
         loop = asyncio.get_running_loop()
-        try:
-            await loop.run_in_executor(None, cls.device._raw, cls.buffer.output)  #type: ignore
-            # check if printing completed with success
-            status = await loop.run_in_executor(None, PrintingStatusQuery.handle)
-            # clear buffer after success
-            if status:
-                cls.buffer.clear()  #type: ignore
-            # printing ended unsuccessfully
-            else:
-                # cut and eject 
-                await loop.run_in_executor(None, cls.device._raw, cls.cut) #type: ignore
-                await loop.run_in_executor(None, cls.device._raw, cls.eject) #type: ignore
-                await loop.run_in_executor(None, cls._poll_for_recover)  #type: ignore
-        except Exception as e:
-            await async_logger.exception(e)
+        await loop.run_in_executor(None, cls.device._raw, cls.buffer.output)  #type: ignore
+        # check if printing completed with success
+        status = await loop.run_in_executor(None, PrintingStatusQuery.handle)
+        # clear buffer after success
+        if status:
+            cls.buffer.clear()  #type: ignore
+        # printing ended unsuccessfully
+        else:
+            # cut and eject 
+            await loop.run_in_executor(None, cls.device._raw, cls.cut) #type: ignore
+            await loop.run_in_executor(None, cls.device._raw, cls.eject) #type: ignore
+            await loop.run_in_executor(None, cls._poll_for_recover)  #type: ignore
 
     @classmethod
     def _poll_for_recover(cls):

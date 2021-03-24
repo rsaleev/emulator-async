@@ -1,6 +1,4 @@
 
-from src.db.models import persistent_proxy
-from src.db.models import persistent_proxy
 from tortoise.models import Model
 from tortoise.fields.data import IntField
 

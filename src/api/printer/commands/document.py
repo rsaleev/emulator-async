@@ -4,7 +4,9 @@ from src import config
 import asyncio
 
 class PrintXML(PrinterCommand):
+    """PrintXML consoledates methods for printing XML document
 
+    """
 
     alias = 'xml'
     CP866 = bytearray((0x17))
@@ -22,11 +24,44 @@ class PrintXML(PrinterCommand):
 
     @classmethod
     async def handle(cls, payload:Element, buffer=True):
-        for elem in payload:
-            cls._print(elem, buffer)
+        """handle 
+        
+        Method for handling and processing data to another scope methods
+
+        Method implement asynchronous approach by passing data to synchronous method that will be executed 
+        with loop.run_in_executor method for perforing non blockin I/O
+
+        Args:
+            payload (Element): XML object - document
+            buffer (bool, optional): perform printing in buffer or bypass. Defaults to True.
+        """
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, cls._print_doc, payload, buffer)
+
 
     @classmethod
-    def _print(cls, content:Element, buffer:bool):
+    def _print_doc(cls, payload:Element, buffer:bool):
+        """_print_doc private scope method that handles XML document print by iteration over its' elements
+
+
+        Args:
+            payload (Element): XML object
+            buffer (bool): perform printing in buffer or bypass. From argument of higher level method
+        """
+        for elem in payload:
+            cls._print_element(elem, buffer)
+
+
+    @classmethod
+    def _print_element(cls, content:Element, buffer:bool):
+        """_print_element [summary]
+
+        parses XML object element attributes and values (text) and generates data for printing: font, type and etc.
+
+        Args:
+            content (Element): XML object Element
+            buffer (bool): perform printing in buffer or bypass. From argument of higher level method
+        """
         align = content.attrib.get('align', 'left')
         bold = True if content.attrib.get('text', False)  and content.attrib['text']== 'bold' else False
         if content.tag != 'br' and content.attrib.get('text', False): 

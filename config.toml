@@ -1,18 +1,65 @@
-
-
-
-
-
+[emulator]
+queued_receipt_state = 8
+post_sale = true
 
 [printer]
+[printer.receipt]
+eject = false
+present_length_mm = 87
 
-[printer.mode]
-continuous = true
+[printer.qr]
+size=5
 
-[printer.settings]
-charset_input = 'cp1251'
-charset_output = 'cp866'
-font = 'b'
+[printer.barcode]
+impl ='bitImageColumn'
 
+[printer.text]
+font='a'
+height = 1
+width=1
+custom_size=false
+double_width=false
+double_height=false
+input = 'cp1251'
+output ='cp866'
+send_encoding = false
+
+[printer.doc]
+font='b'
+height = 1
+width=1
+custom_size=false
+double_width=false
+double_height=false
+input = 'utf8'
+output ='cp866'
+send_encoding = false
+
+[webkassa]
+cassa_unique_number = ''
+url = 'http://127.0.0.1:1331/api'
+login = ''
+password = ''
+timeout = 15
+attempts = 5
+
+[webkassa.taxgroup]
+0 = 0
+1 = 0
+2 = 12
+3 = 20
+4 = 25
+
+[webkassa.company]
+inn = ''
+name = ''
+
+[webkassa.report]
+printable = true
+
+[webkassa.receipt]
+parse = true 
+header = false
+regex = '(^Код\W*)(\d+)'
 
 
