@@ -81,8 +81,8 @@ class WebcassaClient:
                     payload=request_data.dict(by_alias=True, exclude_unset=True))  #type:ignore
                 await logger.debug(json.dumps(request_data.dict(by_alias=True, exclude_unset=True))) #type:ignore
                 await logger.info(f'Dispatching to Webkassa: {endpoint}')
-                output = WebcassaOutput(**response.json()) #type: ignore 
-                logger.debug(f'Response from Webkassa:{json.dumps(response.json())}') #type:ignore
+                output = WebcassaOutput(**response) #type: ignore 
+                await logger.debug(f'Response from Webkassa:{json.dumps(response)}') #type:ignore
                 if output.errors:
                     await States.filter(id=1).update(gateway=0)
                     for err in output.errors:
