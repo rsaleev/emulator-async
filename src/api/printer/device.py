@@ -29,10 +29,11 @@ class UsbPrinter(PrinterProto):
             try:
                 self.discover()
             except Exception as e:
+                logger.exception(e)
                 time.sleep(3)
             else:
                 logger.info('Connection to printing device established')
-        self.device.profile.profile_data['media']['width']['pixels'] = int(os.environ.get("PRINTER_PAPER_WIDTH"), 540) #type:ignore
+        self.device.profile.profile_data['media']['width']['pixels'] = int(os.environ.get("PRINTER_PAPER_WIDTH", 540)) #type:ignore
 
     def reconnect(self):
         self.device=None
