@@ -19,8 +19,6 @@ class UsbPrinter(PrinterProto):
                             timeout=int(os.environ.get('PRINTER_TIMEOUT'))) #type:ignore
         if self.device:
             self.device.hw('INIT')
-            PrinterCommand.set_device(self.device)
-            PrinterCommand.set_buffer(self.buffer)
             return self.device
       
 
@@ -33,6 +31,10 @@ class UsbPrinter(PrinterProto):
                 time.sleep(3)
             else:
                 logger.info('Connection to printing device established')
+                PrinterCommand.set_device(self.device)
+                PrinterCommand.set_buffer(self.buffer)
+                logger.debug(PrinterCommand.device)
+                logger.debug(PrinterCommand.buffer)
         self.device.profile.profile_data['media']['width']['pixels'] = int(os.environ.get("PRINTER_PAPER_WIDTH", 540)) #type:ignore
 
     def reconnect(self):
