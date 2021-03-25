@@ -9,7 +9,7 @@ class States(Model):
     paper = IntField(default=1)
     cover = IntField(default=0)
     jam = IntField(default=0)
-    webkassa = IntField(default=0)
+    gateway = IntField(default=0)
 
     class Meta:
         # dynamically define DB
