@@ -1,4 +1,5 @@
 from tortoise import Tortoise
+import os 
 
 class DBConnector:
 
@@ -17,7 +18,7 @@ class DBConnector:
         # also specify the app name of "models"
         # which contain models from "app.models"
         await Tortoise.init(
-            db_url='sqlite://db.sqlite3',
+            db_url=f'sqlite://{os.environ.get("SQLITE_DB")}',
             modules={'models': ['src.db.models.token', 'src.db.models.shift' ,'src.db.models.receipt', 'src.db.models.state']}
         )
         # Generate the schema

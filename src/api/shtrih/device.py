@@ -71,7 +71,6 @@ class ShtrihSerialDevice(ShtrihDevice, ShtrihProto):
                                                     baudrate=self.baudrate, 
                                                     write_timeout=self.timeout, 
                                                     loop=asyncio.get_running_loop())
-                print(self.connection)
             except Exception as e:
                 await logger.error(e)
                 continue

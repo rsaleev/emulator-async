@@ -9,6 +9,7 @@ from src.db.models import States, Shift
 import asyncio
 from src import config
 from bitarray import bitarray #type:ignore
+from src.api.shtrih import logger
 
 class FullState(ShtrihCommand, ShtrihCommandInterface):
 
@@ -71,18 +72,18 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
     def set_submode(cls, arg:int) -> bytes:
         return bytearray(struct.pack('<B', arg))   
 
-    @classmethod
-    async def _poll(cls):
-        await PrinterFullStatusQuery.handle()
-        shift, states, receipt,_ = await asyncio.gather(Shift.get(id=1), 
-                                                        States.get(id=1), 
-                                                        Receipt.get_or_none(ack=False), 
-                                                        WebkassaClientTokenCheck.handle())
-        return shift, states, receipt
+    # @classmethod
+    # async def _poll(cls):
+    #     #
+    #     shift, states, receipt,_ =
+    #     return shift, states, receipt
 
     @classmethod
-    async def handle(cls) ->bytearray:
-        shift, states, receipt = await cls._poll()
+    async def handle(cls, payload) ->bytearray:
+        await PrinterFullStatusQuery.handle()
+        states, receipt =  await asyncio.gather( 
+                                            States.get(id=1), 
+                                            Receipt.get_or_none(ack=False))
         mode = states.mode
         if receipt:
             mode = config['emulator']['queued_receipt_state']
@@ -97,9 +98,9 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._fw_date)
         arr.extend(cls.set_sale_num())
         arr.extend(cls.set_doc_num())
-        arr.extend(cls.set_flags(shift.paper, shift.cover, shift.jam)) #type:ignore
+        arr.extend(cls.set_flags(states.paper, states.cover, states.jam)) #type:ignore
         arr.extend(cls.set_mode(mode)) #type:ignore
-        arr.extend(cls.set_submode(state.submode)) #type:ignore
+        arr.extend(cls.set_submode(states.submode)) #type:ignore
         arr.extend(cls._port)
         arr.extend(cls._printer_fw_version)
         arr.extend(cls._printer_fw_build)
@@ -116,6 +117,6 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         return arr
 
     @classmethod
-    def dispense(cls):
+    async def dispatch(cls, payload):
         pass
 

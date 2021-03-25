@@ -11,7 +11,7 @@ class SerialNumber(ShtrihCommand, ShtrihCommandInterface):
     _fn_number = struct.pack('<16B',*[0x30]*16)
     
     @classmethod
-    async def handle(cls):
+    async def handle(cls, payload):
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -20,7 +20,7 @@ class SerialNumber(ShtrihCommand, ShtrihCommandInterface):
         return arr
 
     @classmethod
-    async def dispense(cls):
+    async def dispatch(cls, payload):
         pass
 
 
