@@ -25,43 +25,37 @@ class Application:
             await asyncio.gather(WebkassaClientTokenCheck.handle(),PrinterFullStatusQuery.handle())
         except Exception as e:
             await logger.exception(e)
-            sys.exit(1)
+            print(e)
     
     @classmethod
     async def poll(cls):
         shift = await Shift.get(id=1)
-        state = await States.get(id=1)
         period = datetime.now() - shift.open_date
         hours= int(period.total_seconds() // 3600)
-        minutes = int((period.total_seconds() % 3600) //60)
-        seconds = int((period.total_seconds() % 3600) % 60)
-        if (hours < 23 and minutes < 59 and seconds <59
-             and state.mode !=2
+        if (hours < 24
              and shift.total_docs == 0):
             await States.filter(id=1).update(mode=2)
-        elif (hours > 23 and minutes > 59 and seconds >=  59 
-            and state.mode !=2 
-            and shift.total_docs ==0):
-            shift_task = Shift.filter(id=1).update(open_date=datetime.now())
-            states_task =States.filter(id=1).update(mode=2)
-            await asyncio.gather(shift_task, states_task)
-        elif (hours >23 and minutes >59 and seconds >=59 
-            and shift.total_docs>0):
-            await States.filter(id=1).update(mode=4)
-            if config['webkassa']['shift']['autoclose']:
-                log_task = logger.info(f'Autoclosing shift')
-                request_task = WebkassaClientCloseShift.handle()
-                await asyncio.gather(log_task, request_task)
+        elif hours >= 24:
+            if shift.total_docs ==0:
+                shift_task = Shift.filter(id=1).update(open_date=datetime.now())
+                states_task =States.filter(id=1).update(mode=2)
+                await asyncio.gather(shift_task, states_task)
+            else:
+                if config['webkassa']['shift']['autoclose']:
+                    log_task = logger.info(f'Autoclosing shift')
+                    request_task = WebkassaClientCloseShift.handle()
+                    await asyncio.gather(log_task, request_task)
+                else:
+                    await States.filter(id=1).update(mode=4)
+
         
     
     @classmethod
     async def serve(cls):
+        tasks = [cls.fiscalreg.serve(), cls.poll()]
         while True:
             try:
-                if cls.fiscalreg.connection.in_waiting > 0:
-                    await cls.fiscalreg.consume()
-                else:
-                    await cls.poll()
+                await asyncio.gather(*tasks)
             except Exception as e:
                 await logger.exception(e)
             finally:

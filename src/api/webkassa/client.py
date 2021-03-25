@@ -76,7 +76,7 @@ class WebcassaClient:
         attempts = config['webkassa']['attempts']
         while counter <= attempts:
             try:
-                response = cls._send_request(
+                response = await cls._send_request(
                     endpoint=endpoint,
                     payload=request_data.dict(by_alias=True, exclude_unset=True))  #type:ignore
                 await logger.debug(json.dumps(request_data.dict(by_alias=True, exclude_unset=True))) #type:ignore

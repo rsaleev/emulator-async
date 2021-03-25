@@ -39,7 +39,7 @@ class ShtrihSerialDevice(ShtrihDevice, ShtrihProto):
 
     def __init__(self):
         super().__init__()
-        self.connection = aioserial.AioSerial()
+        self.connection = None
         self.port = os.environ.get("SHTRIH_SERIAL_PORT", "/dev/ttyUSB0")
         self.baudrate = int(os.environ.get("SHTRIH_SERIAL_BAUDRATE", "115200"))
         self.timeout = int(os.environ.get("SHTRIH_SERIAL_TIMEOUT", "2"))
@@ -71,6 +71,7 @@ class ShtrihSerialDevice(ShtrihDevice, ShtrihProto):
                                                     baudrate=self.baudrate, 
                                                     write_timeout=self.timeout, 
                                                     loop=asyncio.get_running_loop())
+                print(self.connection)
             except Exception as e:
                 await logger.error(e)
                 continue
@@ -97,7 +98,11 @@ class ShtrihSerialDevice(ShtrihDevice, ShtrihProto):
         await self.connection.write_async(data)
 
 
-
+    async def serve(self):
+        if self.connection.in_waiting >0:
+            await self.consume()
+        else:
+            await asyncio.sleep(0.2)
     
         
 

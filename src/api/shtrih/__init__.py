@@ -1,4 +1,6 @@
-from src import logger
+from src.utils.logger import AsynchronousLogger
+import os
 
+logger = AsynchronousLogger(f'{os.environ.get("LOG_PATH")}/emulator.log')
 
 

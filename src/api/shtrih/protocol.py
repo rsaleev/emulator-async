@@ -16,7 +16,6 @@ class ShtrihProto:
 
     def __init__(self):
         self.buffer = asyncio.Queue()
-        self.connection = None 
 
     async def _write(self, *args):
         raise NotImplementedError
@@ -75,49 +74,49 @@ class ShtrihProto:
                 continue
 
     async def consume(self):
-        payload = await self.read(1)
-        print(payload)
-        if payload == ShtrihProto.ENQ:
-            if not self.buffer.empty(): 
-                queued = await self.buffer.get() #
-                await self.write(queued) 
-            else:
-                output = ShtrihProto.NAK
-                await self.write.write(output) 
-        elif payload == ShtrihProto.ACK:
-            while not self.buffer.empty(): 
-                await self.buffer.get() 
-        elif payload == ShtrihProto.STX:
-            # read 1 byte for length
-            length = await self.read(1) 
-            # read bytes: total bytes size = length
-            data = await self.read(length[0]) 
-            # check if data presented
-            if not data:
-                # if data not presented in payload 
-                await self.write(ShtrihProto.NAK) 
-            # if data presented in payload
-            else:
-                crc = await self.read(1) 
-                # check crc
-                crc_arr = bytearray()
-                crc_arr.extend(length) #type:ignore
-                crc_arr.extend(data)
-                logger.debug(crc_arr)
-                # if crc positive
-                if self.crc_calc(crc_arr) == crc[0]:
-                    await logger.info('CRC:ACCEPTED')
-                    await self._handle(data)
-                # if crc negative
+            payload = await self.read(1)
+            print(payload)
+            if payload == ShtrihProto.ENQ:
+                if not self.buffer.empty(): 
+                    queued = await self.buffer.get() #
+                    await self.write(queued) 
                 else:
-                    await self.write(ShtrihProto.NAK)  #type: ignore
-        elif payload == ShtrihProto.NAK:
-            await logger.info('INPUT:NAK')
-            while not self.buffer.empty(): #type: ignore
-                await self.buffer.get() #type: ignore
-        else:
-            await self.write(ShtrihProto.NAK) 
-            await logger.error(f'INPUT:{payload}.Unknown byte controls ')
+                    output = ShtrihProto.NAK
+                    await self.write.write(output) 
+            elif payload == ShtrihProto.ACK:
+                while not self.buffer.empty(): 
+                    await self.buffer.get() 
+            elif payload == ShtrihProto.STX:
+                # read 1 byte for length
+                length = await self.read(1) 
+                # read bytes: total bytes size = length
+                data = await self.read(length[0]) 
+                # check if data presented
+                if not data:
+                    # if data not presented in payload 
+                    await self.write(ShtrihProto.NAK) 
+                # if data presented in payload
+                else:
+                    crc = await self.read(1) 
+                    # check crc
+                    crc_arr = bytearray()
+                    crc_arr.extend(length) #type:ignore
+                    crc_arr.extend(data)
+                    logger.debug(crc_arr)
+                    # if crc positive
+                    if self.crc_calc(crc_arr) == crc[0]:
+                        await logger.info('CRC:ACCEPTED')
+                        await self._handle(data)
+                    # if crc negative
+                    else:
+                        await self.write(ShtrihProto.NAK)  #type: ignore
+            elif payload == ShtrihProto.NAK:
+                await logger.info('INPUT:NAK')
+                while not self.buffer.empty(): #type: ignore
+                    await self.buffer.get() #type: ignore
+            else:
+                await self.write(ShtrihProto.NAK) 
+                await logger.error(f'INPUT:{payload}.Unknown byte controls ')
 
     async def _handle(self, payload): 
         cmd = payload[0:1]
