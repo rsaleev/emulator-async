@@ -65,7 +65,7 @@ class ShtrihProto:
         while True:
             try:
                 data = await self._read(size)
-                await logger.info(f'INPUT:{data}')
+                await logger.info(f'INPUT:{hexlify(data, sep=":")}')
                 return data
             except Exception as e:
                 task_log = logger.error(e)
@@ -75,14 +75,13 @@ class ShtrihProto:
 
     async def consume(self):
             payload = await self.read(1)
-            print(payload)
             if payload == ShtrihProto.ENQ:
                 if not self.buffer.empty(): 
                     queued = await self.buffer.get() #
                     await self.write(queued) 
                 else:
                     output = ShtrihProto.NAK
-                    await self.write.write(output) 
+                    await self.write(output) 
             elif payload == ShtrihProto.ACK:
                 while not self.buffer.empty(): 
                     await self.buffer.get() 

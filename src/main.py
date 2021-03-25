@@ -55,7 +55,8 @@ class Application:
         tasks = [cls.fiscalreg.serve(), cls.poll()]
         while True:
             try:
-                await asyncio.gather(*tasks)
+                await asyncio.ensure_future(cls.fiscalreg.serve())
+                await asyncio.ensure_future(cls.poll())
             except Exception as e:
                 await logger.exception(e)
             finally:
