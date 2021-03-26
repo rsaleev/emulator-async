@@ -83,7 +83,10 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
     async def handle(cls, payload) ->bytearray:
         await logger.info('FullState')
         await PrinterFullStatusQuery.handle()
-        receipt = await Receipt.get_or_none()
+        try:
+            receipt = await Receipt.get_or_none()
+        except:
+            receipt = None
         states = await States.get(id=1)
         mode = states.mode
         if receipt:
