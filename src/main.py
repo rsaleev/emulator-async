@@ -47,12 +47,12 @@ class Application:
                     await asyncio.gather(log_task, request_task)
                 else:
                     await States.filter(id=1).update(mode=4)
+        await asyncio.sleep(1)
 
         
     
     @classmethod
     async def serve(cls):
-        tasks = [cls.fiscalreg.serve(), cls.poll()]
         while True:
             try:
                 await asyncio.ensure_future(cls.fiscalreg.serve())
@@ -60,7 +60,7 @@ class Application:
             except Exception as e:
                 await logger.exception(e)
             finally:
-                await asyncio.sleep(0.2)
+                continue
             
 if __name__ == '__main__':
     loop = asyncio.new_event_loop()
