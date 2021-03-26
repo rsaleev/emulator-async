@@ -84,10 +84,10 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         await logger.info('FullState')
         await PrinterFullStatusQuery.handle()
         try:
-            receipt = await Receipt.get_or_none()
+            receipt = await Receipt.filter(ack=False).first()
         except:
             receipt = None
-        states = await States.get(id=1)
+        states = await States.filter(id=1).first()
         mode = states.mode
         if receipt:
             mode = config['emulator']['queued_receipt_state']
