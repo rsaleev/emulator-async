@@ -1,4 +1,5 @@
-from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
+from logging import root
+from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface, root_logger
 import re
 from uuid import uuid4
 from src import config
@@ -25,10 +26,9 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def dispatch(cls, payload:bytearray):
         task_parse = asyncio.create_task(cls._parse_custom_line(payload))
-        task_print = PrintBytes.handle(payload=payload[4:])
+        task_print = asyncio.create_task(PrintBytes.handle(payload=payload[4:]))
         tasks = [task_parse, task_print]
-        return tasks
-
+        await asyncio.gather(*tasks)
 
     @classmethod
     async def _parse_custom_line(cls, payload:bytearray):
@@ -56,8 +56,9 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._password)
         return arr 
         
-
     @classmethod
     async def dispatch(cls, payload:bytearray) -> None:
         await CutPresent.handle()
+        
+
     

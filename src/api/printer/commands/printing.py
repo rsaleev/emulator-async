@@ -1,6 +1,7 @@
 from src.api.printer.command import PrinterCommand
 from src import config
 import asyncio 
+from src.api.printer.device import printer
 
 
 class PrintText(PrinterCommand):
@@ -18,7 +19,8 @@ class PrintText(PrinterCommand):
     @classmethod
     async def handle(cls, payload:str, buffer=True):
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, cls._print_text, payload, buffer)
+        task = asyncio.create_task(loop.run_in_executor(None, cls._print_text, payload, buffer))
+        return task
 
     @classmethod
     def _print_text(cls, payload:str, buffer:bool):

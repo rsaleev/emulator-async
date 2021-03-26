@@ -1,16 +1,10 @@
-
+from src.api.printer.device import printer
    
     
 class PrinterCommand:
-    device = None
-    buffer = None
+    device = printer
+    buffer = printer.buffer
 
-    @classmethod
-    def set_device(cls, arg:object):
-        cls.device = arg
-
-    @classmethod
-    def set_buffer(cls, arg:object):
-        cls.buffer = arg
+   
     
 

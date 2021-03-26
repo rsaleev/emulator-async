@@ -71,9 +71,9 @@ class PrintXML(PrinterCommand):
             if buffer:
                 if config['printer']['doc']['send_encoding']:
                     if cls.encoding_output == 'cp1251':
-                        cls.buffer._raw(cls.codepage_command.extend(cls.CP1251)) #type: ignore
+                        printer.buffer._raw(cls.codepage_command.extend(cls.CP1251)) #type: ignore
                     elif cls.encoding_output == 'cp866':
-                        cls.buffer._raw(cls.codepage_command.extend(cls.CP866)) #type: ignore
+                        printer.buffer._raw(cls.codepage_command.extend(cls.CP866)) #type: ignore
                 cls.buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                 cls.buffer._raw(content.text.encode(cls.encoding_output))  #type: ignore
             else:

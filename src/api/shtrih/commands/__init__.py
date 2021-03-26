@@ -5,7 +5,7 @@ from ..commands.sale import OpenReceipt, OpenSale, SimpleCloseSale
 from ..commands.subtotal import SubTotal
 from ..commands.state import FullState
 from ..commands.table import SerialNumber
-
+from src import logger as root_logger
 
 
 

@@ -1,18 +1,20 @@
 import asyncio
 from datetime import datetime
 from src.db.connector import DBConnector
-from src.api.printer.device import UsbPrinter
+from src.api.printer.device import printer
 from src.api.shtrih.device import ShtrihSerialDevice
 from src.api.webkassa.commands import WebkassaClientTokenCheck, WebkassaClientCloseShift
-from src.api.printer.commands import PrinterFullStatusQuery
+from src.api.printer.commands import PrinterFullStatusQuery, PrintText, PrintBytes, CutPresent
+from src.api.printer.command import PrinterCommand
 from src.db.models import States, Shift
 from src import logger, config
 import sys
 
 class Application:
-    printer = UsbPrinter()
+    printer = printer
     fiscalreg = ShtrihSerialDevice()
     connector = DBConnector()
+
 
     @classmethod
     async def init(cls):
@@ -22,13 +24,16 @@ class Application:
             task_fiscalreg_connect = cls.fiscalreg.connect()
             task_printer_connect = loop.run_in_executor(None, cls.printer.connect)
             await asyncio.gather(task_db_connect, task_fiscalreg_connect, task_printer_connect)
+            await Shift.get_or_create(defaults={'open_date':datetime.now(), 'total_docs':0},  id=1)
+            await States.get_or_create(defaults={'mode':4, 'submode':1, 'paper':0, 'jam':0, 'cover':0}, id=1)
             await asyncio.gather(WebkassaClientTokenCheck.handle(),PrinterFullStatusQuery.handle())
+            print('ready')
         except Exception as e:
             await logger.exception(e)
-            print(e)
     
     @classmethod
     async def poll(cls):
+        print('polling')
         shift = await Shift.get(id=1)
         period = datetime.now() - shift.open_date
         hours= int(period.total_seconds() // 3600)
@@ -67,7 +72,6 @@ if __name__ == '__main__':
     app = Application()
     loop.run_until_complete(app.init())
     loop.run_until_complete(app.serve())
-    loop.run_forever()
 
 
 

@@ -1,5 +1,6 @@
 from abc import ABC, abstractclassmethod
 import struct
+from src.api.shtrih.commands import root_logger
 
 class ShtrihCommand:
     _password = bytearray((0x30,))

@@ -2,9 +2,8 @@
 from escpos.printer import Escpos, Dummy
 class PrinterProto(Escpos):
     def __init__(self):
-        super().__init__()
+        Escpos.__init__(self)
         self.buffer = Dummy()
-        self.buffer.clear()
     
     def _raw(self, *args):
         pass

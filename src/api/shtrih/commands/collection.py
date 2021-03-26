@@ -3,7 +3,6 @@ import struct
 from src.api.shtrih.command import ShtrihCommand
 
 
-
 class Withdraw(ShtrihCommand):
    
    

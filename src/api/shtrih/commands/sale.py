@@ -1,7 +1,6 @@
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.db.models.receipt import Receipt
 from src.db.models.state import States
-import asyncio
 import struct
 from src import config
 from uuid import uuid4

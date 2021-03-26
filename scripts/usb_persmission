@@ -1,0 +1,6 @@
+#!/bin/bash
+cat  > '/etc/udev/rules.d/00-usb-persmissions.rules' <<EOF
+1 SUBSYSTEM=="usb", ATTRS{idVendor}=="0dd4", ATTRS{idProduct}=="015d", MODE="0664", GROUP="dialout"
+EOF
+
+udevadm control --reload

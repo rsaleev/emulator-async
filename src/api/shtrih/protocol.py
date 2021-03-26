@@ -5,6 +5,7 @@ import asyncio
 from binascii import hexlify
 from src.api.shtrih.commands import COMMANDS
 from src.api.shtrih import logger 
+from src import logger as root_logger
 
 class ShtrihProto:
 
@@ -93,35 +94,33 @@ class ShtrihProto:
                 await logger.debug(f'LEN:{length}')
                 # read bytes: total bytes size = length
                 data = await self.read(length[0]) 
-                await logger.debug(f'DATA:{data}')
+                await logger.debug(f'DATA:{hexlify(data, sep=":")}')
                 # check if data presented
                 if not data:
                     # if data not presented in payload 
                     await self.write(ShtrihProto.NAK) 
                 # # if data presented in payload
-                # else:
-                #     crc = await self.read(1) 
-                #     await logger.debug(f'CRC:{crc}')
-                #     # check crc
-                #     crc_arr = bytearray()
-                #     crc_arr.append(length)
-                #     crc_arr.extend(data)
-                #     # if crc positive
-                #     if self.crc_calc(crc_arr) == crc:
-                #         await logger.info('CRC:ACCEPTED')
                 else:
-                    await self._handle(data)
+                    crc = await self.read(1) 
+                    await logger.debug(f'CRC:{crc}')
+                    # check crc
+                    crc_arr = bytearray()
+                    crc_arr.append(length)
+                    crc_arr.extend(data)
+                    # if crc positive
+                    if self.crc_calc(crc_arr) == crc:
+                        await logger.debug('CRC:ACCEPTED')
+                        await self._handle(data)
                     # # if crc negative
-                    # else:
-                    #     await logger.info('CRC:DECLINED')
-                    #     await self.write(ShtrihProto.NAK)  #type: ignore
+                    else:
+                        await logger.debug('CRC:DECLINED')
+                        await self.write(ShtrihProto.NAK)  #type: ignore
             elif payload == ShtrihProto.NAK:
-                await logger.info('INPUT:NAK')
                 while not self.buffer.empty(): #type: ignore
                     await self.buffer.get() #type: ignore
             else:
-                await self.write(ShtrihProto.NAK) 
-                await logger.error(f'INPUT:{payload}.Unknown byte controls ')
+                #await self.write(ShtrihProto.NAK) 
+                await logger.error(f'INPUT:{hexlify(payload, sep=":")}.Unknown byte controls ')
         except Exception as e:
             await logger.exception(e)
             
@@ -132,7 +131,7 @@ class ShtrihProto:
         data = payload[len(cmd):]
         await logger.debug(f'CMD:{cmd} DATA:{data}')
         hdlr = next((c for c in COMMANDS if cmd == c._command_code),None)
-        await logger.debug(f'HANDLER:{hdlr}')
+        await root_logger.info(f'HANDLER:{hdlr.__class__}')
         if hdlr:
             await self.write(ShtrihProto.ACK)
             response = await hdlr.handle(data)
@@ -140,13 +139,10 @@ class ShtrihProto:
             await logger.debug(response)
             response.extend(self.crc_calc(response))
             output = self.resp_pack(response)
-            await logger.debug(f'RESPONSE:{output}')
-            await self.write(output)
-            await hdlr.dispatch(data)
-            #await asyncio.gather(task_write, task_dispatch)
+            await asyncio.gather(logger.debug(f'RESPONSE:{output}'), self.write(output), hdlr.dispatch(data))
         else:
-            await self.write(ShtrihProto.NAK)
-            await logger.error(f"{cmd} not implemented in current build version ")
+            await asyncio.gather(self.write(ShtrihProto.NAK),logger.error(f"{cmd} not implemented in current build version "))
+             
    
            
         

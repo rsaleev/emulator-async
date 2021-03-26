@@ -4,7 +4,7 @@ from tortoise.fields.data import UUIDField, CharField, IntField, FloatField, Dat
 
 
 class Receipt(Model):
-    uid = UUIDField(unique=True)
+    uid = UUIDField(unique=True, pk=True)
     ticket = CharField(max_length=255)
     count = IntField(default=1)
     price = IntField(default=0) 

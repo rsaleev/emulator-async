@@ -10,6 +10,7 @@ import asyncio
 from src import config
 from bitarray import bitarray #type:ignore
 from src.api.shtrih import logger
+from src import logger
 
 class FullState(ShtrihCommand, ShtrihCommandInterface):
 
@@ -80,6 +81,7 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def handle(cls, payload) ->bytearray:
+        await logger.info('FullState')
         await PrinterFullStatusQuery.handle()
         states, receipt =  await asyncio.gather( 
                                             States.get(id=1), 

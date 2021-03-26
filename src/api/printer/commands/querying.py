@@ -6,36 +6,42 @@ import time
 class PrinterFullStatusQuery(PrinterCommand):
 
     alias = 'status'
-
-    command = bytearray((0x10,0x04,0x20))
+    command = bytearray((0x10,0x04,0x14))
 
 
     @classmethod
-    async def handle(cls, payload=None) ->None: 
+    async def handle(cls, payload=None): 
         loop = asyncio.get_running_loop()
         try:
-            await loop.run_in_executor(None, cls.device._raw, cls.command)  #type: ignore
-            status = await loop.run_in_executor(None, cls.device.read, 6) #type:ignore
-            logger.debug(f'STATUS:{status}')
-            paper = cls._set_paper_status(status[2])
-            cover = cls._set_cover_status(status[3])
-            rec_err = cls._set_rec_status(status[4]) 
-            unrec_err = cls._set_unrec_status(status[5])
-            if not paper and not cover and not rec_err and not unrec_err:
-                await States.filter(id=1).update(submode=0, paper=int(paper), cover=int(cover), jam=int(rec_err))
+            result = await loop.run_in_executor(None, cls._fetch_full_status)
+            paper, cover, rec_err, unrec_err = result
+            await States.filter(id=1).update(paper=int(paper), cover=int(cover), jam=int(rec_err))
+            if paper and not cover and not rec_err and not unrec_err:
+                await States.filter(id=1).update(submode=0)
             else:
-                await States.filter(id=1).update(submode=1,paper=int(paper), cover=int(cover), jam=int(rec_err))      
+                await States.filter(id=1).update(submode=1) 
         except:
-            await States.filter(id=1).update(submode=1)      
+            await States.filter(id=1).update(submode=1) 
 
+    @classmethod
+    def _fetch_full_status(cls):
+        cls.device.write(cls.command)
+        status = cls.device.read(6) 
+        logger.debug(f'STATUS:{status}')
+        paper = cls._set_paper_status(status[2])
+        cover = cls._set_cover_status(status[3])
+        rec_err = cls._set_rec_status(status[4]) 
+        unrec_err = cls._set_unrec_status(status[5])
+        states = (paper, cover, rec_err, unrec_err)
+        return states
         
     @classmethod
     def _set_paper_status(cls, v:int) ->int:
         st = [int(elem) for elem in list(bin(v)[2:].zfill(8))]
         if st[7] ==1:
-            return True
-        else:
             return False
+        else:
+            return True
 
     @classmethod
     def _set_cover_status(cls, v:int) ->int:
@@ -61,10 +67,9 @@ class PrinterFullStatusQuery(PrinterCommand):
         else:
             return False
 
-class PrintingStatusQuery(PrinterCommand):
+class PrintingStatusQuery:
 
     alias = 'online'
-
     command = bytearray((0x10,0x04,0x02))
 
     @classmethod
@@ -81,15 +86,11 @@ class PrintingStatusQuery(PrinterCommand):
             return True
         else:
             return False 
-
-class PrintBuffer(PrinterCommand):
+class PrintBuffer:
 
     alias = 'buffer'
-
     cut = bytearray((0x1B,0x69))
     eject = bytearray((0x1D,0x65,0x05))
-
-
 
     @classmethod
     async def handle(cls, payload=None):
@@ -119,7 +120,7 @@ class PrintBuffer(PrinterCommand):
                 time.sleep(0.2)
                 continue
 
-class ClearBuffer(PrinterCommand):
+class ClearBuffer:
 
     alias = 'clear'
 
