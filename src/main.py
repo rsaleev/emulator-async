@@ -25,9 +25,12 @@ class Application:
             task_fiscalreg_connect = cls.fiscalreg.connect()
             task_printer_connect = loop.run_in_executor(None, cls.printer.connect)
             await asyncio.gather(task_db_connect, task_fiscalreg_connect, task_printer_connect)
-            await Shift.get_or_create(id=1)
-            await States.get_or_create(id=1)
-            await Token.get_or_create(id=1)
+            try:
+                await Shift.create(id=1, open_date=datetime.now())
+                await States.create(id=1)
+                await Token.get_or_create(id=1, ts=datetime.now())
+            except:
+                pass
             await asyncio.gather(WebkassaClientTokenCheck.handle(),PrinterFullStatusQuery.handle())
             print('ready')
         except Exception as e:
