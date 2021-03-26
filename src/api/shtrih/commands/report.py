@@ -1,5 +1,5 @@
 
-from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface, root_logger
+from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.api.webkassa.commands import WebkassaClientXReport, WebkassaClientZReport
 from src.api.printer.commands import PrintXML, CutPresent
 from src.api.webkassa.exceptions import UnresolvedCommand

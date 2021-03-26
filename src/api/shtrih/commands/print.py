@@ -1,5 +1,4 @@
-from logging import root
-from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface, root_logger
+from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 import re
 from uuid import uuid4
 from src import config
