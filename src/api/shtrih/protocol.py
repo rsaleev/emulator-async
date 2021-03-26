@@ -103,7 +103,7 @@ class ShtrihProto:
                     await logger.debug(f'CRC:{crc}')
                     # check crc
                     crc_arr = bytearray()
-                    crc_arr.append(length)
+                    crc_arr.extend(length)
                     crc_arr.extend(data)
                     # if crc positive
                     if self.crc_calc(crc_arr) == crc:
