@@ -110,7 +110,6 @@ class UsbPrinter(PrinterProto):
                 self.reconnect()
                 continue
 
-if os.environ.get('PRINTER_TYPE') == 'USB':             
-    printer = UsbPrinter()
+printer = UsbPrinter()
 
        
