@@ -129,7 +129,7 @@ class ShtrihProto:
         data = payload[len(cmd):]
         await logger.debug(f'CMD:{cmd} DATA:{data}')
         hdlr = next((c for c in COMMANDS if cmd == c._command_code),None)
-        await root_logger.info(f'HANDLER:{hdlr.__class__}')
+        #await root_logger.info(f'HANDLER:{hdlr.__class__}')
         if hdlr:
             await self.write(ShtrihProto.ACK)
             response = await hdlr.handle(data)
