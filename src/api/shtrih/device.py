@@ -98,10 +98,8 @@ class ShtrihSerialDevice(ShtrihDevice, ShtrihProto):
 
 
     async def serve(self):
-        if self.connection.in_waiting >0:
-            await self.consume()
-        else:
-            await asyncio.sleep(0.2)
+        await self.consume()
+        await asyncio.sleep(0.2)
     
         
 

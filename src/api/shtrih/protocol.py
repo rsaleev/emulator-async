@@ -5,8 +5,6 @@ import asyncio
 from binascii import hexlify
 from src.api.shtrih.commands import COMMANDS
 from src.api.shtrih import logger 
-from src import logger as root_logger
-
 class ShtrihProto:
 
 
