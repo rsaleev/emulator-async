@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+from src.db.models.token import Token
 from src.db.connector import DBConnector
 from src.api.printer.device import printer
 from src.api.shtrih.device import ShtrihSerialDevice
@@ -24,8 +25,9 @@ class Application:
             task_fiscalreg_connect = cls.fiscalreg.connect()
             task_printer_connect = loop.run_in_executor(None, cls.printer.connect)
             await asyncio.gather(task_db_connect, task_fiscalreg_connect, task_printer_connect)
-            await Shift.get_or_create(defaults={'open_date':datetime.now(), 'total_docs':0},  id=1)
-            await States.get_or_create(defaults={'mode':4, 'submode':1, 'paper':0, 'jam':0, 'cover':0, 'gateway':0}, id=1)
+            await Shift.get_or_create(id=1)
+            await States.get_or_create(id=1)
+            await Token.get_or_create(id=1)
             await asyncio.gather(WebkassaClientTokenCheck.handle(),PrinterFullStatusQuery.handle())
             print('ready')
         except Exception as e:

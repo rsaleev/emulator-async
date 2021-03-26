@@ -83,9 +83,9 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
     async def handle(cls, payload) ->bytearray:
         await logger.info('FullState')
         await PrinterFullStatusQuery.handle()
-        states, receipt =  await asyncio.gather( 
-                                            States.get(id=1), 
-                                            Receipt.get_or_none(ack=False))
+        task_receipt = Receipt.get_or_none(ack=False)
+        tasks_states = States.get(id=1)
+        states, receipt =  await asyncio.gather(tasks_states, task_receipt)
         mode = states.mode
         if receipt:
             mode = config['emulator']['queued_receipt_state']

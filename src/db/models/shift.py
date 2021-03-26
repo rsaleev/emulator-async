@@ -6,8 +6,8 @@ from tortoise.fields.data import IntField, DatetimeField
 
 class Shift(Model):
     id = IntField(pk=True)
-    open_date = DatetimeField()
-    total_docs = IntField()
+    open_date = DatetimeField(auto_now=True)
+    total_docs = IntField(default=0)
 
     class Meta:
         # dynamically define DB

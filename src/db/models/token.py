@@ -5,8 +5,8 @@ from datetime import datetime
 
 class Token(Model):
     id = IntField(pk=True)
-    token = CharField(max_length=255)
-    ts = DatetimeField(default=datetime.now) # default value 
+    token = CharField(max_length=255, default='')
+    ts = DatetimeField(auto_now=True, auto_now_add=True) # default value 
 
     class Meta:
         # dynamically define DB
