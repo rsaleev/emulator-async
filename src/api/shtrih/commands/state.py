@@ -88,6 +88,7 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         except:
             receipt = None
         states = await States.filter(id=1).first()
+        print(states)
         mode = states.mode
         if receipt:
             mode = config['emulator']['queued_receipt_state']
