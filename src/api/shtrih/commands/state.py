@@ -87,7 +87,7 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
             receipt = await Receipt.filter(ack=False).first()
         except:
             receipt = None
-        states = await States.filter(id=1).first()
+        states = await States.get()
         print(states)
         mode = states.mode
         if receipt:
