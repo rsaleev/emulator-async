@@ -1,5 +1,4 @@
 from src.api.printer.protocol import PrinterProto
-from src.api.printer.command import PrinterCommand
 from usb.core import USBError, USBTimeoutError
 from src.api.printer import logger
 import os
