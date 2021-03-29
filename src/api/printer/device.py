@@ -1,114 +1,75 @@
 from src.api.printer.protocol import PrinterProto
-from usb.core import USBError, USBTimeoutError
 from src.api.printer import logger
 import os
 import time
-import usb
+from src.api.printer.exceptions import DeviceIOError, DeviceConnectionError
+from escpos.printer import Dummy
+from src.api.printer.devices.impl import *
+  
 
 
-class UsbPrinter(PrinterProto):
+
+class Printer(PrinterProto):
+
     def __init__(self):
         super().__init__()
-        self.device = None
-        self.id_vendor = int(os.environ.get('PRINTER_VENDOR_ID'),16)
-        self.id_product=int(os.environ.get('PRINTER_PRODUCT_ID'),16)
-        self.in_ep=int(os.environ.get('PRINTER_IN_EP'),16)
-        self.out_ep=int(os.environ.get('PRINTER_OUT_EP'),16)
-        self.timeout=int(os.environ.get('PRINTER_TIMEOUT'))
-      
+        if os.environ['PRINTER_TYPE'] == 'USB':
+           self.__class__ = UsbPrinter
+        self.buffer = Dummy()
+  
+    def _read(self, size):
+        raise NotImplementedError
+
+    def _write(self, data):
+        raise NotImplementedError
+
     def discover(self):
-        self.device = usb.core.find(idVendor=self.id_vendor, idProduct=self.id_product)
-        if self.device is None:
-            raise USBError("Device not found or cable not plugged in.")
-        self.idVendor = self.device.idVendor
-        self.idProduct = self.device.idProduct
-        if self.device.backend.__module__.endswith("libusb1"):
-            check_driver = None
-            try:
-                check_driver = self.device.is_kernel_driver_active(0)
-            except NotImplementedError:
-                pass
+        raise NotImplementedError
 
-            if check_driver is None or check_driver:
-                try:
-                    self.device.detach_kernel_driver(0)
-                except NotImplementedError:
-                    pass
-                except usb.core.USBError as e:
-                    if check_driver is not None:
-                        raise USBError("Could not detatch kernel driver: {0}".format(str(e)))
-
-        try:
-            self.device.set_configuration()
-            self.device.reset()
-        except usb.core.USBError as e:
-            print("Could not set configuration: {0}".format(str(e)))
-        finally:
-            return self.device
+    def _disconnect(self):
+        raise NotImplementedError
 
     def connect(self):
         while not self.device:
             try:
                 self.discover()
-            except Exception as e:
-                logger.exception(e)
+            except DeviceConnectionError as e:
+                logger.error(e)
                 time.sleep(3)
             else:
-                logger.info('Connection to printing device established')
-        self.profile.profile_data['media']['width']['pixels'] = int(os.environ.get("PRINTER_PAPER_WIDTH", 540)) #type:ignore
+                self.profile.profile_data['media']['width']['pixels'] = int(os.environ.get("PRINTER_PAPER_WIDTH", 540)) #type:ignore
+                return self.device
 
     def reconnect(self):
         self.device=None
         self.connect()
-        
-    def close(self):
-        try:
-            self.hw('INIT')
-            self.device.close()
-        except:
-            pass
+
+
+    def disconnect(self):
+        self.hw('INIT')
+        self._disconnect()
 
     def read(self, size:int):
-        """method for reading incoming data from usb port
-
-        Args:
-            size (int): number of bytes to read
-
-        Returns:
-            List[int]: array of bytes converted to int
-        """
         while True:
             try:
-                output = self.device.read(self.in_ep, size, self.timeout) #type:ignore
-                return output
-            except (USBError, USBTimeoutError) as e:
-                logger.exception(e)
+                return self._read(size)
+            except (DeviceConnectionError, DeviceIOError):
+                self.reconnect()
+                continue        
+
+    def _raw(self, msg):
+        while True:
+            try:
+                self._write(msg)
+            except (DeviceConnectionError, DeviceIOError):
                 self.reconnect()
                 continue
 
-    def _read(self):
-        pass
-
-    def _raw(self, data):
+    def write(self, data):
         while True:
             try:
-                self.device.write(self.out_ep, data) #type:ignore
-                break
-            except (USBError, USBTimeoutError) as e:
-                logger.exception(e)
+                self._write(data)
+            except (DeviceConnectionError, DeviceIOError):
                 self.reconnect()
                 continue
 
-    def write(self, data): 
-        while True:
-            try:
-                self.device.write(self.out_ep, data) #type:ignore
-                break
-            except (USBError, USBTimeoutError) as e:
-                logger.exception(e)
-                self.reconnect()
-                continue
-
-printer = UsbPrinter()
-
-       

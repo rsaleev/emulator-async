@@ -6,36 +6,16 @@ from src.api.shtrih import logger
 from serial.tools import list_ports
 from itertools import groupby
 from src.api.shtrih.exceptions import *
-from abc import ABC, abstractclassmethod
-from typing import Any
+from src.api.device import Device
 from src.api.shtrih.protocol import ShtrihProto
 
 
-class ShtrihDevice(ABC):
+class ShtrihSerialDevice(Device, ShtrihProto):
 
-    @abstractclassmethod
-    async def connect():
-        pass
+    """ 
 
-    @abstractclassmethod
-    async def reconnect():
-        pass
-    
-    @abstractclassmethod
-    async def disconnect():
-        pass
-
-    @abstractclassmethod
-    async def _read(cls, *args:Any):
-        pass
-
-
-    @abstractclassmethod
-    async def _write(cls,*args:Any):
-        pass
-
-
-class ShtrihSerialDevice(ShtrihDevice, ShtrihProto):
+    [extended_summary]
+    """
 
     def __init__(self):
         super().__init__()
@@ -44,7 +24,6 @@ class ShtrihSerialDevice(ShtrihDevice, ShtrihProto):
         self.baudrate = int(os.environ.get("SHTRIH_SERIAL_BAUDRATE", "115200"))
         self.timeout = int(os.environ.get("SHTRIH_SERIAL_TIMEOUT", "2"))
 
-    
     def discover(self):
         ports = list(list_ports.comports())
         if len(ports) > 1:
@@ -55,7 +34,7 @@ class ShtrihSerialDevice(ShtrihDevice, ShtrihProto):
                 logger.error(
                     f"Discovered {counter} equal {group}. Recovering with default config"
                 )
-                return ShtrihSerialDevice().port
+                return self.port
             else:
                 return ports[0][0]
         elif len(ports) <= 0:

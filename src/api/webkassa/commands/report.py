@@ -1,136 +1,19 @@
 from src.api.webkassa.exceptions import ExpiredTokenError, ShiftAlreadyClosed, CredentialsError, UnrecoverableError
-from pydantic import BaseModel
-from src.api.webkassa.helpers import to_camel
-from typing import Any, Optional, List
-from src.db.models.shift import Shift
-from src.db.models.token import Token
-from src.db.models.state import States
+from src.db.models import Shift, Token, States
 from src import config
 from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from datetime import datetime
-from src.api.webkassa.command import WebcassaCommand, WebcassaGateway
+from src.api.webkassa.command import WebcassaCommand
 from src.api.webkassa.client import WebcassaClient
+from src.api.webkassa.models import ZXReportRequest, ZXReportResponse
 from src.api.webkassa.commands.authorization import WebkassaClientToken
 from src.api.webkassa import logger
 from xml.etree.ElementTree import fromstring
 import asyncio
+from tortoise import timezone
+from src.api.printer.commands import PrintXML, CutPresent
 
-""" 
-Z/X-REPORT REQUEST
-
-implements both report and state change
-"""
-
-
-class ZXReportRequest(BaseModel):
-    token: str
-    cashbox_unique_number: str
-
-    class Config:
-        alias_generator = to_camel
-        allow_population_by_field_name = True
-
-
-""" 
-Z/X-REPORT RESPONSE
-"""
-
-
-class PaymentByTypesApiModel(BaseModel):
-    Sum: Optional[int]
-    Type: Optional[int]
-
-
-class Sell(BaseModel):
-    PaymentsByTypesApiModel: Optional[List[PaymentByTypesApiModel]]
-    Discount: float
-    Markup: float
-    Taken: int
-    Change: Optional[int] = 0
-    Count: int
-    VAT: float
-
-
-class Buy(BaseModel):
-    PaymentsByTypesApiModel: Optional[List[PaymentByTypesApiModel]]
-    Discount: int
-    Markup: int
-    Taken: int
-    Change: Optional[int] = 0
-    Count: int
-    VAT: float
-
-
-class ReturnSell(BaseModel):
-    PaymentsByTypesApiModel: Optional[List[PaymentByTypesApiModel]]
-    Discount: int
-    Markup: int
-    Taken: int
-    Count: int
-    VAT: float
-
-
-class ReturnBuy(BaseModel):
-    PaymentByTypesApiModel: Optional[List[PaymentByTypesApiModel]]
-    Discount: int
-    Markup: int
-    Taken: int
-    Count: int
-    VAT: float
-
-
-class EndNonNullable(BaseModel):
-    Sell: int
-    Buy: int
-    ReturnSell: Optional[int]
-    ReturnBuy: Optional[int]
-
-
-class StartNonNullable(BaseModel):
-    Sell: int
-    Buy: int
-    ReturnSell: Optional[int]
-    ReturnBuy: Optional[int]
-
-
-class Ofd(BaseModel):
-    Name: str
-    Host: str
-    Code: int
-
-
-class ZXReportResponse(BaseModel):
-    ReportNumber: int
-    TaxPayerName: str
-    TaxPayerIN: str
-    TaxPayerVAT: bool
-    TaxPayerVATSeria: str
-    TaxPayerVATNumber: str
-    CashboxSN: str
-    CashboxIN: str
-    CashboxRN: str
-    StartOn: str
-    ReportOn: str
-    CloseOn: str
-    CashierCode: int
-    ShiftNumber: int
-    DocumentCount: int
-    PutMoneySum: int
-    TakeMoneySum: int
-    ControlSum: int
-    OfflineMode: bool = False
-    CashboxOfflineMode: bool = False
-    SumInCashbox: int
-    Sell: Optional[Sell]
-    Buy: Optional[Buy]
-    ReturnSell: Optional[ReturnSell]
-    ReturnBuy: Optional[ReturnBuy]
-    EndNonNullable: EndNonNullable
-    StartNonNullable: StartNonNullable
-    Ofd: Ofd
-
-
-class WebkassaClientZReport(WebcassaCommand, WebcassaClient, WebcassaGateway):
+class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
 
     endpoint = 'ZReport'
     alias = 'zreport'
@@ -146,33 +29,38 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient, WebcassaGateway):
             cashbox_unique_number=config['webkassa']['cassa_unique_number'])
         try:
             response = await cls.dispatch(endpoint=cls.endpoint,
-                                request_data=request,
-                                response_model=ZXReportResponse,
-                                callback_error=cls.exc_callback)
+                                          request_data=request,
+                                          response_model=ZXReportResponse,#type: ignore
+                                          callback_error=cls.exc_callback)
             template = TEMPLATE_ENVIRONMENT.get_or_select_template(
                 'report.xml')
             name = response.TaxPayerName  #type: ignore
             name.replace(u'\u201c', '"')
             name.replace(u'\u201d', '"')
-            rendered = fromstring(template.render(report_type='СМЕННЫЙ Z-ОТЧЕТ',
-                                        horizontal_delimiter='-',
-                                        response=response,
-                                        company_name=name,
-                                        tab=' '))
-            await Shift.filter(id=1).update(open_date=datetime.now(),
-                                    total_docs=0)
-            await States.filter(id=1).update(mode=2)
-            return rendered
+            rendered = fromstring(
+                template.render(report_type='СМЕННЫЙ Z-ОТЧЕТ',
+                                horizontal_delimiter='-',
+                                response=response,
+                                company_name=name,
+                                tab=' '))
+                
+            task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
+                                            total_docs=0)
+            task_states_modify =  States.filter(id=1).update(mode=2)
+            tasks_print_xml = PrintXML.handle(rendered, buffer=False)
+            await asyncio.gather(task_shift_modify, task_states_modify, tasks_print_xml)
+            await CutPresent.handle()
         except Exception as e:
             await logger.exception(e)
-            return None
+            return 
 
     @classmethod
     async def exc_callback(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
-            await Shift.filter(id=1).update(open_date=datetime.now(),
-                                 total_docs=0)
-            await States.filter(id=1).update(mode=2)
+            task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
+                                            total_docs=0)
+            task_states_modify=  States.filter(id=1).update(mode=2)
+            await asyncio.gather(task_shift_modify, task_states_modify)
             return False
         elif isinstance(exc, CredentialsError):
             await States.filter(id=1).update(gateway=0)
@@ -181,9 +69,12 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient, WebcassaGateway):
             await States.filter(id=1).update(gateway=0)
             return False
         elif isinstance(exc, ExpiredTokenError):
-            await WebkassaClientToken.handle()
-            payload.token = await Token.get(id=1)
-            return True
+            response = await WebkassaClientToken.handle()
+            if response:
+                payload.token = response
+                return True
+            else:
+                return False
 
 
 class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
@@ -199,35 +90,39 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
             cashbox_unique_number=config['webkassa']['cassa_unique_number'])
         try:
             response = await cls.dispatch(endpoint=cls.endpoint,
-                                request_data=request,
-                                response_model=ZXReportResponse,
-                                callback_error=cls.exc_callback)
+                                          request_data=request,
+                                          response_model=ZXReportResponse, #type: ignore
+                                          callback_error=cls.exc_callback)
             if response:
-                shift_task =  Shift.filter(id=1).update(open_date=datetime.now(),
-                                    total_docs=0)
-                states_task =  States.filter(id=1).update(mode=2)
+                shift_task = Shift.filter(id=1).update(
+                    open_date=timezone.now(), total_docs=0)
+                states_task = States.filter(id=1).update(mode=2)
                 await asyncio.gather(shift_task, states_task)
+            else:
+                await logger.error("Couldn't close shift")
         except Exception as e:
             await logger.exception(e)
-       
+
     @classmethod
     async def exc_callback(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
-            tasks = []
-            tasks.append(Shift.filter(id=1).update(open_date=datetime.now(),
-                                 total_docs=0))
-            tasks.append(States.filter(id=1).update(mode=2))
-            await asyncio.gather(*tasks)
+            task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
+                                          total_docs=0)
+            task_states_modify = States.filter(id=1).update(mode=2)
+            await asyncio.gather(task_shift_modify, task_states_modify)
             return False
         elif isinstance(exc, CredentialsError):
-            await WebkassaClientToken.handle()
-            new_token = await Token.get(id=1)
-            payload.token = new_token.token 
-            return True
+            response = await WebkassaClientToken.handle()
+            if response:
+                payload.token = response
+                return True
+            else:
+                return False
         elif isinstance(exc, UnrecoverableError):
             return False
 
-class WebkassaClientXReport(WebcassaCommand, WebcassaClient, WebcassaGateway):
+
+class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
 
     endpoint = 'XReport'
     alias = 'xreport'
@@ -242,9 +137,9 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient, WebcassaGateway):
             token=token.token,
             cashbox_unique_number=config['webkassa']['cassa_unique_number'])
         response = await cls.dispatch(endpoint=cls.endpoint,
-                                request_data=request,
-                                response_model=ZXReportResponse,
-                                callback_error=cls.exc_callback)
+                                      request_data=request,
+                                      response_model=ZXReportResponse, #type: ignore
+                                      callback_error=cls.exc_callback)
         try:
             if config['webkassa']['report']['printable']:
                 template = TEMPLATE_ENVIRONMENT.get_or_select_template(
@@ -252,25 +147,28 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient, WebcassaGateway):
                 name = response.TaxPayerName  #type: ignore
                 name.replace(u'\u201c', '"')
                 name.replace(u'\u201d', '"')
-                rendered = fromstring(template.render(report_type='СМЕННЫЙ Х-ОТЧЕТ',
-                                        horizontal_delimiter='-',
-                                        response=response,
-                                        company_name=name,
-                                        tab=' '))
-                
-                return rendered
+                rendered = fromstring(
+                    template.render(report_type='СМЕННЫЙ Х-ОТЧЕТ',
+                                    horizontal_delimiter='-',
+                                    response=response,
+                                    company_name=name,
+                                    tab=' '))
+
+                await PrintXML.handle(rendered)
+                await CutPresent.handle()
         except Exception as e:
             await logger.exception(e)
 
     @classmethod
     async def exc_callback(cls, exc, payload):
         if isinstance(exc, CredentialsError):
-            await States.filter(id=1).update(gateway=0)
             return False
         elif isinstance(exc, UnrecoverableError):
-            await States.filter(id=1).update(gateway=0)
             return False
         elif isinstance(exc, ExpiredTokenError):
-            await WebkassaClientToken.handle()
-            payload.token = await Token.get(id=1)
-            return True
+            response = await WebkassaClientToken.handle()
+            if response:
+                payload.token = response
+                return True
+            else:
+                return False

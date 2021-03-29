@@ -1,51 +1,37 @@
-from typing import Any, List, Optional
-from pydantic import BaseModel
 from src import config
 from src.api.webkassa import logger
 from src.api.webkassa.exceptions import *
-from src.db.models.state import States
-from .helpers import to_camel
+from src.api.webkassa.models import WebcassaOutput, WebcassaOutputErrors
+from src.db.models import States
 import json
 from typing import Callable
-from pydantic import BaseModel
 import aiohttp
-
-class WebcassaOutputErrors(BaseModel):
-    code: int
-    text: str
-
-    class Config:
-        alias_generator = to_camel
-        allow_population_by_field_name = True
-
-class WebcassaOutput(BaseModel):
-    data: Optional[Any] = None
-    errors: Optional[List[WebcassaOutputErrors]] = None
-
-    class Config:
-        alias_generator = to_camel
-        allow_population_by_field_name = True
+from pydantic import BaseModel
+import asyncio
 
 
 class WebcassaClient:
 
+    url = config['webkassa']['url']
+    timeout = config['webkassa']['timeout']
+    headers = {'Content-Type': 'application/json'}
+
     @classmethod
     async def _send_request(cls, endpoint: str, payload: dict):
-        url = config['webkassa']['url']
-        timeout = config['webkassa']['timeout']
-        headers = {'Content-Type': 'application/json'}
-        async with  aiohttp.ClientSession() as session:
-            async with session.post(url=f'{url}/{endpoint}',
-                            headers=headers,
-                            json=payload,
-                            timeout=timeout,
-                            raise_for_status=True) as response:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url=f'{cls.url}/{endpoint}',
+                                    headers=cls.headers,
+                                    json=payload,
+                                    timeout=cls.timeout,
+                                    raise_for_status=True) as response:
                 r = await response.json()
-                return r 
-        
+                return r
+
     @classmethod
     def _handle_error(cls, err: WebcassaOutputErrors):
-        if err.code in [-1, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 16, 18, 1014, 505]:
+        if err.code in [
+                -1, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 16, 18, 1014, 505
+        ]:
             raise UnrecoverableError(f'Code:{err.code} Msg:{err.text}')
         elif err.code in [1, 3]:
             raise CredentialsError(f'Code:{err.code} Msg:{err.text}')
@@ -54,11 +40,12 @@ class WebcassaClient:
         elif err.code == 11:
             raise ShiftExceededTime(f'Code:{err.code} Msg:{err.text}')
         elif err.code == 14:
-            raise ReceiptUniqueNumDuplication(f'Code:{err.code} Msg:{err.text}')
+            raise ReceiptUniqueNumDuplication(
+                f'Code:{err.code} Msg:{err.text}')
 
     @classmethod
-    async def dispatch(cls, endpoint: str, request_data: object,
-                 response_model: object, callback_error: Callable):
+    async def dispatch(cls, endpoint: str, request_data: BaseModel,
+                       response_model:BaseModel, callback_error: Callable):
         """
         Method for sending requests to Webkassa Service with retrying implementation
 
@@ -76,36 +63,51 @@ class WebcassaClient:
         attempts = config['webkassa']['attempts']
         while counter <= attempts:
             try:
-                response = await cls._send_request(
-                    endpoint=endpoint,
-                    payload=request_data.dict(by_alias=True, exclude_unset=True))  #type:ignore
-                await logger.debug(json.dumps(request_data.dict(by_alias=True, exclude_unset=True))) #type:ignore
-                await logger.info(f'Dispatching to Webkassa: {endpoint}')
-                output = WebcassaOutput(**response) #type: ignore 
-                await logger.debug(f'Response from Webkassa:{json.dumps(response)}') #type:ignore
+                response = await cls._send_request(endpoint=endpoint,
+                                                   payload=request_data.dict(
+                                                       by_alias=True,
+                                                       exclude_unset=True)
+                                                   )  
+                asyncio.ensure_future(logger.debug(
+                                    json.dumps(
+                                        request_data.dict(by_alias=True,
+                                                        exclude_unset=True))))
+                asyncio.ensure_future(logger.info(f'Dispatching to Webkassa: {endpoint}'))
+                output = WebcassaOutput(**response)
+                task_log_debug_incoming = logger.debug(
+                    f'Response from Webkassa:{json.dumps(response)}'
+                )  
                 if output.errors:
-                    await States.filter(id=1).update(gateway=0)
+                    task_state_modify_0= States.filter(id=1).update(gateway=0)
+                    await asyncio.gather(task_log_debug_incoming, task_state_modify_0)
                     for err in output.errors:
                         cls._handle_error(err)
                 else:
                     await States.filter(id=1).update(gateway=1)
-                    return response_model(**output.data) #type:ignore
-            except (UnrecoverableError, ReceiptUniqueNumDuplication, ShiftAlreadyClosed, ShiftExceededTime) as e:
-                resolver = await callback_error(e,request_data)
+                    return response_model(**output.data)  #type:ignore
+            except (UnrecoverableError, ReceiptUniqueNumDuplication,
+                    ShiftAlreadyClosed, ShiftExceededTime) as e:
+                # default state on error -> 0
+                resolver = await callback_error(e, request_data)
                 if resolver:
-                    await States.filter(id=1).update(gateway=0)
-                    logger.error(f'Catched API error {repr(e)}. Attempt: {counter}. Continue')
-                    counter+=1
+                    asyncio.ensure_future(logger.error(
+                        f'Catched API error {repr(e)}. Attempt: {counter}. Continue'
+                    ))
+                    counter += 1
                     continue
                 else:
-                    await States.filter(id=1).update(gateway=0)
-                    await logger.error(f'Max attempts exhausted. Attempt: {counter} Error:{repr(e)}')
-                    return None
+                    asyncio.ensure_future(logger.error(
+                        f'Max attempts exhausted. Attempt: {counter} Error:{repr(e)}'
+                    ))
+                    return
             except ConnectionError as e:
-                await States.filter(id=1).update(gateway=0)
-                counter+=1
-                await logger.error(f'Cacthed connection error. Attempt: {counter} Error:{repr(e)}. Continue')
+                counter += 1
+                asyncio.ensure_future(logger.error(
+                    f'Cacthed connection error. Attempt: {counter} Error:{repr(e)}. Continue'
+                ))
                 continue
+
         else:
-            await States.filter(id=1).update(gateway=0)
-            raise UnresolvedCommand(f'Max attempts exhausted. Attempt: {counter}')
+            raise UnresolvedCommand(
+                f'Max attempts exhausted. Attempt: {counter}')
+            

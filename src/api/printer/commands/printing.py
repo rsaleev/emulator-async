@@ -1,10 +1,9 @@
-from src.api.printer.command import PrinterCommand
+from src.api.printer.device import Printer
 from src import config
 import asyncio 
-from src.api.printer.device import printer
 
 
-class PrintText(PrinterCommand):
+class PrintText(Printer):
 
     alias = 'text'
     
@@ -32,18 +31,18 @@ class PrintText(PrinterCommand):
             buffer (bool, optional): [description]. Defaults to True.
         """
         if buffer:
-            cls.buffer.set(align=cls.align, font=cls.font, bold=False, underline=0, width=1,  #type: ignore
+            Printer().buffer.set(align=cls.align, font=cls.font, bold=False, underline=0, width=1,  #type: ignore
                      height=1, density=9, invert=False, smooth=False, flip=False, double_width=False, double_height=False, 
                     custom_size=False)  #type: ignore
-            cls.buffer.text(payload)  #type: ignore
+            Printer().buffer.text(payload)  #type: ignore
         else:
-            cls.device.set(align=cls.align, font=cls.font, bold=False, underline=0, width=1,  #type: ignore
+            Printer().set(align=cls.align, font=cls.font, bold=False, underline=0, width=1,  #type: ignore
                      height=1, density=9, invert=False, smooth=False, flip=False, double_width=False, double_height=False, 
                     custom_size=False)  #type: ignore
-            cls.device.text(payload)  #type: ignore
+            Printer().text(payload)  #type: ignore
      
 
-class PrintBytes(PrinterCommand):
+class PrintBytes(Printer):
 
     alias = 'bytes'
 
@@ -81,30 +80,30 @@ class PrintBytes(PrinterCommand):
     def _print_bytes(cls, payload:bytearray, buffer:bool) -> None:
         bits = bin(payload[0])[2:].zfill(8)
         if buffer:
-            cls.buffer.set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  #type: ignore
+            Printer().buffer.set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  #type: ignore
                     height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=cls.double_width, double_height=cls.double_heigth, 
                     custom_size=cls.custom_size)  #type: ignore
             if config['printer']['text']['send_encoding']:
                 if cls.encoding_output == 'cp1251':
-                    cls.buffer._raw(cls.codepage_command.extend(cls.CP1251)) #type: ignore
+                   Printer().buffer._raw(cls.codepage_command.extend(cls.CP1251)) #type: ignore
                 elif cls.encoding_output == 'cp866':
-                    cls.buffer._raw(cls.codepage_command.extend(cls.CP866)) #type: ignore
+                   Printer().buffer._raw(cls.codepage_command.extend(cls.CP866)) #type: ignore
             content_decoded = payload[1:].decode(cls.encoding_input)
             if bits[6]:
                 content_decoded=f'{content_decoded}\n'
             content_encoded = content_decoded.encode(cls.encoding_output)
-            cls.buffer._raw(content_encoded)  #type: ignore
+            Printer().buffer._raw(content_encoded)  #type: ignore
         else:
-            cls.device.set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  #type: ignore
+            Printer().set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  #type: ignore
                      height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=False, double_height=False, 
                     custom_size=cls.custom_size) 
             if config['printer']['text']['send_encoding']:
                     if cls.encoding_output == 'cp1251':
-                        cls.buffer._raw(cls.codepage_command.extend(cls.CP1251)) #type: ignore
+                       Printer().buffer._raw(cls.codepage_command.extend(cls.CP1251)) #type: ignore
                     elif cls.encoding_output == 'cp866':
-                        cls.buffer._raw(cls.codepage_command.extend(cls.CP866)) #type: ignore
+                       Printer().buffer._raw(cls.codepage_command.extend(cls.CP866)) #type: ignore
             content_decoded = payload[1:].decode(cls.encoding_input)
             if bits[6]:
                 content_decoded=f'{content_decoded}\n'
             content_encoded = content_decoded.encode(cls.encoding_output)
-            cls.device._raw(content_encoded)  #type: ignore
+            Printer()._raw(content_encoded)  #type: ignore

@@ -74,6 +74,8 @@ class ShtrihProto:
                 continue
 
     async def consume(self):
+        
+       
         try:
             payload = await self.read(1)
             if payload == ShtrihProto.ENQ:

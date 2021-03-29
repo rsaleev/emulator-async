@@ -1,4 +1,3 @@
-from src.api.webkassa.exceptions import CredentialsError, UnrecoverableError
 from src.api.webkassa.commands import WebkassaClientToken
 from src.db.models.token import Token
 from datetime import datetime

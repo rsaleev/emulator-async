@@ -61,7 +61,7 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def handle(cls, payload:bytearray)->bytearray:
         # pre
-        Receipt.filter(ack=False).delete()
+        await Receipt.filter(ack=False).delete()
         await States.filter(id=1).update(gateway=1)
         # post
         arr = bytearray()
@@ -122,7 +122,7 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
             elif cc >0:
                 payment = cc
                 payment_type = 1
-            await Receipt.filter(uid=receipt.uid).update(payment_type=payment_type, payment=payment, payment_ts=datetime.now())
+            await Receipt.filter(uid=receipt.uid).update(payment_type=payment_type, payment=payment)
 
         
 

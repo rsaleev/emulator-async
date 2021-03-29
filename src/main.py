@@ -1,8 +1,10 @@
 import asyncio
 from datetime import datetime
+from src.api.printer.commands.querying import ClearBuffer
 from src.db.models.token import Token
 from src.db.connector import DBConnector
-from src.api.printer.device import printer
+from src.api.printer.device import Printer
+
 from src.api.shtrih.device import ShtrihSerialDevice
 from src.api.webkassa.commands import WebkassaClientTokenCheck, WebkassaClientCloseShift
 from src.api.printer.commands import PrinterFullStatusQuery, PrintText, PrintBytes, CutPresent
@@ -12,10 +14,9 @@ from src import logger, config
 import sys
 
 class Application:
-    printer = printer
+    printer = Printer()
     fiscalreg = ShtrihSerialDevice()
     connector = DBConnector()
-
 
     @classmethod
     async def init(cls):
@@ -25,20 +26,12 @@ class Application:
             task_fiscalreg_connect = cls.fiscalreg.connect()
             task_printer_connect = loop.run_in_executor(None, cls.printer.connect)
             await asyncio.gather(task_db_connect, task_fiscalreg_connect, task_printer_connect)
-            try:
-                await Shift.create(id=1, open_date=datetime.now())
-                await States.create(id=1)
-                await Token.get_or_create(id=1, ts=datetime.now())
-            except:
-                pass
             await asyncio.gather(WebkassaClientTokenCheck.handle(),PrinterFullStatusQuery.handle())
-            print('ready')
         except Exception as e:
             await logger.exception(e)
     
     @classmethod
     async def poll(cls):
-        print('polling')
         shift = await Shift.get(id=1)
         period = datetime.now() - shift.open_date
         hours= int(period.total_seconds() // 3600)
@@ -58,30 +51,16 @@ class Application:
                 else:
                     await States.filter(id=1).update(mode=4)
         await asyncio.sleep(1)
-
-        
     
     @classmethod
     async def serve(cls):
         while True:
-            try:
-                await asyncio.ensure_future(cls.fiscalreg.serve())
-                await asyncio.ensure_future(cls.poll())
-            except Exception as e:
-                await logger.exception(e)
-            finally:
-                continue
+            await asyncio.ensure_future(cls.fiscalreg.serve())
+            await asyncio.ensure_future(cls.poll())
+          
             
 if __name__ == '__main__':
     loop = asyncio.new_event_loop()
     app = Application()
     loop.run_until_complete(app.init())
     loop.run_until_complete(app.serve())
-
-
-
-
-
-    
-
-

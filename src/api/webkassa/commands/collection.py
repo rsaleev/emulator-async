@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from src.api.webkassa.exceptions import * 
 from src.db.models.token import Token
 from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
-from src.api.webkassa.command import WebcassaCommand, WebcassaGateway
+from src.api.webkassa.command import WebcassaCommand
 from src.api.webkassa.client import WebcassaClient
 from src.api.webkassa.commands.authorization import WebkassaClientToken
 from src import config

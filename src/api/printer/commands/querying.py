@@ -1,13 +1,14 @@
-from src.api.printer.command import PrinterCommand
+from src.api.printer.device import Printer
 from src.db.models.state import States
 from src.api.printer import logger
 import asyncio
 import time
-class PrinterFullStatusQuery(PrinterCommand):
+
+
+class PrinterFullStatusQuery(Printer):
 
     alias = 'status'
     command = bytearray((0x10,0x04,0x14))
-
 
     @classmethod
     async def handle(cls, payload=None): 
@@ -25,8 +26,8 @@ class PrinterFullStatusQuery(PrinterCommand):
 
     @classmethod
     def _fetch_full_status(cls):
-        cls.device.write(cls.command)
-        status = cls.device.read(6) 
+        Printer().write(cls.command) #type: ignore
+        status =Printer().read(6) #type: ignore
         logger.debug(f'STATUS:{status}')
         paper = cls._set_paper_status(status[2])
         cover = cls._set_cover_status(status[3])
@@ -67,15 +68,15 @@ class PrinterFullStatusQuery(PrinterCommand):
         else:
             return False
 
-class PrintingStatusQuery:
+class PrintingStatusQuery(Printer):
 
     alias = 'online'
     command = bytearray((0x10,0x04,0x02))
 
     @classmethod
     def handle(cls, payload=None):
-        cls.device.write(cls.command) #type: ignore
-        status = cls.device.read(6) #type: ignore
+        Printer().write(cls.command)
+        status = Printer().read(6) 
         output = cls._get_printing_status(status[2])
         return output
 
@@ -86,7 +87,7 @@ class PrintingStatusQuery:
             return True
         else:
             return False 
-class PrintBuffer:
+class PrintBuffer(Printer):
 
     alias = 'buffer'
     cut = bytearray((0x1B,0x69))
@@ -95,17 +96,16 @@ class PrintBuffer:
     @classmethod
     async def handle(cls, payload=None):
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, cls.device._raw, cls.buffer.output)  #type: ignore
-        # check if printing completed with success
+        await loop.run_in_executor(None, Printer()._raw,Printer().buffer.output)  
         status = await loop.run_in_executor(None, PrintingStatusQuery.handle)
         # clear buffer after success
         if status:
-            cls.buffer.clear()  #type: ignore
+            Printer().buffer.clear()  
         # printing ended unsuccessfully
         else:
             # cut and eject 
-            await loop.run_in_executor(None, cls.device._raw, cls.cut) #type: ignore
-            await loop.run_in_executor(None, cls.device._raw, cls.eject) #type: ignore
+            await loop.run_in_executor(None, Printer()._raw, cls.cut) #type: ignore
+            await loop.run_in_executor(None, Printer()._raw, cls.eject) #type: ignore
             await loop.run_in_executor(None, cls._poll_for_recover)  #type: ignore
 
     @classmethod
@@ -114,16 +114,16 @@ class PrintBuffer:
             time.sleep(0.2)
             status = PrintingStatusQuery.handle()
             if status:
-                cls.device._raw(cls.buffer.output) #type: ignore
+                Printer()._raw(Printer().buffer.output) 
                 break
             else:
                 time.sleep(0.2)
                 continue
 
-class ClearBuffer:
+class ClearBuffer(Printer):
 
     alias = 'clear'
 
     @classmethod
     async def handle(cls, payload=None):
-        cls.buffer.clear()  #type: ignore
+        Printer().buffer.clear()

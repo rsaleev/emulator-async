@@ -1,9 +1,9 @@
-from src.api.printer.command import PrinterCommand
+from src.api.printer.device import Printer
 from xml.etree.ElementTree import Element
 from src import config
 import asyncio
 
-class PrintXML(PrinterCommand):
+class PrintXML(Printer):
     """PrintXML consoledates methods for printing XML document
 
     """
@@ -71,18 +71,22 @@ class PrintXML(PrinterCommand):
             if buffer:
                 if config['printer']['doc']['send_encoding']:
                     if cls.encoding_output == 'cp1251':
-                        printer.buffer._raw(cls.codepage_command.extend(cls.CP1251)) #type: ignore
+                        Printer()._raw(cls.codepage_command.extend(cls.CP1251)) 
                     elif cls.encoding_output == 'cp866':
-                        printer.buffer._raw(cls.codepage_command.extend(cls.CP866)) #type: ignore
-                cls.buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
-                cls.buffer._raw(content.text.encode(cls.encoding_output))  #type: ignore
+                        Printer().buffer._raw(cls.codepage_command.extend(cls.CP866)) 
+                Printer().buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
+                Printer().buffer._raw(content.text.encode(cls.encoding_output)) 
             else:
-                cls.device._raw(cls.codepage_command) #type: ignore
-                cls.device.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
-                cls.device._raw(content.text.encode(cls.encoding_output)) #type: ignore
+                if config['printer']['doc']['send_encoding']:
+                    if cls.encoding_output == 'cp1251':
+                        Printer()._raw(cls.codepage_command.extend(cls.CP1251))
+                    elif cls.encoding_output == 'cp866':
+                        Printer()._raw(cls.codepage_command.extend(cls.CP866)) 
+                    Printer()._raw(cls.codepage_command) 
+                    Printer().set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
+                    Printer()._raw(content.text.encode(cls.encoding_output)) 
         elif content.tag == 'br':
             if buffer:
-                cls.buffer._raw(bytes("\n", 'ascii')) #type: ignore             
+                Printer().buffer._raw(bytes("\n", 'ascii'))             
             else:
-                cls.device._raw(bytes("\n", 'ascii')) #type: ignore             
-                cls.device.set(align=align, font=font, bold=bold, width=1, height=1, custom_size=cls.custom_size) #type: ignore
+                Printer()._raw(bytes("\n", 'ascii'))          

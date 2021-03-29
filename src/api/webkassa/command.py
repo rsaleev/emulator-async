@@ -10,7 +10,3 @@ class WebcassaCommand(ABC):
     def exc_callback():
         pass
     
-
-class WebcassaGateway:
-    printer = None
-    

@@ -4,4 +4,4 @@ from src.api.printer.commands.querying import ClearBuffer, PrintBuffer, PrinterF
 from src.api.printer.commands.present import CutPresent
 
 
-COMMANDS = [PrintXML, PrintBytes, PrintBuffer, PrintText, PrinterFullStatusQuery, PrintBuffer, ClearBuffer]
+COMMANDS = [PrintXML, PrintBytes, PrintBuffer, PrintText, PrinterFullStatusQuery, PrintBuffer, ClearBuffer, CutPresent]
