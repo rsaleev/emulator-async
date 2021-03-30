@@ -1,6 +1,5 @@
 from usb.core import USBError, USBTimeoutError
 import os
-import time
 import usb
 from src.api.printer.exceptions import * 
 
