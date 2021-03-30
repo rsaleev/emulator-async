@@ -144,3 +144,4 @@ pyproject.*
 .env
 .db
 .db-*
+/deployment
