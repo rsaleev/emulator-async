@@ -1,21 +1,16 @@
 import asyncio
 from datetime import datetime
-from src.api.printer.commands.querying import ClearBuffer
-from src.db.models.token import Token
 from src.db.connector import DBConnector
 from src.api.printer.device import Printer
-
-from src.api.shtrih.device import ShtrihSerialDevice
+from src.api.shtrih.device import Paykiosk
 from src.api.webkassa.commands import WebkassaClientTokenCheck, WebkassaClientCloseShift
-from src.api.printer.commands import PrinterFullStatusQuery, PrintText, PrintBytes, CutPresent
-from src.api.printer.command import PrinterCommand
+from src.api.printer.commands import PrinterFullStatusQuery
 from src.db.models import States, Shift
 from src import logger, config
-import sys
 
 class Application:
     printer = Printer()
-    fiscalreg = ShtrihSerialDevice()
+    fiscalreg = Paykiosk()
     connector = DBConnector()
 
     @classmethod
