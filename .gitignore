@@ -142,4 +142,5 @@ pyproject.*
 .vscode/
 /test/
 .env
-.db*
+.db
+.db-*
