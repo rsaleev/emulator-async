@@ -5,7 +5,6 @@ import struct
 from src import config
 from uuid import uuid4
 from src.api.printer.commands import ClearBuffer
-from datetime import datetime
 from src.api.webkassa.commands import WebkassaClientSale
 
 class OpenSale(ShtrihCommand, ShtrihCommandInterface):
@@ -51,7 +50,7 @@ class OpenReceipt(ShtrihCommand, ShtrihCommandInterface):
         return arr
 
     @classmethod
-    async def dispense(cls) ->None:
+    async def dispatch(cls, payload:bytearray) ->None:
         pass
 
 class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
@@ -72,7 +71,7 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
         return arr
     
     @classmethod
-    async def dispense(cls, payload:bytearray) ->None:
+    async def dispatch(cls, payload:bytearray) ->None:
         pass
 
 class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
@@ -94,7 +93,8 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         # new logic 
         if config['emulator']['post_sale']:
             try:
-                await cls.dispatch(payload)
+                await cls._set_sale(payload)
+                await WebkassaClientSale.handle()
             except:
                 cls.set_error(0x03)
             else:
@@ -106,9 +106,12 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def dispatch(cls, payload):
-        await cls._set_sale(payload)
-        await WebkassaClientSale.handle()
-
+        if not config['emulator']['post_sale']:
+            await cls._set_sale(payload)
+            await WebkassaClientSale.handle()
+        else:
+            pass
+           
     @classmethod
     async def _set_sale(cls, payload):
         receipt = await Receipt.get_or_none()
@@ -123,7 +126,8 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
                 payment = cc
                 payment_type = 1
             await Receipt.filter(uid=receipt.uid).update(payment_type=payment_type, payment=payment)
-
+        else:
+            raise ValueError("No data found")
         
 
 
