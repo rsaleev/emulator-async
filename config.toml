@@ -1,8 +1,12 @@
 [emulator]
-queued_receipt_state = 8
+queued_receipt_state = 8 #ИЗМЕНИТЬ
 post_sale = true
+flush_receipt = false
 
 [printer]
+
+continious_mode = true 
+
 [printer.receipt]
 eject = false
 present_length_mm = 87
@@ -34,12 +38,13 @@ double_height=false
 input = 'utf8'
 output ='cp866'
 send_encoding = false
+buffer = false
 
 [webkassa]
-cassa_unique_number = ''
+cassa_unique_number = '' # ЗАПОЛНИтЬ
 url = 'http://127.0.0.1:1331/api'
-login = ''
-password = ''
+login = '' # ЗАПОЛНИтЬ
+password = '' # ЗАПОЛНИтЬ
 timeout = 15
 attempts = 5
 
@@ -51,8 +56,8 @@ attempts = 5
 4 = 25
 
 [webkassa.company]
-inn = ''
-name = ''
+inn = '' # ЗАПОЛНИтЬ
+name = '' # ЗАПОЛНИтЬ
 
 [webkassa.report]
 printable = true
@@ -60,6 +65,6 @@ printable = true
 [webkassa.receipt]
 parse = true 
 header = false
-regex = '(^Код\W*)(\d+)'
+regex = '(^Код\W*)(\d+)' #BИЗМЕНИТЬ
 
 
