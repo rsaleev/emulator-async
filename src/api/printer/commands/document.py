@@ -23,7 +23,7 @@ class PrintXML(Printer):
     double_heigth = config['printer']['doc']['double_height']
 
     @classmethod
-    async def handle(cls, payload:Element, buffer=True):
+    async def handle(cls, payload:Element):
         """handle 
         
         Method for handling and processing data to another scope methods
@@ -36,6 +36,7 @@ class PrintXML(Printer):
             buffer (bool, optional): perform printing in buffer or bypass. Defaults to True.
         """
         loop = asyncio.get_running_loop()
+        buffer = config['printer']['doc']['buffer']
         await loop.run_in_executor(None, cls._print_doc, payload, buffer)
 
 
@@ -49,6 +50,8 @@ class PrintXML(Printer):
             buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
         for elem in payload:
+            if config['printer']['continiuos_mode']:
+                Printer()._raw(b'\x1D\x65\x20')
             cls._print_element(elem, buffer)
 
 
