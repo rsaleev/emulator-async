@@ -5,14 +5,14 @@ import time
 from src.api.printer.exceptions import DeviceIOError, DeviceConnectionError
 from escpos.printer import Dummy
 from src.api.printer.devices.impl import *
+from src.api.device import Device
   
 
-
-
-class Printer(PrinterProto):
+class Printer(Device, PrinterProto):
 
     def __init__(self):
-        super().__init__()
+        PrinterProto.__init__(self)
+        Device.__init__(self)
         if os.environ['PRINTER_TYPE'] == 'USB':
            self.__class__ = UsbPrinter
         self.buffer = Dummy()
