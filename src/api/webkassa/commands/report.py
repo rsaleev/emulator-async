@@ -47,7 +47,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
             task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
                                             total_docs=0)
             task_states_modify =  States.filter(id=1).update(mode=2)
-            tasks_print_xml = PrintXML.handle(rendered, buffer=False)
+            tasks_print_xml = PrintXML.handle(rendered)
             await asyncio.gather(task_shift_modify, task_states_modify, tasks_print_xml)
             await CutPresent.handle()
         except Exception as e:
