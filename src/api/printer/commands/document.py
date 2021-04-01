@@ -50,8 +50,6 @@ class PrintXML(Printer):
             buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
         for elem in payload:
-            if config['printer']['continiuos_mode']:
-                Printer()._raw(b'\x1D\x65\x20')
             cls._print_element(elem, buffer)
 
 
