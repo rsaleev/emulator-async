@@ -1,84 +1,123 @@
 import asyncio
 import aioserial
 import os
-import asyncio
+from serial.serialutil import SerialException, SerialTimeoutException
 from src.api.shtrih import logger
 from serial.tools import list_ports
 from itertools import groupby
-from src.api.shtrih.exceptions import *
-from src.api.device import Device
+from src.api.device import *
 from src.api.shtrih.protocol import ShtrihProto
+from binascii import hexlify
 
 
-class ShtrihSerialDevice(Device, ShtrihProto):
+class SerialDevice(DeviceImpl):
+    device = None 
 
-    """ 
-
-    [extended_summary]
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.connection = None
-        self.port = os.environ.get("SHTRIH_SERIAL_PORT", "/dev/ttyUSB0")
-        self.baudrate = int(os.environ.get("SHTRIH_SERIAL_BAUDRATE", "115200"))
-        self.timeout = int(os.environ.get("SHTRIH_SERIAL_TIMEOUT", "2"))
-
-    def discover(self):
+    @classmethod
+    async def _open(cls):
+        port = os.environ.get("SHTRIH_SERIAL_PORT", "/dev/ttyUSB0")
         ports = list(list_ports.comports())
         if len(ports) > 1:
-            hwids = [p[2].split(" ") for p in ports]  #type: ignore
+            hwids = [str(p[2]).split(" ") for p in ports] 
             counter, group = [(len(list(group)), key)
                               for key, group in groupby(hwids)][0]
             if counter > 1:
-                logger.error(
-                    f"Discovered {counter} equal {group}. Recovering with default config"
-                )
-                return self.port
+               await logger.error(f"Found multiple devices {counter} with same group {group}")
             else:
-                return ports[0][0]
-        elif len(ports) <= 0:
-            raise SerialDeviceNotFound(f"Couldn't find any serial device")
+                port = ports[0][0]
+        elif len(ports) == 0:
+            await logger.error(f"Device not found with autodiscover connecting with default params")
         elif len(ports) == 1:
-            return ports[0][0]
+            port = ports[0][0]
+        cls.device = aioserial.AioSerial(port=str(port), 
+            baudrate=int(os.environ.get("SHTRIH_SERIAL_BAUDRATE", "115200")), 
+            write_timeout=int(os.environ.get("SHTRIH_SERIAL_TIMEOUT", "2")), 
+            loop=asyncio.get_running_loop())
+
+    @classmethod
+    async def _read(cls, size):
+        try:
+            output = cls.device.read_async(size)
+            return output
+        except (SerialException, SerialTimeoutException, IOError) as e:
+            raise DeviceIOError(e)
+
+    @classmethod
+    async def _write(cls, data):
+        try:
+            await cls.device.write_async(data)
+        except (SerialException, SerialTimeoutException, IOError) as e:
+            raise DeviceIOError(e)
+
+    @classmethod
+    async def _close(cls):
+        try:
+            cls.device.cancel_read()
+            cls.device.cancel_write()
+            cls.device.close()
+        except:
+            pass
+
+class Paykiosk(Device, ShtrihProto):
+
+    def __init__(self):
+        Device.__init__(self)
+        ShtrihProto.__init__(self)
+        self.impl = None
+        self.device = None
+
+    def discover(self):
+        if os.environ['PAYKIOSK_TYPE'] == 'SERIAL':
+            self.impl = SerialDevice()
+        elif os.environ['PAYKIOSK_TYPE'] != 'SERIAL':
+            raise NotImplementedError
 
     async def connect(self):
-        while not self.connection:
+        await logger.info("Connecting to fiscalreg device...")
+        while not self.device:
             try:
-                port = self.discover()
-                self.connection = aioserial.AioSerial(port=port,  #type: ignore
-                                                    baudrate=self.baudrate, 
-                                                    write_timeout=self.timeout, 
-                                                    loop=asyncio.get_running_loop())
-            except Exception as e:
+                self.device = await self.impl._open()
+            except DeviceConnectionError as e:
                 await logger.error(e)
+                await asyncio.sleep(3)
                 continue
+            else:
+                await logger.info("Connecton to fiscalreg device established")
+                return self.device
 
     async def reconnect(self):
-        if not self.connection.isOpen():
-            await self.connect()
-        else:
-            self.connection.cancel_read()
-            self.connection.cancel_write()
-            self.connection.flush()
-            self.connection = None
-            await self.connect()
+        self.device = None
+        await self.connect()
             
     async def disconnect(self):
-        self.connection.cancel_read()
-        self.connection.cancel_write()
+        await self.impl._close()
 
-    async def _read(self, size:int):
-        data = await self.connection.read_async(size)
-        return data
+    async def read(self, size:int):
+       while True:
+            try:
+                data = await self.impl._read(size)
+                await logger.info(f'INPUT:{hexlify(data), sep=":")}') #type: ignore
+                return data
+            except (DeviceConnectionError, DeviceIOError):
+                await self.reconnect()
+                continue
 
-    async def _write(self, data:bytearray):
-        await self.connection.write_async(data)
-
+    async def write(self, data:bytearray):
+        while True:
+            try:
+                task_write = self.impl._write(data)
+                task_log = logger.info(f'OUTPUT:{hexlify(bytes(data)), sep=":")}') #type: ignore
+                await asyncio.gather(task_log, task_write)
+                break
+            except (DeviceConnectionError, DeviceIOError):
+                await self.reconnect()
+                continue
 
     async def serve(self):
-        await self.consume()
-        await asyncio.sleep(0.2)
+        if self.impl.device.in_waiting:
+            await self.consume()
+        else:
+            await asyncio.sleep(0.1)
     
         
 

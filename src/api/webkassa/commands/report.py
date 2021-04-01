@@ -2,7 +2,6 @@ from src.api.webkassa.exceptions import ExpiredTokenError, ShiftAlreadyClosed, C
 from src.db.models import Shift, Token, States
 from src import config
 from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
-from datetime import datetime
 from src.api.webkassa.command import WebcassaCommand
 from src.api.webkassa.client import WebcassaClient
 from src.api.webkassa.models import ZXReportRequest, ZXReportResponse

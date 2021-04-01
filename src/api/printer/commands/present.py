@@ -25,8 +25,7 @@ class CutPresent(Printer):
             Printer().hw('INIT') #type: ignore
         else:        
             Printer()._raw(cls.cut)  #type: ignore
-            present_len_to_bytes = int(config['printer']['receipt']['present_length_mm']/7.3).to_bytes(1, 'little')
-            Printer()._raw(cls.present.extend(present_len_to_bytes))  #type: ignore
+            Printer()._raw(cls.present.append(int(config['printer']['receipt']['present_length_mm']/7.3)))  #type: ignore
             Printer().hw('INIT') #type: ignore
         Printer().buffer.clear()  #type: ignore
         

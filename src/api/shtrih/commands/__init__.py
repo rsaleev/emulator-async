@@ -1,15 +1,15 @@
-from ..commands.print import PrintDefaultLine
-from ..commands.report import ZReport, XReport
-from ..commands.shift import OpenShift, CloseShift
-from ..commands.sale import OpenReceipt, OpenSale, SimpleCloseSale
-from ..commands.subtotal import SubTotal
-from ..commands.state import FullState
-from ..commands.table import SerialNumber
-from src import logger as root_logger
-
+from functools import WRAPPER_ASSIGNMENTS
+from .print import PrintDefaultLine
+from .report import ZReport, XReport
+from .shift import OpenShift, CloseShift
+from .sale import OpenReceipt, OpenSale, SimpleCloseSale
+from .subtotal import SubTotal
+from .state import FullState
+from .table import SerialNumber
+from .collection import Deposit, Withdraw
 
 
 
 
 COMMANDS =[PrintDefaultLine, ZReport, XReport, OpenReceipt, OpenSale, OpenShift, CloseShift, SimpleCloseSale,
-            SubTotal, FullState, SerialNumber]
+            SubTotal, FullState, SerialNumber, Deposit, Withdraw]

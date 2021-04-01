@@ -17,7 +17,16 @@ class Receipt(Model):
     sent = BooleanField(default=False)
     ack = BooleanField(default=False)
 
+    def __str__(self):
+        msg =  f"ID:{self.id} UID:{self.uid}"\
+                f" TICKET:{self.ticket} COUNT:{self.count}"\
+                f"PRICE: {self.price} PAYMENT:{self.payment}"\
+                f"TAX: {self.tax} TAX_PERCENT:{self.tax_percent}"\
+                f"PAYMENT_TYPE: {self.payment_type} PAYMENT TS{self.payment_ts}" 
+        return msg
+
     class Meta:
         table = 'receipts'
         ordering = ["id"]
 
+        

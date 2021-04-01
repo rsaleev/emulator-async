@@ -24,7 +24,7 @@ class ZReport(ShtrihCommand, ShtrihCommandInterface):
     async def dispatch(cls):
         doc = await WebkassaClientZReport.handle()
         if doc:
-            await PrintXML.handle(doc, buffer=False)
+            await PrintXML.handle(doc)
             await CutPresent.handle()
 
 
@@ -45,7 +45,7 @@ class XReport(ShtrihCommand, ShtrihCommandInterface):
     async def dispatch(cls, payload:bytearray):
         doc = await WebkassaClientXReport.handle()
         if doc:
-            await PrintXML.handle(doc, buffer=False) 
+            await PrintXML.handle(doc) 
             await CutPresent.handle()
         else:
             raise UnresolvedCommand("Couldn't print XReport document, no data for template")

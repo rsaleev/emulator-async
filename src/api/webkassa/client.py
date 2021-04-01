@@ -17,7 +17,7 @@ class WebcassaClient:
     headers = {'Content-Type': 'application/json'}
 
     @classmethod
-    async def _send_request(cls, endpoint: str, payload: dict):
+    async def _send(cls, endpoint: str, payload: dict):
         async with aiohttp.ClientSession() as session:
             async with session.post(url=f'{cls.url}/{endpoint}',
                                     headers=cls.headers,
@@ -28,7 +28,7 @@ class WebcassaClient:
                 return r
 
     @classmethod
-    def _handle_error(cls, err: WebcassaOutputErrors):
+    def _err_hdlr(cls, err: WebcassaOutputErrors):
         if err.code in [
                 -1, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 16, 18, 1014, 505
         ]:
@@ -63,7 +63,7 @@ class WebcassaClient:
         attempts = config['webkassa']['attempts']
         while counter <= attempts:
             try:
-                response = await cls._send_request(endpoint=endpoint,
+                response = await cls._send(endpoint=endpoint,
                                                    payload=request_data.dict(
                                                        by_alias=True,
                                                        exclude_unset=True)
@@ -81,7 +81,7 @@ class WebcassaClient:
                     task_state_modify_0= States.filter(id=1).update(gateway=0)
                     await asyncio.gather(task_log_debug_incoming, task_state_modify_0)
                     for err in output.errors:
-                        cls._handle_error(err)
+                        cls._err_hdlr(err)
                 else:
                     await States.filter(id=1).update(gateway=1)
                     return response_model(**output.data)  #type:ignore

@@ -1,34 +1,36 @@
 
 import struct
 from src.api.shtrih.command import ShtrihCommand
+from src.api.webkassa.commands import WebkassaClientCollection
 
 
 class Withdraw(ShtrihCommand):
    
-   
-        # count as bytearray element, where B[0] => STX
-    _length = bytearray((0x05,))# B[1] LEN - 1 byte
-    _command_code = bytearray((0x51,)) #B[2] - 2 byte
+    _length = bytearray((0x05,))
+    _command_code = bytearray((0x51,)) 
     _doc_number = struct.pack('<H',0)
         
     @classmethod
-    def handle(cls):
+    async def handle(cls, payload:bytearray):
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._doc_number)
         return bytes(arr)
+
+    @classmethod
+    async def dispatch(cls, payload:bytearray):
+        await WebkassaClientCollection.handle(payload, 0)
 
 class Deposit(ShtrihCommand):
 
-    # count as bytearray element, where B[0] => STX
-    _length = bytearray((0x05,))# B[1] LEN - 1 byte
-    _command_code = bytearray((0x50,)) #B[2] - 2 byte
+    _length = bytearray((0x05,))
+    _command_code = bytearray((0x50,))
     _doc_number = struct.pack('<H',0)
         
     @classmethod
-    def handle(cls):
+    async def handle(cls, payload:bytearray):
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -36,9 +38,9 @@ class Deposit(ShtrihCommand):
         arr.extend(cls._doc_number)
         return bytes(arr)
 
-
-
-
+    @classmethod
+    async def dispatch(cls, payload:bytearray):
+        await WebkassaClientCollection.handle(payload, 1)
         
 
 

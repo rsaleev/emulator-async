@@ -11,9 +11,8 @@ from src.api.printer.commands import PrintXML, CutPresent
 from xml.etree.ElementTree import fromstring
 import asyncio
 from tortoise import timezone
-
-
-
+import aiofiles
+import os
 
 class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     endpoint = 'Check'
@@ -27,6 +26,8 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         if receipt:
             if receipt.price ==0 or receipt.payment ==0:
                 await logger.error(f'Receipt {receipt.uid} has broken data')
+                if config['emulator']['flush_receipts']:
+                    await cls._flush(receipt) # flush receipt
             else:
                 request  = SaleRequest( 
                     token=token.token,
@@ -68,6 +69,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                     await CutPresent.handle()
                 except Exception as e:
                     logger.exception(e)
+                    raise e
 
     @classmethod
     async def exc_callback(cls, exc, payload):
@@ -97,4 +99,11 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         elif isinstance(exc, UnrecoverableError):
             await States.filter(id=1).update(gateway=0)
             return False
-            
+        
+
+    @classmethod
+    async def _flush(cls, receipt:Receipt):
+        async with aiofiles.open(f'{os.path.abspath(os.getcwd())}/unprocessed_receipts.txt', "a+") as f:
+            await f.write(str(receipt))
+            await f.flush()
+            await Receipt.filter(id=receipt.id).delete()

@@ -18,11 +18,7 @@ class PrintQR(Printer):
     @classmethod
     def _print_qr(cls, payload:str):
         Printer().qr(content=payload, center=True, size=cls.size)
-           
-       
-       
-
-
+        
 class PrintGraphicLines(Printer):
 
     alias = 'graphics'
