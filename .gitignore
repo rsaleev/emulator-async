@@ -145,3 +145,6 @@ pyproject.*
 .db
 .db-*
 /deployment
+webcassa.db-shm
+webcassa.db-wal
+webcassa.env
