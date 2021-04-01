@@ -136,15 +136,3 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-
-poetry.*
-pyproject.*
-.vscode/
-/test/
-.env
-.db
-.db-*
-/deployment
-*.db-shm
-*.db-wal
-*.env
