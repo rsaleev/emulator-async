@@ -16,10 +16,9 @@ class PrintText(Printer):
 
     
     @classmethod
-    async def handle(cls, payload:str, buffer=True):
+    async def handle(cls, payload:str, buffer=False):
         loop = asyncio.get_running_loop()
-        task = asyncio.create_task(loop.run_in_executor(None, cls._print_text, payload, buffer))
-        return task
+        await loop.run_in_executor(None, cls._print_text, payload, buffer)
 
     @classmethod
     def _print_text(cls, payload:str, buffer:bool):
@@ -30,16 +29,20 @@ class PrintText(Printer):
             content (str): simple string with control symbols
             buffer (bool, optional): [description]. Defaults to True.
         """
+        #Printer()._raw(b'\x1d\x65\x20')
         if buffer:
             Printer().buffer.set(align=cls.align, font=cls.font, bold=False, underline=0, width=1,  #type: ignore
                      height=1, density=9, invert=False, smooth=False, flip=False, double_width=False, double_height=False, 
                     custom_size=False)  #type: ignore
             Printer().buffer.text(payload)  #type: ignore
         else:
+            # if config['printer']['continious_mode']:
             Printer().set(align=cls.align, font=cls.font, bold=False, underline=0, width=1,  #type: ignore
                      height=1, density=9, invert=False, smooth=False, flip=False, double_width=False, double_height=False, 
                     custom_size=False)  #type: ignore
             Printer().text(payload)  #type: ignore
+
+
      
 
 class PrintBytes(Printer):
@@ -81,8 +84,6 @@ class PrintBytes(Printer):
         
         bits = bin(payload[0])[2:].zfill(8)
         if buffer:
-            if config['printer']['continiuos_mode']:
-                Printer().buffer._raw(b'\x1D\x65\x20')
             Printer().buffer.set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  #type: ignore
                     height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=cls.double_width, double_height=cls.double_heigth, 
                     custom_size=cls.custom_size)  #type: ignore
@@ -98,8 +99,8 @@ class PrintBytes(Printer):
             
             Printer().buffer._raw(content_encoded)  #type: ignore
         else:
-            if config['printer']['continiuos_mode']:
-                Printer().buffer._raw(b'\x1D\x65\x20') 
+            #if config['printer']['continiuos_mode']:
+            #Printer().buffer._raw(b'\x1D\x65\x20') 
             Printer().set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  #type: ignore
                      height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=False, double_height=False, 
                     custom_size=cls.custom_size) 

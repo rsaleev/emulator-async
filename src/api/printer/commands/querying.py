@@ -39,7 +39,7 @@ class PrinterFullStatusQuery(Printer):
     @classmethod
     def _set_paper_status(cls, v:int) ->int:
         st = [int(elem) for elem in list(bin(v)[2:].zfill(8))]
-        if st[7] ==1:
+        if st[7]+st[5] ==1:
             return False
         else:
             return True
@@ -127,3 +127,14 @@ class ClearBuffer(Printer):
     @classmethod
     async def handle(cls, payload=None):
         Printer().buffer.clear()
+
+
+
+class ModeSetter(Printer):
+
+    alias ='mode'
+    command = bytearray((0x1D, 0x65, 0x14))
+
+    @classmethod
+    async def handle(cls, payload=None):
+        Printer()._raw(cls.command)
