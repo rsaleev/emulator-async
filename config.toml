@@ -5,10 +5,10 @@ flush_receipt = false
 
 [printer]
 
-continious_mode = true 
+continuous_mode = true 
 
 [printer.receipt]
-eject = false
+eject = true
 present_length_mm = 87
 
 [printer.qr]
