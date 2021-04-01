@@ -136,3 +136,12 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+*.lock
+pyproject.toml
+.vscode/
+launch.*
+settings.*
+deployment/
+*.db.db-*
+*.env
