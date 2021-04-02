@@ -58,6 +58,7 @@ class SerialDevice(DeviceImpl):
         except:
             pass
 
+
 class Paykiosk(Device, ShtrihProto):
 
     def __init__(self):
@@ -71,6 +72,7 @@ class Paykiosk(Device, ShtrihProto):
             self.impl = SerialDevice()
         elif os.environ['PAYKIOSK_TYPE'] != 'SERIAL':
             raise NotImplementedError
+        return self.impl
 
     async def connect(self):
         await logger.info("Connecting to fiscalreg device...")
