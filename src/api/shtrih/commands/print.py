@@ -2,7 +2,7 @@ from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 import re
 from uuid import uuid4
 from src import config
-from src.api.printer.commands import PrintBytes, CutPresent
+from src.api.printer.commands import PrintBytes, CutPresent, PrintBuffer
 from src.api.shtrih import logger
 from src.db.models.receipt import Receipt
 import asyncio
@@ -25,7 +25,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def dispatch(cls, payload:bytearray):
         task_parse = asyncio.create_task(cls._parse_custom_line(payload))
-        task_print = asyncio.create_task(PrintBytes.handle(payload=payload[4:], buffer=False))
+        task_print = asyncio.create_task(PrintBytes.handle(payload=payload[4:], buffer=True))
         tasks = [task_parse, task_print]
         await asyncio.gather(*tasks)
 
@@ -57,6 +57,7 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         
     @classmethod
     async def dispatch(cls, payload:bytearray) -> None:
+        await PrintBuffer.handle()
         await CutPresent.handle()
         
 
