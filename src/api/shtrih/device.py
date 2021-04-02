@@ -35,7 +35,6 @@ class SerialDevice(DeviceImpl):
                 baudrate=int(os.environ.get("PAYKIOSK_BAUDRATE")), 
                 dsrdtr=True, 
                 rtscts=True,
-                exclusive=True,
                 write_timeout=float(os.environ.get("PAYKIOSK_WRITE_TIMEOUT"))/1000,
                 loop=asyncio.get_running_loop())
         except Exception as e:
