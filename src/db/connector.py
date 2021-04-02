@@ -1,6 +1,6 @@
 from tortoise import Tortoise
 import os 
-from src.db.models import *state,  
+from src.db.models import *  
 from tortoise import timezone
 from src import logger 
 class DBConnector:
