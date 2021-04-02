@@ -16,7 +16,7 @@ class PrinterFullStatusQuery(Printer):
         try:
             paper, roll, cover, rec_err, unrec_err = await loop.run_in_executor(None, cls._fetch_full_status)
             await States.filter(id=1).update(paper=int(paper), cover=int(cover), roll=int(roll), jam=int(rec_err))
-            if not paper and not roll and not cover and not rec_err and not unrec_err:
+            if paper and not cover and not rec_err and not unrec_err:
                 await States.filter(id=1).update(submode=0)
             else:
                 await States.filter(id=1).update(submode=1) 
