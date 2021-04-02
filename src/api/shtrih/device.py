@@ -38,6 +38,7 @@ class SerialDevice(DeviceImpl):
     async def _read(cls, size):
         try:
             output = cls.device.read_async(size)
+            print(output)
             return output
         except (SerialException, SerialTimeoutException, IOError) as e:
             raise DeviceIOError(e)
@@ -81,6 +82,7 @@ class Paykiosk(Device, ShtrihProto):
         while not self.device:
             try:
                 self.device = await self.impl._open()
+                print(self.device.device)
             except DeviceConnectionError as e:
                 await logger.error(e)
                 await asyncio.sleep(3)
@@ -101,7 +103,7 @@ class Paykiosk(Device, ShtrihProto):
             try:
                 data = await self.impl._read(size)
                 print(data)
-                await logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}') 
+                #await logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}') 
                 return data
             except (DeviceConnectionError, DeviceIOError):
                 await self.reconnect()
