@@ -97,7 +97,6 @@ class PrintBuffer(Printer):
         # status = await loop.run_in_executor(None, PrintingStatusQuery.handle)
         # # clear buffer after success
         # if status:
-        Printer().buffer.clear()  
         # # printing ended unsuccessfully
         # else:
         #     # cut and eject 
@@ -109,7 +108,9 @@ class PrintBuffer(Printer):
     def _print_buffer(cls):
         try:
             print(Printer().buffer)
+            print(len(PrintBuffer().buffer.output))
             Printer()._raw(Printer().buffer.output)
+            Printer().buffer.clear()  
         except Exception as e:
             logger.exception(e)
 

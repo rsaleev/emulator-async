@@ -96,11 +96,8 @@ class PrintBytes(Printer):
             if bits[6]:
                 content_decoded=f'{content_decoded}\n'
             content_encoded = content_decoded.encode(cls.encoding_output)
-            
             Printer().buffer._raw(content_encoded)  #type: ignore
         else:
-            #if config['printer']['continiuos_mode']:
-            #Printer().buffer._raw(b'\x1D\x65\x20') 
             Printer().set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  #type: ignore
                      height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=False, double_height=False, 
                     custom_size=cls.custom_size) 
