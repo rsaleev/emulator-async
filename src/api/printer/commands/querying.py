@@ -34,6 +34,7 @@ class PrinterFullStatusQuery(Printer):
         cover = cls._set_cover_status(status[3])
         rec_err = cls._set_rec_status(status[4]) 
         unrec_err = cls._set_unrec_status(status[5])
+        logger.debug(f'PAPER:{paper}|ROLL:{roll}|COVER:{cover}|RECOVERABLE:{rec_err}|UNRECOVERABLE:{unrec_err}')
         return paper, roll, cover, rec_err, unrec_err
 
 
