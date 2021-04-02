@@ -97,6 +97,7 @@ class PrintBytes(Printer):
                 content_decoded=f'{content_decoded}\n'
             content_encoded = content_decoded.encode(cls.encoding_output)
             Printer().buffer._raw(content_encoded)  #type: ignore
+            print(Printer().buffer.output)
         else:
             Printer().set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  #type: ignore
                      height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=False, double_height=False, 

@@ -106,7 +106,7 @@ class ShtrihProto:
             await logger.debug(f'BODY:{hexlify(response, sep=":")}')
             response.extend(self.crc_calc(response))
             output = self.resp_pack(response)
-            await asyncio.gather(logger.debug(f'RESPONSE:{hexlify(output, sep=":")}'), self.write(output), hdlr.dispatch(data))
+            await asyncio.gather(self.write(output), hdlr.dispatch(data))
         else:
             await asyncio.gather(self.write(ShtrihProto.NAK),logger.error(f"{cmd} not implemented in current build version "))
              

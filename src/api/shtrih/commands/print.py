@@ -56,9 +56,7 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         
     @classmethod
     async def dispatch(cls, payload:bytearray) -> None:
-        print('Print buffer')
         await PrintBuffer.handle()
-        print('Cut')
         await CutPresent.handle()
         
 

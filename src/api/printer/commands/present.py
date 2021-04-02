@@ -21,6 +21,7 @@ class CutPresent(Printer):
     @classmethod
     def _present(cls):
         try:
+            print('cutting')
             if config['printer']['receipt']['eject']:
                 Printer()._raw(cls.cut)  #type: ignore
                 Printer()._raw(cls.eject)  #type: ignore
@@ -31,4 +32,4 @@ class CutPresent(Printer):
                 Printer().hw('INIT') #type: ignore
         except Exception as e:
             logger.exception(e)
-        
+            print(e)
