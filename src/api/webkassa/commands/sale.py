@@ -51,6 +51,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                                             request_data=request,   
                                             response_model=SaleResponse, #type: ignore
                                             callback_error=cls.exc_callback)
+                    print(response)
                     company = CompanyData(name=config['webkassa']['company']['name'],
                                         inn=config['webkassa']['company']['inn'])
                     template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
