@@ -39,11 +39,12 @@ class SerialDevice(DeviceImpl):
             #cancel_write_timeout=int(os.environ.get("SHTRIH_SERIAL_TIMEOUT", "2")), 
             loop=asyncio.get_running_loop())
         cls.connected = True
-int(os.environ.get("SHTRIH_SERIAL_TIMEOUT", "2"))
+
+
     @classmethod
     async def _read(cls, size):
         try:
-            output = cls.device.read_async(size)
+            output = await cls.device.read_async(size)
             return output
         except (SerialException, SerialTimeoutException, IOError) as e:
             raise DeviceIOError(e)
