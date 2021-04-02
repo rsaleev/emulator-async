@@ -1,6 +1,7 @@
 from src.api.webkassa.commands import WebkassaClientToken
 from src.db.models.token import Token
-from datetime import datetime
+from tortoise import timezone
+from src.api.webkassa import logger
 
 class WebkassaClientTokenCheck:
     alias = 'status'
@@ -14,10 +15,17 @@ class WebkassaClientTokenCheck:
         """
         token_in_db = await Token.filter(id=1).get_or_none()
         if token_in_db and token_in_db.token !='':
-            if (token_in_db.ts-datetime.now()).total_seconds()//3600 > 23:
+            if (token_in_db.ts-timezone.now()).total_seconds()//3600 > 23:
                 await WebkassaClientToken.handle()
         else:
-            await WebkassaClientToken.handle()
+            token = await WebkassaClientToken.handle()
+            if token:
+                await Token.filter(id=1).update(
+                                         token=token,
+                                         ts=timezone.now())
+            else:
+                logger.error("Token not updates")
+            
 
             
         

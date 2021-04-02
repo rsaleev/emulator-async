@@ -25,9 +25,6 @@ class WebkassaClientToken(WebcassaClient):
             response_model=TokenGetResponse, #type:ignore
             callback_error=cls.exc_callback)
         if response:
-            await Token.update_or_create(id=1,
-                                         token=response.token,
-                                         ts=timezone.now())
             return response.token
         else:
             return 

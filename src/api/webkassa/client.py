@@ -68,11 +68,11 @@ class WebcassaClient:
                                                        by_alias=True,
                                                        exclude_unset=True)
                                                    )  
-                asyncio.ensure_future(logger.debug(
+                await logger.debug(
                                     json.dumps(
                                         request_data.dict(by_alias=True,
-                                                        exclude_unset=True))))
-                asyncio.ensure_future(logger.info(f'Dispatching to Webkassa: {endpoint}'))
+                                                        exclude_unset=True)))
+                await logger.info(f'Dispatching to Webkassa: {endpoint}')
                 output = WebcassaOutput(**response)
                 task_log_debug_incoming = logger.debug(
                     f'Response from Webkassa:{json.dumps(response)}'
