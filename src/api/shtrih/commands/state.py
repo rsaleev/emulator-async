@@ -55,14 +55,12 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         return struct.pack('<H', arg)
 
     @classmethod
-    def set_flags(cls, paper:int, cover:int, jam:int) -> bytes:
-        flags = struct.pack('<H', int.from_bytes(bitarray([1,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0]).tobytes(), byteorder='little'))
-        if paper == 0:
-            flags = struct.pack('<H', int.from_bytes(bitarray([0,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0]).tobytes(), byteorder='little'))
-        elif cover == 1:
-            flags = struct.pack('<H', int.from_bytes(bitarray([0,0,0,1,0,0,1,0,0,0,0,0,1,1,0,0]).tobytes(), byteorder='little'))
-        elif jam == 1:
-            flags = struct.pack('<H', int.from_bytes(bitarray([0,0,0,1,0,0,1,0,0,0,0,0,0,0,1,0]).tobytes(), byteorder='little'))
+    def set_flags(cls,states:States) -> bytes:
+        flags = struct.pack(
+            '<H',
+            int.from_bytes(bitarray(
+                [states.paper,0, 0, 1, 0, 0, states.roll, 0, states.cover, states.cover, states.jam,0,0,0,1,0]).tobytes(),
+                           byteorder='little'))
         return flags
     
     @classmethod
@@ -81,7 +79,6 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def handle(cls, payload) ->bytearray:
-        await logger.info('FullState')
         await PrinterFullStatusQuery.handle()
         receipt = await Receipt.get_or_none()
         states = await States.get_or_none()
@@ -98,7 +95,7 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._fw_date)
         arr.extend(cls.set_sale_num())
         arr.extend(cls.set_doc_num())
-        arr.extend(cls.set_flags(states.paper, states.cover, states.jam)) #type:ignore
+        arr.extend(cls.set_flags(states)) #type:ignore
         arr.extend(cls.set_mode(mode)) #type:ignore
         arr.extend(cls.set_submode(states.submode)) #type:ignore
         arr.extend(cls._port)

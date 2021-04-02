@@ -96,7 +96,7 @@ class Paykiosk(Device, ShtrihProto):
        while True:
             try:
                 data = await self.impl._read(size)
-                await logger.info(f'INPUT:{hexlify(data), sep=":")}') #type: ignore
+                await logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}') 
                 return data
             except (DeviceConnectionError, DeviceIOError):
                 await self.reconnect()
@@ -106,7 +106,7 @@ class Paykiosk(Device, ShtrihProto):
         while True:
             try:
                 task_write = self.impl._write(data)
-                task_log = logger.info(f'OUTPUT:{hexlify(bytes(data)), sep=":")}') #type: ignore
+                task_log = logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}')
                 await asyncio.gather(task_log, task_write)
                 break
             except (DeviceConnectionError, DeviceIOError):
