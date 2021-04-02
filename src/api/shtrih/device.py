@@ -32,11 +32,11 @@ class SerialDevice(DeviceImpl):
             port = ports[0][0]
         try:
             cls.device = aioserial.AioSerial(port=str(port), 
-                baudrate=int(os.environ.get("PAYKIOSK_SERIAL_BAUDRATE")), 
+                baudrate=int(os.environ.get("PAYKIOSK_BAUDRATE")), 
                 dsrdtr=True, 
                 rtscts=True,
                 exclusive=True,
-                write_timeout=float(os.environ.get("PAYKIOSK_SERIAL_TIMEOUT")),
+                write_timeout=float(os.environ.get("PAYKIOSK_WRITE_TIMEOUT")),
                 loop=asyncio.get_running_loop())
             print(cls.device)
         except Exception as e:
