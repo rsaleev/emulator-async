@@ -21,7 +21,8 @@ class PrinterFullStatusQuery(Printer):
                 await States.filter(id=1).update(submode=0)
             else:
                 await States.filter(id=1).update(submode=1) 
-        except:
+        except Exception as e:
+            logger.exception(e)
             await States.filter(id=1).update(submode=1) 
 
     @classmethod
