@@ -35,7 +35,7 @@ class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
             sum = struct.unpack('<5B', payload[4:9]),
             external_check_number=str(uuid4()))
         try:
-            response = cls.dispatch(endpoint=cls.endpoint, 
+            response = await cls.dispatch(endpoint=cls.endpoint, 
                                     request_data=request, 
                                     response_model=MoneyCollectionResponse, #type: ignore
                                     callback_error=cls.exc_callback)
