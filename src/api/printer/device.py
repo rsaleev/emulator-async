@@ -11,6 +11,7 @@ import usb
 class UsbDevice(DeviceImpl):
 
     device = None
+    connected = False
 
     @classmethod
     def _open(cls):
@@ -45,7 +46,9 @@ class UsbDevice(DeviceImpl):
         except usb.core.USBError as e:
             raise DeviceConnectionError(
                 "Could not set configuration: {0}".format(str(e)))
-        return cls.device
+        else:
+            cls.connected = True 
+
 
     @classmethod
     def _read(cls, size):
@@ -77,7 +80,6 @@ class Printer(PrinterProto, Device):
     def __init__(self):
         super().__init__()
         self.impl = None
-        self.device = None
         self.buffer = Dummy()
         self.discover()
 
@@ -90,9 +92,9 @@ class Printer(PrinterProto, Device):
 
     def connect(self):
         logger.info(f'Connecting to printer device...')
-        while not self.device:
+        while not self.impl.connected:
             try:
-                self.device = self.impl._open()
+                self.impl._open()
             except DeviceConnectionError as e:
                 logger.error(e)
                 time.sleep(3)
@@ -106,7 +108,7 @@ class Printer(PrinterProto, Device):
                 return self.device
 
     def reconnect(self):
-        self.device = None
+        self.impl.connected = False
         self.connect()
 
     def disconnect(self):
@@ -116,7 +118,8 @@ class Printer(PrinterProto, Device):
     def read(self, size: int):
         while True:
             try:
-                return self.impl._read(size)
+                output = self.impl._read(size)
+                return output
             except (DeviceConnectionError, DeviceIOError):
                 self.reconnect()
                 continue

@@ -128,8 +128,6 @@ class ClearBuffer(Printer):
     async def handle(cls, payload=None):
         Printer().buffer.clear()
 
-
-
 class ModeSetter(Printer):
 
     alias ='mode'
