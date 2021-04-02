@@ -94,21 +94,10 @@ class PrintBuffer(Printer):
     async def handle(cls, payload=None):
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, cls._print_buffer)  
-        # status = await loop.run_in_executor(None, PrintingStatusQuery.handle)
-        # # clear buffer after success
-        # if status:
-        # # printing ended unsuccessfully
-        # else:
-        #     # cut and eject 
-        #     await loop.run_in_executor(None, Printer()._raw, cls.cut) #type: ignore
-        #     await loop.run_in_executor(None, Printer()._raw, cls.eject) #type: ignore
-        #     await loop.run_in_executor(None, cls._poll_for_recover)  #type: ignore
-
+     
     @classmethod
     def _print_buffer(cls):
         try:
-            print(Printer().buffer)
-            print(len(PrintBuffer().buffer.output))
             Printer()._raw(Printer().buffer.output)
             Printer().buffer.clear()  
         except Exception as e:
