@@ -21,7 +21,7 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
         return arr
 
     @classmethod
-    async def dispense(cls, payload:bytearray) ->None:
+    async def dispatch(cls, payload:bytearray) ->None:
         count = struct.unpack('<iB',payload[4:9])[0]//10**3
         price = struct.unpack('<iB', payload[9:14])[0]//10**2     
         tax_percent = config['webkassa']['taxgroup'][str(payload[14])]
