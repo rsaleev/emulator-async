@@ -41,12 +41,12 @@ class PrinterFullStatusQuery(Printer):
     @classmethod
     def _set_paper_status(cls, v:int) ->int:
         st = [int(elem) for elem in list(bin(v)[2:].zfill(8))]
-        return ~st[7]
+        return not st[7]
 
     @classmethod
     def _set_roll_status(cls, v:int) ->int:
         st = [int(elem) for elem in list(bin(v)[2:].zfill(8))]
-        return ~st[5]            
+        return not st[5]            
 
     @classmethod
     def _set_cover_status(cls, v:int) ->int:
