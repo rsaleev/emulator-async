@@ -27,5 +27,4 @@ class CutPresent(Printer):
             Printer()._raw(cls.cut)  #type: ignore
             Printer()._raw(cls.present.append(int(config['printer']['receipt']['present_length_mm']/7.3)))  #type: ignore
             Printer().hw('INIT') #type: ignore
-        Printer().buffer.clear()  #type: ignore
         
