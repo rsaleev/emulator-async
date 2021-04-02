@@ -12,6 +12,7 @@ from binascii import hexlify
 
 class SerialDevice(DeviceImpl):
     device = None 
+    connected = False
 
     @classmethod
     async def _open(cls):
@@ -33,6 +34,7 @@ class SerialDevice(DeviceImpl):
             baudrate=int(os.environ.get("SHTRIH_SERIAL_BAUDRATE", "115200")), 
             cancel_write_timeout=int(os.environ.get("SHTRIH_SERIAL_TIMEOUT", "2")), 
             loop=asyncio.get_running_loop())
+        cls.connected = True
 
     @classmethod
     async def _read(cls, size):
@@ -66,7 +68,6 @@ class Paykiosk(Device, ShtrihProto):
         Device.__init__(self)
         ShtrihProto.__init__(self)
         self.impl = None
-        self.device = None
         self.discover()
 
 
@@ -79,10 +80,9 @@ class Paykiosk(Device, ShtrihProto):
 
     async def connect(self):
         await logger.info("Connecting to fiscalreg device...")
-        while not self.device:
+        while not self.impl.connected:
             try:
-                self.device = await self.impl._open()
-                print(self.device.device)
+                await self.impl._open()
             except DeviceConnectionError as e:
                 await logger.error(e)
                 await asyncio.sleep(3)
@@ -92,7 +92,7 @@ class Paykiosk(Device, ShtrihProto):
                 return self.device
 
     async def reconnect(self):
-        self.device = None
+        self.impl.connected = False
         await self.connect()
             
     async def disconnect(self):
