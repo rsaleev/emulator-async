@@ -60,7 +60,7 @@ class ShtrihProto:
             elif payload == ShtrihProto.STX:
                 # read 1 byte for length
                 length = await self.read(1) 
-                await logger.debug(f'LEN:{length}')
+                await logger.debug(f'LEN:{hexlify(length, sep=":")}')
                 # read bytes: total bytes size = length
                 data = await self.read(length[0]) 
                 await logger.debug(f'DATA:{hexlify(data, sep=":")}')
@@ -71,7 +71,7 @@ class ShtrihProto:
                 # # if data presented in payload
                 else:
                     crc = await self.read(1) 
-                    await logger.debug(f'CRC:{crc}')
+                    await logger.debug(f'CRC:{hexlify(crc, sep=":")}')
                     # check crc
                     crc_arr = bytearray()
                     crc_arr.extend(length)
@@ -98,16 +98,15 @@ class ShtrihProto:
         if cmd == bytearray((0xFF,)):
             cmd = payload[0:2]
         data = payload[len(cmd):]
-        await logger.debug(f'CMD:{cmd} DATA:{data}')
+        await logger.debug(f'CMD:{hexlify(cmd, sep=":")} DATA:{hexlify(data, sep=":")}')
         hdlr = next((c for c in COMMANDS if cmd == c._command_code),None)
-        await logger.debug(f'HANDLER:{hdlr.__class__}')
         if hdlr:
             await self.write(ShtrihProto.ACK)
             response = await hdlr.handle(data)
-            await logger.debug(f'BODY:{response}')
+            await logger.debug(f'BODY:{hexlify(response, sep=":")}')
             response.extend(self.crc_calc(response))
             output = self.resp_pack(response)
-            await asyncio.gather(logger.debug(f'RESPONSE:{output}'), self.write(output), hdlr.dispatch(data))
+            await asyncio.gather(logger.debug(f'RESPONSE:{hexlify(output, sep=":")}'), self.write(output), hdlr.dispatch(data))
         else:
             await asyncio.gather(self.write(ShtrihProto.NAK),logger.error(f"{cmd} not implemented in current build version "))
              

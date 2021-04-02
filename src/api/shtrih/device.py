@@ -32,10 +32,10 @@ class SerialDevice(DeviceImpl):
             port = ports[0][0]
         try:
             cls.device = aioserial.AioSerial(port=str(port), 
-                baudrate=int(os.environ.get("PAYKIOSK_BAUDRATE")), 
+                baudrate=int(os.environ.get("PAYKIOSK_BAUDRATE")), #type: ignore
                 dsrdtr=True, 
                 rtscts=True,
-                write_timeout=float(os.environ.get("PAYKIOSK_WRITE_TIMEOUT"))/1000,
+                write_timeout=float(os.environ.get("PAYKIOSK_WRITE_TIMEOUT"))/1000, #type: ignore
                 loop=asyncio.get_running_loop())
         except Exception as e:
             raise e 
@@ -92,7 +92,6 @@ class Paykiosk(Device, ShtrihProto):
         while not self.impl.connected:
             try:
                 await self.impl._open()
-                print(self.impl.connected)
             except DeviceConnectionError as e:
                 await logger.error(e)
                 await asyncio.sleep(3)
