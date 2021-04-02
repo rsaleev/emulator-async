@@ -36,12 +36,12 @@ class SerialDevice(DeviceImpl):
                 dsrdtr=True, 
                 rtscts=True,
                 exclusive=True,
-                write_timeout=float(os.environ.get("PAYKIOSK_WRITE_TIMEOUT")),
+                write_timeout=float(os.environ.get("PAYKIOSK_WRITE_TIMEOUT"))/1000,
                 loop=asyncio.get_running_loop())
-            print(cls.device)
         except Exception as e:
-            print(e)
-        cls.connected = True
+            raise e 
+        else:
+            cls.connected = True
 
 
     @classmethod
@@ -132,10 +132,11 @@ class Paykiosk(Device, ShtrihProto):
                 continue
 
     async def serve(self):
-        if self.in_waiting >0:
-            await self.consume()
-        else:
-            await asyncio.sleep(0.1)
+        while True:
+            if self.in_waiting >0:
+                await self.consume()
+            else:
+                await asyncio.sleep(0.1)
     
         
 

@@ -79,11 +79,10 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def handle(cls, payload) ->bytearray:
-        await PrinterFullStatusQuery.handle()
-        receipt = await Receipt.get_or_none()
-        states = await States.get_or_none()
-        if receipt:
-            mode = config['emulator']['queued_receipt_state']
+        printer_query_task = PrinterFullStatusQuery.handle()
+        db_query_taks= States.get(id=1)
+        states, _ = await asyncio.gather(db_query_taks, printer_query_task)
+        print(states)
         ### response body
         arr = bytearray()
         arr.extend(cls._length)
