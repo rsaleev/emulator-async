@@ -56,6 +56,7 @@ class SerialDevice(DeviceImpl):
         try:
             await cls.device.write_async(data)
         except (SerialException, SerialTimeoutException, IOError) as e:
+            print(e)
             raise DeviceIOError(e)
 
     @classmethod
