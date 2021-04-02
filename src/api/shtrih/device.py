@@ -36,7 +36,6 @@ class SerialDevice(DeviceImpl):
             rtscts=True,
             exclusive=True,
             write_timeout=float(os.environ.get("PAYKIOSK_SERIAL_TIMEOUT")),
-            #cancel_write_timeout=int(os.environ.get("SHTRIH_SERIAL_TIMEOUT", "2")), 
             loop=asyncio.get_running_loop())
         cls.connected = True
 
@@ -74,6 +73,9 @@ class Paykiosk(Device, ShtrihProto):
         self.impl = None
         self.discover()
 
+    @property
+    def in_waiting(self):
+        return self.impl.device.in_waiting
 
     def discover(self):
         if os.environ['PAYKIOSK_TYPE'] == 'SERIAL':
@@ -126,7 +128,7 @@ class Paykiosk(Device, ShtrihProto):
                 continue
 
     async def serve(self):
-        if self.impl.device.in_waiting >0:
+        if self.in_waiting >0:
             await self.consume()
         else:
             await asyncio.sleep(0.1)
