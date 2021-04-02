@@ -86,6 +86,7 @@ class Printer(PrinterProto, Device):
             self.impl = UsbDevice()
         elif os.environ['PRINTER_TYPE'] == 'SERIAL':
             raise NotImplementedError
+        return self.impl
 
     def connect(self):
         logger.info(f'Connecting to printer device...')

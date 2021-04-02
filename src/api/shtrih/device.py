@@ -66,6 +66,8 @@ class Paykiosk(Device, ShtrihProto):
         ShtrihProto.__init__(self)
         self.impl = None
         self.device = None
+        self.discover()
+
 
     def discover(self):
         if os.environ['PAYKIOSK_TYPE'] == 'SERIAL':
