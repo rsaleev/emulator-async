@@ -24,8 +24,6 @@ class ShtrihProto:
     async def read(self, *args, **kwargs):
         raise NotImplementedError
 
-
-   
     def crc_calc(self, payload:bytearray) -> bytearray:
         """crc_calc [summary]
 
@@ -45,31 +43,6 @@ class ShtrihProto:
         output.extend(ShtrihProto.STX)
         output.extend(arr)
         return output
-        
-    # async def write(self, data:bytearray) ->None:
-    #     task_buffer = self.buffer.put(data)
-    #     task_log = logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}')
-    #     await asyncio.gather(task_log, task_buffer)
-    #     while True:
-    #         try:
-    #             await self._write(data)
-    #             break
-    #         except Exception as e:
-    #                 task_log = logger.error(e)
-    #                 tasks_reconnect = self.reconnect()
-    #                 await asyncio.gather(task_log, tasks_reconnect)
-    #                 continue
-
-    # async def read(self, size:int):
-    #     while True:
-    #         try:
-    #             data = await self._read(size)
-    #             return data
-    #         except Exception as e:
-    #             task_log = logger.error(e)
-    #             tasks_reconnect = self.reconnect()
-    #             await asyncio.gather(task_log, tasks_reconnect)
-    #             continue
 
     async def consume(self):
         try:
