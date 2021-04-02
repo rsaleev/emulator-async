@@ -30,13 +30,17 @@ class SerialDevice(DeviceImpl):
             await logger.error(f"Device not found with autodiscover connecting with default params")
         elif len(ports) == 1:
             port = ports[0][0]
-        cls.device = aioserial.AioSerial(port=str(port), 
-            baudrate=int(os.environ.get("PAYKIOSK_SERIAL_BAUDRATE")), 
-            dsrdtr=True, 
-            rtscts=True,
-            exclusive=True,
-            write_timeout=float(os.environ.get("PAYKIOSK_SERIAL_TIMEOUT")),
-            loop=asyncio.get_running_loop())
+        try:
+            cls.device = aioserial.AioSerial(port=str(port), 
+                baudrate=int(os.environ.get("PAYKIOSK_SERIAL_BAUDRATE")), 
+                dsrdtr=True, 
+                rtscts=True,
+                exclusive=True,
+                write_timeout=float(os.environ.get("PAYKIOSK_SERIAL_TIMEOUT")),
+                loop=asyncio.get_running_loop())
+            print(cls.device)
+        except Exception as e:
+            print(e)
         cls.connected = True
 
 
