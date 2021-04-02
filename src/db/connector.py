@@ -1,6 +1,6 @@
 from tortoise import Tortoise
 import os 
-from src.db.models import * 
+from src.db.models import *state,  
 from tortoise import timezone
 from src import logger 
 class DBConnector:
@@ -28,12 +28,24 @@ class DBConnector:
 
         # initialize records
         try:
-            await Shift.create(id=1)
-            await States.create(id=1)
-            await Token.create(id=1)
+            shift = Shift(id=1)
+            await shift.save()
         except Exception as e:
             await logger.error(e)
             pass
+        try:
+            states = States(id=1)
+            await states.save()
+        except Exception as e:
+            await logger.error(e)
+            pass
+        try:
+            token = Token(id=1)
+            await token.create(id=1)
+        except Exception as e:
+            await logger.error(e)
+            pass
+      
         return self
 
     async def disconnect(self):
