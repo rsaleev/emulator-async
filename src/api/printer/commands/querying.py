@@ -97,7 +97,7 @@ class PrintBuffer(Printer):
         # status = await loop.run_in_executor(None, PrintingStatusQuery.handle)
         # # clear buffer after success
         # if status:
-        #     Printer().buffer.clear()  
+        Printer().buffer.clear()  
         # # printing ended unsuccessfully
         # else:
         #     # cut and eject 
