@@ -96,9 +96,7 @@ class PrintBytes(Printer):
             if bits[6]:
                 content_decoded=f'{content_decoded}\n'
             content_encoded = content_decoded.encode(cls.encoding_output)
-            print(content_encoded)
             Printer().buffer._raw(content_encoded) 
-            print(Printer().buffer.output)
         else:
             Printer().set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width, 
                      height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=False, double_height=False, 

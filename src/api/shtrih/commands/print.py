@@ -25,7 +25,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def dispatch(cls, payload:bytearray):
         task_parse = cls._parse_custom_line(payload)
-        task_print = PrintBytes.handle(payload=payload[4:], buffer=True)
+        task_print = PrintBytes.handle(payload=payload[4:], buffer=config['printer']['text']['buffer'])
         await asyncio.gather(task_parse, task_print)
 
     @classmethod
@@ -56,7 +56,8 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         
     @classmethod
     async def dispatch(cls, payload:bytearray) -> None:
-        await PrintBuffer.handle()
+        if config['printer']['text']['buffer']:
+            await PrintBuffer.handle()
         await CutPresent.handle()
         
 
