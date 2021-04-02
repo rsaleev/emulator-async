@@ -14,10 +14,7 @@ class WebkassaClientTokenCheck:
             [object]: returns Pydantic model object created from JSON response
         """
         token_in_db = await Token.filter(id=1).get()
-        if token_in_db and token_in_db.token !='':
-            if (token_in_db.ts-timezone.now()).total_seconds()//3600 > 23:
-                await WebkassaClientToken.handle()
-        else:
+        if token_in_db.token =='' or (token_in_db.ts-timezone.now()).total_seconds()//3600 > 23:
             token = await WebkassaClientToken.handle()
             if token:
                 await Token.filter(id=1).update(
@@ -25,6 +22,8 @@ class WebkassaClientTokenCheck:
                                          ts=timezone.now())
             else:
                 logger.error("Token not updates")
+        
+           
             
 
             
