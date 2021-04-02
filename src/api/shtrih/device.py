@@ -83,6 +83,7 @@ class Paykiosk(Device, ShtrihProto):
         while not self.impl.connected:
             try:
                 await self.impl._open()
+                print(self.impl.connected)
             except DeviceConnectionError as e:
                 await logger.error(e)
                 await asyncio.sleep(3)
