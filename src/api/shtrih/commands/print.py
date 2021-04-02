@@ -24,10 +24,9 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
     
     @classmethod
     async def dispatch(cls, payload:bytearray):
-        task_parse = asyncio.create_task(cls._parse_custom_line(payload))
-        task_print = asyncio.create_task(PrintBytes.handle(payload=payload[4:], buffer=True))
-        tasks = [task_parse, task_print]
-        await asyncio.gather(*tasks)
+        task_parse = cls._parse_custom_line(payload)
+        task_print = PrintBytes.handle(payload=payload[4:], buffer=True)
+        await asyncio.gather(task_parse, task_print)
 
     @classmethod
     async def _parse_custom_line(cls, payload:bytearray):
