@@ -31,7 +31,7 @@ class SerialDevice(DeviceImpl):
             port = ports[0][0]
         cls.device = aioserial.AioSerial(port=str(port), 
             baudrate=int(os.environ.get("SHTRIH_SERIAL_BAUDRATE", "115200")), 
-            write_timeout=int(os.environ.get("SHTRIH_SERIAL_TIMEOUT", "2")), 
+            cancel_write_timeout=int(os.environ.get("SHTRIH_SERIAL_TIMEOUT", "2")), 
             loop=asyncio.get_running_loop())
 
     @classmethod
@@ -100,6 +100,7 @@ class Paykiosk(Device, ShtrihProto):
        while True:
             try:
                 data = await self.impl._read(size)
+                print(data)
                 await logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}') 
                 return data
             except (DeviceConnectionError, DeviceIOError):
@@ -118,7 +119,7 @@ class Paykiosk(Device, ShtrihProto):
                 continue
 
     async def serve(self):
-        if self.impl.device.in_waiting:
+        if self.impl.device.in_waiting >0:
             await self.consume()
         else:
             await asyncio.sleep(0.1)
