@@ -71,17 +71,10 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
     def set_submode(cls, arg:int) -> bytes:
         return bytearray(struct.pack('<B', arg))   
 
-    # @classmethod
-    # async def _poll(cls):
-    #     #
-    #     shift, states, receipt,_ =
-    #     return shift, states, receipt
-
     @classmethod
     async def handle(cls, payload) ->bytearray:
-        printer_query_task = PrinterFullStatusQuery.handle()
-        db_query_taks= States.get(id=1)
-        states, _ = await asyncio.gather(db_query_taks, printer_query_task)
+        await PrinterFullStatusQuery.handle()
+        states = await States.get(id=1)
         mode = states.mode
         if states.gateway == 0:
             mode = 4

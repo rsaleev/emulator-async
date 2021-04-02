@@ -14,10 +14,9 @@ class PrinterFullStatusQuery(Printer):
     async def handle(cls, payload=None): 
         loop = asyncio.get_running_loop()
         try:
-            result = await loop.run_in_executor(None, cls._fetch_full_status)
-            paper, cover, rec_err, unrec_err = result
-            await States.filter(id=1).update(paper=int(paper), cover=int(cover), jam=int(rec_err))
-            if paper and not cover and not rec_err and not unrec_err:
+            paper, roll, cover, rec_err, unrec_err = await loop.run_in_executor(None, cls._fetch_full_status)
+            await States.filter(id=1).update(paper=int(paper), cover=int(cover), roll=int(roll), jam=int(rec_err))
+            if not paper and not roll and not cover and not rec_err and not unrec_err:
                 await States.filter(id=1).update(submode=0)
             else:
                 await States.filter(id=1).update(submode=1) 
@@ -30,44 +29,40 @@ class PrinterFullStatusQuery(Printer):
         Printer().write(cls.command) #type: ignore
         status =Printer().read(6) #type: ignore
         logger.debug(f'STATUS:{status}')
-        paper = cls._set_paper_status(status[2])
+        paper= cls._set_paper_status(status[2])
+        roll = cls._set_roll_status(status[2])
         cover = cls._set_cover_status(status[3])
         rec_err = cls._set_rec_status(status[4]) 
         unrec_err = cls._set_unrec_status(status[5])
-        states = (paper, cover, rec_err, unrec_err)
-        return states
+        return paper, roll, cover, rec_err, unrec_err
+
+
         
     @classmethod
     def _set_paper_status(cls, v:int) ->int:
         st = [int(elem) for elem in list(bin(v)[2:].zfill(8))]
-        if st[7]+st[5] ==1:
-            return False
-        else:
-            return True
+        return st[7]
+
+    @classmethod
+    def _set_roll_status(cls, v:int) ->int:
+        st = [int(elem) for elem in list(bin(v)[2:].zfill(8))]
+        return st[5]            
 
     @classmethod
     def _set_cover_status(cls, v:int) ->int:
         st = [int(elem) for elem in list(bin(v)[2:].zfill(8))] 
-        if (st[7]+st[6])!=0:
-            return True
-        else:
-            return False
+        return st[7]+st[6]
+       
 
     @classmethod
     def _set_rec_status(cls, v:int) ->int:
         st = [int(elem) for elem in list(bin(v)[2:].zfill(8))]  
-        if st[1] !=0:
-            return True
-        else:
-            return False
+        return st[1]
 
     @classmethod
     def _set_unrec_status(cls, v:int) ->int:
         st = [int(elem) for elem in list(bin(v)[2:].zfill(8))]  
-        if min(st) !=0:
-            return True
-        else:
-            return False
+        return min(st)
 
 class PrintingStatusQuery(Printer):
 
