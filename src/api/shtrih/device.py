@@ -31,11 +31,11 @@ class SerialDevice(DeviceImpl):
         elif len(ports) == 1:
             port = ports[0][0]
         cls.device = aioserial.AioSerial(port=str(port), 
-            baudrate=int(os.environ.get("SHTRIH_SERIAL_BAUDRATE")), 
+            baudrate=int(os.environ.get("PAYKIOSK_SERIAL_BAUDRATE")), 
             dsrdtr=True, 
             rtscts=True,
             exclusive=True,
-            write_timeout=float(os.environ.get("SHTRIH_SERIAL_TIMEOUT")),
+            write_timeout=float(os.environ.get("PAYKIOSK_SERIAL_TIMEOUT")),
             #cancel_write_timeout=int(os.environ.get("SHTRIH_SERIAL_TIMEOUT", "2")), 
             loop=asyncio.get_running_loop())
         cls.connected = True
