@@ -11,6 +11,7 @@ from src.api.printer.commands import PrintXML, CutPresent
 from xml.etree.ElementTree import fromstring
 import asyncio
 from tortoise import timezone
+from tortoise.expressions import F
 import aiofiles
 import os
 
@@ -63,7 +64,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                         response=response))
                     task_state_modify = States.filter(id=1).update(gateway=1)
                     task_receipt_delete = Receipt.filter(uid=receipt.uid).delete()
-                    task_shift_modify = Shift.filter(id=1).update(total_docs=Shift.total_docs+1)
+                    task_shift_modify = Shift.filter(id=1).update(total_docs=F('total_docs')+1)
                     task_print = PrintXML.handle(rendered)
                     await asyncio.gather(task_state_modify, task_receipt_delete, task_shift_modify, task_print)
                     await CutPresent.handle()
