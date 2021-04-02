@@ -82,7 +82,9 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         printer_query_task = PrinterFullStatusQuery.handle()
         db_query_taks= States.get(id=1)
         states, _ = await asyncio.gather(db_query_taks, printer_query_task)
-        print(states)
+        mode = states.mode
+        if states.gateway == 0:
+            mode = 4
         ### response body
         arr = bytearray()
         arr.extend(cls._length)
