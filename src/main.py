@@ -1,9 +1,11 @@
 import asyncio
+from src.api.printer.commands.querying import PrintBuffer
+from src.api.printer.commands.printing import PrintBytes
 from src.db.connector import DBConnector
 from src.api.printer.device import Printer
 from src.api.shtrih.device import Paykiosk
 from src.api.watchdog import Watchdog
-from src.api.printer.commands import PrinterFullStatusQuery
+from src.api.printer.commands import PrinterFullStatusQuery, PrintGraphicLines, CutPresent
 from src.api.webkassa.commands import WebkassaClientTokenCheck
 from src import logger
 import signal
@@ -54,6 +56,7 @@ class Application:
             task_db_connect = cls.db.connect()
             task_fiscalreg_connect = cls.fiscalreg.connect()
             task_printer_connect = loop.run_in_executor(None, cls.printer.connect)
+            await task_printer_connect
             await asyncio.gather(task_db_connect, task_fiscalreg_connect, task_printer_connect)
             task_printer_check = PrinterFullStatusQuery.handle()
             task_webkassa_check = WebkassaClientTokenCheck.handle()
@@ -69,13 +72,12 @@ class Application:
         await logger.info('Serving...')
         while True:
             try:
-                await asyncio.ensure_future(cls.fiscalreg.serve())
+                await asyncio.ensure_future(cls.fiscalreg.poll())
                 await asyncio.ensure_future(cls.watchdog.poll())
             except Exception as e:
                 await logger.exception(e)
+                continue
 
-        
-            
 if __name__ == '__main__':
     loop = asyncio.new_event_loop()
     app = Application()

@@ -13,6 +13,7 @@ class UsbDevice(DeviceImpl):
     device = None
     connected = False
 
+
     @classmethod
     def _open(cls):
         cls.device = usb.core.find(
@@ -47,7 +48,8 @@ class UsbDevice(DeviceImpl):
             raise DeviceConnectionError(
                 "Could not set configuration: {0}".format(str(e)))
         else:
-            cls.connected = True 
+            cls.connected = True
+
 
 
     @classmethod
@@ -77,48 +79,54 @@ class UsbDevice(DeviceImpl):
 
 
 class Printer(PrinterProto, Device):
+    
+    buffer = Dummy()
+
     def __init__(self):
-        super().__init__()
-        self.impl = None
-        self.buffer = Dummy()
+        PrinterProto.__init__(self)
+        self._impl = None
         self.discover()
 
     def discover(self):
         if os.environ['PRINTER_TYPE'] == 'USB':
-            self.impl = UsbDevice()
+            self._impl = UsbDevice()
         elif os.environ['PRINTER_TYPE'] == 'SERIAL':
             raise NotImplementedError
-        return self.impl
+        return self._impl
 
     def connect(self):
         logger.info(f'Connecting to printer device...')
-        while not self.impl.connected:
-            try:
-                self.impl._open()
-            except DeviceConnectionError as e:
-                logger.error(e)
-                time.sleep(3)
-                continue
-            else:
-                logger.info('Connection to printer established')
-                self.profile.profile_data['media']['width']['pixels'] = int(
-                    os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
-                if config['printer']['continuous_mode']:
-                    self._raw(bytearray((0x1D, 0x65, 0x14)))
-                return self.device
+        if self._impl:
+            while not self._impl.connected:
+                try:
+                    self._impl._open()
+                except DeviceConnectionError as e:
+                    logger.error(e)
+                    time.sleep(3)
+                    continue
+                else:
+                    logger.info('Connection to printer established')
+                    self.profile.profile_data['media']['width']['pixels'] = int(
+                        os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
+                    if config['printer']['continuous_mode']:
+                        self._raw(bytearray((0x1D, 0x65, 0x14)))
+                    return self.device
+        else:
+            logger.error('Implementation not found')
 
     def reconnect(self):
-        self.impl.connected = False
-        self.connect()
+        if self._impl:
+            self._impl.connected = False
+            self.connect()
 
     def disconnect(self):
         self.hw('INIT')
-        self.impl._close()
+        self._impl._close()
 
     def read(self, size: int):
         while True:
             try:
-                output = self.impl._read(size)
+                output = self._impl._read(size)
                 return output
             except (DeviceConnectionError, DeviceIOError):
                 self.reconnect()
@@ -127,7 +135,7 @@ class Printer(PrinterProto, Device):
     def _raw(self, msg):
         while True:
             try:
-                self.impl._write(msg)
+                self._impl._write(msg)
                 break
             except (DeviceConnectionError, DeviceIOError):
                 self.reconnect()
@@ -136,7 +144,7 @@ class Printer(PrinterProto, Device):
     def write(self, data):
         while True:
             try:
-                self.impl._write(data)
+                self._impl._write(data)
                 break
             except (DeviceConnectionError, DeviceIOError):
                 self.reconnect()

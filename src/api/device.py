@@ -28,19 +28,19 @@ class Device(ABC):
 class DeviceImpl(ABC):
 
     @abstractclassmethod
-    async def _open(cls, *args:Any, **kwargs):
+    def _open(cls, *args:Any, **kwargs):
         pass
 
     @abstractclassmethod
-    async def _close(cls, *args:Any, **kwargs):
+    def _close(cls, *args:Any, **kwargs):
         pass
 
     @abstractclassmethod
-    async def _read(cls, *args:Any, **kwargs):
+    def _read(cls, *args:Any, **kwargs):
         pass
 
     @abstractclassmethod
-    async def _write(cls,*args:Any, **kwargs):
+    def _write(cls,*args:Any, **kwargs):
         pass
 
 class DeviceConnectionError(Exception):

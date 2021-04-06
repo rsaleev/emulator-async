@@ -19,14 +19,15 @@ class ShtrihCommandInterface(ABC):
     @abstractclassmethod
     async def handle():
         """
-        Method for preparing response on comman:
+        Method for preparing response on command:
         """
         pass
-
 
     @abstractclassmethod
-    async def dispatch():
-        """
-        Method for processing data to external systems: API, DB, etc.
-        """
+    async def _process():
         pass
+
+    @abstractclassmethod
+    async def _dispatch():
+        pass
+

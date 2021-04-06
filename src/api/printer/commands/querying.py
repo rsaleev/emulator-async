@@ -93,16 +93,15 @@ class PrintBuffer(Printer):
     @classmethod
     async def handle(cls, payload=None):
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, cls._print_buffer)  
+        await States.filter(id=1).update(submode=2)
+        await loop.run_in_executor(None, cls._print_buffer) 
+        await States.filter(id=1).update(submode=3)
      
     @classmethod
     def _print_buffer(cls):
-        try:
-            Printer()._raw(Printer().buffer.output)
-            Printer().buffer.clear()  
-        except Exception as e:
-            logger.exception(e)
-
+        Printer()._raw(cls.buffer.output)
+        Printer().buffer.clear()  
+     
 
 
     @classmethod
@@ -111,7 +110,7 @@ class PrintBuffer(Printer):
             time.sleep(0.2)
             status = PrintingStatusQuery.handle()
             if status:
-                Printer()._raw(Printer().buffer.output) 
+                Printer()._raw(cls.buffer.output) 
                 break
             else:
                 time.sleep(0.2)

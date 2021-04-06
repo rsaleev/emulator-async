@@ -2,12 +2,9 @@ from src.api.printer.device import Printer
 from xml.etree.ElementTree import Element
 from src import config
 import asyncio
+from src.db.models import States
 
 class PrintXML(Printer):
-    """PrintXML consoledates methods for printing XML document
-
-    """
-
     alias = 'xml'
     CP866 = bytearray((0x17))
     CP1251 = bytearray((0x46))
@@ -21,6 +18,7 @@ class PrintXML(Printer):
     custom_size = config['printer']['doc']['custom_size']
     double_width = config['printer']['doc']['double_width']
     double_heigth = config['printer']['doc']['double_height']
+    buffer = config['printer']['doc']['buffer']
 
     @classmethod
     async def handle(cls, payload:Element):
@@ -36,8 +34,9 @@ class PrintXML(Printer):
             buffer (bool, optional): perform printing in buffer or bypass. Defaults to True.
         """
         loop = asyncio.get_running_loop()
-        buffer = config['printer']['doc']['buffer']
-        await loop.run_in_executor(None, cls._print_doc, payload, buffer)
+        task_submode_change = States.filter(id=1).update(submode=5)
+        task_print_buffer = loop.run_in_executor(None, cls._print_doc, payload, cls.buffer)
+        await asyncio.gather(task_submode_change, task_print_buffer)
 
 
     @classmethod
@@ -49,9 +48,7 @@ class PrintXML(Printer):
             payload (Element): XML object
             buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
-        for elem in payload:
-            cls._print_element(elem, buffer)
-
+        [cls._print_element(elem, buffer) for elem in payload]
 
     @classmethod
     def _print_element(cls, content:Element, buffer:bool):

@@ -3,7 +3,6 @@ import struct
 from src.api.shtrih.command import ShtrihCommand
 from src.api.webkassa.commands import WebkassaClientCollection
 
-
 class Withdraw(ShtrihCommand):
    
     _length = bytearray((0x05,))

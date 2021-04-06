@@ -1,37 +1,42 @@
-from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 import re
+import asyncio
 from uuid import uuid4
 from src import config
 from src.api.printer.commands import PrintBytes, CutPresent, PrintBuffer
 from src.api.shtrih import logger
+from src.api.shtrih.device import Paykiosk
+from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.db.models.receipt import Receipt
-import asyncio
 
 
-class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
+class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface, Paykiosk):
 
     _length = bytearray((0x03,))
     _command_code = bytearray((0x17,))
             
     @classmethod
     async def handle(cls, payload:bytearray):
-        task_parse = cls._parse_custom_line(payload)
-        task_print = PrintBytes.handle(payload=payload[4:], buffer=config['printer']['text']['buffer'])
-        await asyncio.gather(task_parse, task_print)
+        task_write = cls._process(payload)
+        task_execute = cls._dispatch(payload)
+        task_optional = cls._parse_custom_line(payload)
+        if config['webkassa']['receipt']['parse']:
+            await asyncio.gather(task_write, task_execute, task_optional)
+        else:
+            await asyncio.gather(task_write, task_execute)
+
+    @classmethod
+    async def _process(cls, payload):
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        return arr
-    
-    @classmethod
-    async def dispatch(cls, payload:bytearray):
-        # task_parse = cls._parse_custom_line(payload)
-        # task_print = PrintBytes.handle(payload=payload[4:], buffer=config['printer']['text']['buffer'])
-        # await asyncio.gather(task_parse, task_print)
-        pass
+        await Paykiosk()._transmit(arr)
 
+    @classmethod
+    async def _dispatch(cls, payload:bytearray):
+        await PrintBytes.handle(payload=payload[4:])
+        
     @classmethod
     async def _parse_custom_line(cls, payload:bytearray):
         try:
@@ -51,17 +56,22 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
    
     @classmethod
     async def handle(cls, payload:bytearray):
+        task_write = cls._process(payload)
+        task_execute = cls._dispatch(payload)
+        await asyncio.gather(task_write, task_execute)
+
+    @classmethod
+    async def _process(cls, payload:bytearray):
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        return arr 
+        await Paykiosk()._transmit(arr)
         
     @classmethod
-    async def dispatch(cls, payload:bytearray) -> None:
+    async def _dispatch(cls, payload:bytearray) -> None:
         if config['printer']['text']['buffer']:
-            
             await PrintBuffer.handle()
         await CutPresent.handle()
         

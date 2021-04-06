@@ -49,11 +49,9 @@ class PrintText(Printer):
 class PrintBytes(Printer):
 
     alias = 'bytes'
-
     codepage_command = bytearray((0x1B,0x74))
     CP866 = bytearray((0x17))
     CP1251 = bytearray((0x46))
-    
     encoding_input = config['printer']['text']['input']
     encoding_output = config['printer']['text']['output']
     align = 'left'
@@ -63,21 +61,12 @@ class PrintBytes(Printer):
     custom_size = config['printer']['text']['custom_size']
     double_width = config['printer']['text']['double_width']
     double_heigth = config['printer']['text']['double_height']
-
-
+    buffer = config['printer']['text']['buffer']
 
     @classmethod
-    async def handle(cls, payload:bytearray, buffer=True) ->None:
-      
-        """
-        Method for printing bytes with method _raw()
-
-        Args:
-            content (bytearray): array of bytes for output. 
-            buffer (bool, optional): [description]. Defaults to True.
-        """
+    async def handle(cls, payload:bytearray) -> None:
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, cls._print_bytes, payload, buffer)
+        await loop.run_in_executor(None, cls._print_bytes, payload, cls.buffer)
 
 
     @classmethod
@@ -103,7 +92,7 @@ class PrintBytes(Printer):
                     custom_size=cls.custom_size) 
             if config['printer']['text']['send_encoding']:
                     if cls.encoding_output == 'cp1251':
-                       Printer().buffer._raw(cls.codepage_command.extend(cls.CP1251)) 
+                       Printer()._raw(cls.codepage_command.extend(cls.CP1251)) 
                     elif cls.encoding_output == 'cp866':
                        Printer().buffer._raw(cls.codepage_command.extend(cls.CP866))
             content_decoded = payload[1:].decode(cls.encoding_input)

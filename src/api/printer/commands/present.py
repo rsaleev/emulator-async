@@ -17,19 +17,18 @@ class CutPresent(Printer):
     async def handle(cls, payload=None):
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, cls._present)
-
+        await States.filter(id=1).update(submode=0)
+        
     @classmethod
     def _present(cls):
         try:
-            print('cutting')
             if config['printer']['receipt']['eject']:
-                Printer()._raw(cls.cut)  #type: ignore
-                Printer()._raw(cls.eject)  #type: ignore
-                Printer().hw('INIT') #type: ignore
+               Printer()._raw(cls.cut)  #type: ignore
+               Printer()._raw(cls.eject)  #type: ignore
+               Printer().hw('INIT') #type: ignore
             else:        
-                Printer()._raw(cls.cut)  #type: ignore
-                Printer()._raw(cls.present.append(int(config['printer']['receipt']['present_length_mm']/7.3)))  #type: ignore
-                Printer().hw('INIT') #type: ignore
+               Printer()._raw(cls.cut)  #type: ignore
+               Printer()._raw(cls.present.append(int(config['printer']['receipt']['present_length_mm']/7.3)))  #type: ignore
+               Printer().hw('INIT') #type: ignore
         except Exception as e:
             logger.exception(e)
-            print(e)

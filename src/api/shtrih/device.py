@@ -128,12 +128,13 @@ class Paykiosk(Device, ShtrihProto):
                 await self.reconnect()
                 continue
 
-    async def serve(self):
+    async def poll(self):
         while True:
             if self.in_waiting >0:
                 await self.consume()
             else:
                 await asyncio.sleep(0.1)
     
+          
         
 

@@ -1,17 +1,13 @@
 
-from src.db.models.receipt import Receipt
+import asyncio
 import struct
 from datetime import datetime
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.api.printer.commands import PrinterFullStatusQuery
 from src.api.webkassa.commands import WebkassaClientTokenCheck
-from src.db.models import States, Shift
-import asyncio
-from src import config
-from bitarray import bitarray #type:ignore
-from src.api.shtrih import logger
-from src import logger
-
+from src.db.models import States
+from src.api.shtrih.device import Paykiosk
+from bitarray import bitarray #type: ignore
 class FullState(ShtrihCommand, ShtrihCommandInterface):
 
     _length = bytearray((0x30,))# B[1] LEN - 1 byte
@@ -72,8 +68,14 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         return bytearray(struct.pack('<B', arg))   
 
     @classmethod
-    async def handle(cls, payload) ->bytearray:
-        await PrinterFullStatusQuery.handle()
+    async def handle(cls, payload):
+        await cls._process()
+
+    @classmethod
+    async def _process(cls):
+        task_printer_check = PrinterFullStatusQuery.handle()
+        task_token_check = WebkassaClientTokenCheck.handle()
+        await asyncio.gather(task_printer_check, task_token_check)
         states = await States.get(id=1)
         mode = states.mode
         if states.gateway == 0:
@@ -105,9 +107,9 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._reregistrations)
         arr.extend(cls._left_reregistrations)
         arr.extend(cls._inn)
-        return arr
+        await Paykiosk()._transmit(arr)
 
     @classmethod
-    async def dispatch(cls, payload):
+    async def _dispatch(cls):
         pass
 
