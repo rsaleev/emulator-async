@@ -1,5 +1,6 @@
 
 import struct
+import asyncio
 from src.api.shtrih.command import ShtrihCommand
 from src.api.webkassa.commands import WebkassaClientCollection
 
@@ -11,16 +12,21 @@ class Withdraw(ShtrihCommand):
         
     @classmethod
     async def handle(cls, payload:bytearray):
+        return asyncio.create_task(asyncio.gather(cls._process(payload), cls._dispatch()))
+
+    @classmethod
+    async def _process(cls, payload:bytearray) -> bytearray:
+        await WebkassaClientCollection.handle(payload, 0)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._doc_number)
-        return bytes(arr)
+        return arr
 
     @classmethod
-    async def dispatch(cls, payload:bytearray):
-        await WebkassaClientCollection.handle(payload, 0)
+    async def _dispatch(cls)->None:
+        pass
 
 class Deposit(ShtrihCommand):
 
@@ -30,16 +36,21 @@ class Deposit(ShtrihCommand):
         
     @classmethod
     async def handle(cls, payload:bytearray):
+        return asyncio.create_task(asyncio.gather(cls._process(payload), cls._dispatch()))
+
+    @classmethod
+    async def _process(cls, payload):
+        await WebkassaClientCollection.handle(payload, 1)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._doc_number)
-        return bytes(arr)
+        return arr
 
     @classmethod
-    async def dispatch(cls, payload:bytearray):
-        await WebkassaClientCollection.handle(payload, 1)
+    async def _dispatch(cls):
+        pass
         
 
 
