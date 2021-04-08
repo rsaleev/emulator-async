@@ -21,23 +21,18 @@ class Application:
     watchdog = Watchdog()
 
     @classmethod
-    async def _signal_cleanup(cls):
-        await logger.warning('Shutting dow application')
+    async def _signal_handler(cls, signal, loop):
+        await logger.warning('Shutting down application')
         closing_tasks = []
         closing_tasks.append(cls.printer.disconnect())
         closing_tasks.append(cls.fiscalreg.disconnect())
         closing_tasks.append(cls.db.disconnect())
         await asyncio.gather(*closing_tasks, return_exceptions=True)
         await logger.shutdown()
-
-    @classmethod
-    async def _signal_handler(cls, signal, loop):
-
         tasks = [task for task in asyncio.all_tasks(loop) if task is not
                     asyncio.tasks.current_task()]
         for t in tasks:
             t.cancel()
-        asyncio.ensure_future(cls._signal_cleanup())
         # perform eventloop shutdown
         try:
             loop.stop()
