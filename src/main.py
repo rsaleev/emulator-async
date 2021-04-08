@@ -27,7 +27,9 @@ class Application:
         closing_tasks.append(cls.printer.disconnect())
         closing_tasks.append(cls.fiscalreg.disconnect())
         closing_tasks.append(cls.db.disconnect())
-        await asyncio.gather(*closing_tasks, return_exceptions=True)
+        await asyncio.gather(*closing_tasks, return_exceptions=True)        
+        await logger.warning('Finalizing...')
+
         await logger.shutdown()
         tasks = [task for task in asyncio.all_tasks(loop) if task is not
                     asyncio.tasks.current_task()]
