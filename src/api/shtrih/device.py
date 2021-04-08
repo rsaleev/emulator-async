@@ -31,11 +31,12 @@ class SerialDevice(DeviceImpl):
         elif len(ports) == 1:
             port = ports[0][0]
         try:
-            cls.device = aioserial.AioSerial(port=str(port), 
+            cls.device = aioserial.AioSerial(
+                port=str(port), 
                 baudrate=int(os.environ.get("PAYKIOSK_BAUDRATE")), #type: ignore
-                dsrdtr=bool(os.environ.get("PAYKIOSK_FLOW_CONTROL")), 
-                rtscts=bool(os.environ.get("PAYKIOSK_FLOW_CONTROL")),
-                write_timeout=float(os.environ.get("PAYKIOSK_WRITE_TIMEOUT"))/1000, #type: ignore
+                dsrdtr=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))), 
+                rtscts=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))),
+                write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000), #type: ignore
                 loop=asyncio.get_running_loop())
         except Exception as e:
             raise e 
@@ -130,10 +131,13 @@ class Paykiosk(Device, ShtrihProto):
 
     async def poll(self):
         while True:
-            if self.in_waiting >0:
-                await self.consume()
-            else:
-                await asyncio.sleep(0.1)
+            try:
+                if self.in_waiting >0:
+                    await self.consume()
+                else:
+                    await asyncio.sleep(0.1)
+            except (OSError, DeviceConnectionError, DeviceIOError):
+                await self.reconnect()
     
           
         
