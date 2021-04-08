@@ -6,7 +6,6 @@ from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.api.printer.commands import PrinterFullStatusQuery
 from src.api.webkassa.commands import WebkassaClientTokenCheck
 from src.db.models import States
-from src.api.shtrih.device import Paykiosk
 from bitarray import bitarray #type: ignore
 class FullState(ShtrihCommand, ShtrihCommandInterface):
 

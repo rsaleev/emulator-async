@@ -2,9 +2,8 @@
 import struct
 import asyncio
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
-from src.api.shtrih.device import Paykiosk
 
-class SerialNumber(ShtrihCommand, ShtrihCommandInterface, Paykiosk):
+class SerialNumber(ShtrihCommand, ShtrihCommandInterface):
    
     _length = bytearray((0x17,))# B[1] LEN - 1 byte
     _command_code = bytearray((0xFF,0x02,)) #B[2] - 2 byte

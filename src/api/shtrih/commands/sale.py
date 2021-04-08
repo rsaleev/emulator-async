@@ -7,18 +7,15 @@ from src.db.models.receipt import Receipt
 from src.db.models.state import States
 from src.api.printer.commands import ClearBuffer
 from src.api.webkassa.commands import WebkassaClientSale
-from src.api.shtrih.device import Paykiosk
 from src.api.shtrih import logger
 
-class OpenSale(ShtrihCommand, ShtrihCommandInterface, Paykiosk):
+class OpenSale(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x03,))
     _command_code = bytearray((0x80,))
 
     @classmethod
     async def handle(cls, payload:bytearray):
-        task_write = cls._process()
-        task_execute = cls._dispatch(payload)
-        await asyncio.gather(task_write, task_execute)
+        return asyncio.create_task(asyncio.gather(cls._process(), cls._dispatch(payload)))
 
     @classmethod
     async def _process(cls):
@@ -27,7 +24,7 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface, Paykiosk):
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        await Paykiosk()._transmit(arr)
+        return arr 
 
     @classmethod
     async def _dispatch(cls, payload:bytearray) ->None:
@@ -50,8 +47,8 @@ class OpenReceipt(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x8D,))
 
     @classmethod
-    async def handle(cls)->None:
-        await cls._process()
+    async def handle(cls)->asyncio.Task:
+        return asyncio.create_task(asyncio.gather(cls._process(), cls._dispatch()))
 
     @classmethod
     async def _process(cls):
@@ -60,7 +57,7 @@ class OpenReceipt(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        await Paykiosk()._transmit(arr)
+        return arr 
 
     @classmethod
     async def _dispatch(cls) ->None:
@@ -71,10 +68,9 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x88,))
 
     @classmethod
-    async def handle(cls, payload:bytearray)->None:
-        task_write = cls._process()
-        task_execute = cls._dispatch()
-        await asyncio.gather(task_write, task_execute)
+    async def handle(cls, payload:bytearray)->asyncio.Task:
+        return asyncio.create_task(asyncio.gather(cls._process(), cls._dispatch()))
+
 
     @classmethod
     async def _process(cls):
@@ -86,7 +82,8 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        await Paykiosk()._transmit(arr)
+        return arr 
+
 
     @classmethod
     async def _dispatch(cls) ->None:

@@ -6,9 +6,8 @@ from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.api.webkassa.commands import WebkassaClientCloseShift
 from src.db.models import States, Shift
 
-from src.api.shtrih.device import Paykiosk
 
-class OpenShift(ShtrihCommand, ShtrihCommandInterface,Paykiosk):
+class OpenShift(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x01,))
     _command_code = bytearray((0xE0,))
     
@@ -31,7 +30,7 @@ class OpenShift(ShtrihCommand, ShtrihCommandInterface,Paykiosk):
     async def _dispatch(cls, payload:bytearray):
         pass
 
-class CloseShift(ShtrihCommand, ShtrihCommandInterface, Paykiosk):
+class CloseShift(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x05,))
     _command_code = bytearray((0xFF,0x43))
 

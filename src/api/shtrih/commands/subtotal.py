@@ -1,9 +1,8 @@
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 import struct
 from src.db.models import Receipt
-from src.api.shtrih.device import Paykiosk
 import asyncio
-class SubTotal(ShtrihCommand, ShtrihCommandInterface, Paykiosk):
+class SubTotal(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x03,))
     _command_code = bytearray((0x89,))
 
