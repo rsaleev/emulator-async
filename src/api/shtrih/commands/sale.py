@@ -9,6 +9,7 @@ from src.api.printer.commands import ClearBuffer
 from src.api.webkassa.commands import WebkassaClientSale
 from src.api.shtrih.device import Paykiosk
 from src.api.shtrih import logger
+
 class OpenSale(ShtrihCommand, ShtrihCommandInterface, Paykiosk):
     _length = bytearray((0x03,))
     _command_code = bytearray((0x80,))
@@ -97,8 +98,8 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x85,)) #B[2] - 1 byte
 
     @classmethod
-    async def handle(cls, payload:bytearray) -> None:
-        await cls._process(payload)
+    async def handle(cls, payload:bytearray) -> asyncio.Task:
+        return asyncio.create_task(asyncio.gather(cls._process(payload), cls._dispatch()))
 
     @classmethod
     async def _process(cls, payload:bytearray):
@@ -125,8 +126,6 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
                     cls.set_error(0x03)
                 else:
                     cls.set_error(0x00)
-            else:
-                asyncio.ensure_future(WebkassaClientSale.handle())
         else:
             asyncio.ensure_future(logger.error('No payment data'))
             cls.set_error(0x03)
@@ -136,11 +135,12 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._error_code)
         arr.extend(cls._password)
         arr.extend(change)
-        await Paykiosk()._transmit(arr)
-
+        return arr 
+        
     @classmethod
     async def _dispatch(cls):
-        pass
+        if not config['emulator']['post_sale']:
+            await asyncio.create_task(WebkassaClientSale.handle())
         
 
 

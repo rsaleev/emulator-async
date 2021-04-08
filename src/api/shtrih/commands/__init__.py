@@ -1,11 +1,11 @@
-from .print import PrintDefaultLine, Cut
-from .report import ZReport, XReport
-from .shift import OpenShift, CloseShift
-from .sale import OpenReceipt, OpenSale, SimpleCloseSale
-from .subtotal import SubTotal
-from .state import FullState
-from .table import SerialNumber
-from .collection import Deposit, Withdraw
+from src.api.shtrih.commands.print import PrintDefaultLine, Cut
+from src.api.shtrih.commands.report import ZReport, XReport
+from src.api.shtrih.commands.shift import OpenShift, CloseShift
+from src.api.shtrih.commands.sale import OpenReceipt, OpenSale, SimpleCloseSale
+from src.api.shtrih.commands.subtotal import SubTotal
+from src.api.shtrih.commands.state import FullState
+from src.api.shtrih.commands.table import SerialNumber
+from src.api.shtrih.commands.collection import Deposit, Withdraw
 
 
 

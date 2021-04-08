@@ -1,6 +1,6 @@
 from abc import ABC, abstractclassmethod
 import struct
-
+from typing import Callable
 class ShtrihCommand:
     _password = bytearray((0x30,))
     _error_code = bytearray((0x00,))
@@ -17,17 +17,26 @@ class ShtrihCommand:
 class ShtrihCommandInterface(ABC):
     
     @abstractclassmethod
-    async def handle():
+    def handle():
+        """handle 
+
+        returns array of asyncio.Tasks
         """
-        Method for preparing response on command:
+    
+        pass
+
+    @abstractclassmethod
+    def _process():
+        """_process 
+
+        returns result of processing
         """
         pass
 
     @abstractclassmethod
-    async def _process():
-        pass
+    def _dispatch():
+        """_dispatch 
 
-    @abstractclassmethod
-    async def _dispatch():
+        returns execution logic
+        """
         pass
-

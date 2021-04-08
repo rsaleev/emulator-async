@@ -68,11 +68,11 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         return bytearray(struct.pack('<B', arg))   
 
     @classmethod
-    async def handle(cls, payload):
-        await cls._process()
+    async def handle(cls, payload) -> asyncio.Task:
+        return asyncio.create_task(asyncio.gather(cls._process(), cls._dispatch()))
 
     @classmethod
-    async def _process(cls):
+    async def _process(cls) -> bytearray:
         task_printer_check = PrinterFullStatusQuery.handle()
         task_token_check = WebkassaClientTokenCheck.handle()
         await asyncio.gather(task_printer_check, task_token_check)
@@ -80,6 +80,7 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         mode = states.mode
         if states.gateway == 0:
             mode = 4
+            cls.set_error(0x11)
         ### response body
         arr = bytearray()
         arr.extend(cls._length)
@@ -107,9 +108,9 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._reregistrations)
         arr.extend(cls._left_reregistrations)
         arr.extend(cls._inn)
-        await Paykiosk()._transmit(arr)
+        return arr
 
     @classmethod
-    async def _dispatch(cls):
+    async def _dispatch(cls) -> None:
         pass
 

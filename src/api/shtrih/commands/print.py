@@ -2,43 +2,37 @@ import re
 import asyncio
 from uuid import uuid4
 from src import config
+from typing import List
 from src.api.printer.commands import PrintBytes, CutPresent, PrintBuffer
 from src.api.shtrih import logger
-from src.api.shtrih.device import Paykiosk
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.db.models.receipt import Receipt
 
 
-class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface, Paykiosk):
+class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
 
     _length = bytearray((0x03,))
     _command_code = bytearray((0x17,))
             
     @classmethod
-    async def handle(cls, payload:bytearray):
-        task_write = cls._process(payload)
-        task_execute = cls._dispatch(payload)
-        task_optional = cls._parse_custom_line(payload)
-        if config['webkassa']['receipt']['parse']:
-            await asyncio.gather(task_write, task_execute, task_optional)
-        else:
-            await asyncio.gather(task_write, task_execute)
+    async def handle(cls, payload:bytearray) -> asyncio.Task:
+        return asyncio.create_task(asyncio.gather(cls._process(payload), cls._dispatch(payload)))
 
     @classmethod
-    async def _process(cls, payload):
+    async def _process(cls, payload) -> bytearray:
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        await Paykiosk()._transmit(arr)
+        return arr
 
     @classmethod
-    async def _dispatch(cls, payload:bytearray):
-        await PrintBytes.handle(payload=payload[4:])
+    async def _dispatch(cls, payload:bytearray) -> None:
+        await asyncio.gather(PrintBytes.handle(payload=payload[4:]), cls.__parse_custom_line(payload))
         
     @classmethod
-    async def _parse_custom_line(cls, payload:bytearray):
+    async def __parse_custom_line(cls, payload:bytearray) -> None:
         try:
             line_to_print = bytes(payload[5:]).decode('cp1251')
             regex = config['webkassa']['receipt']['regex']
@@ -55,25 +49,25 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x25,))
    
     @classmethod
-    async def handle(cls, payload:bytearray):
-        task_write = cls._process(payload)
-        task_execute = cls._dispatch(payload)
-        await asyncio.gather(task_write, task_execute)
+    async def handle(cls, payload:bytearray) -> asyncio.Task:
+        return asyncio.create_task(asyncio.gather(cls._process(payload), *cls._dispatch(payload)))
 
     @classmethod
-    async def _process(cls, payload:bytearray):
+    async def _process(cls, payload:bytearray) -> bytearray:
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        await Paykiosk()._transmit(arr)
+        return arr
         
     @classmethod
-    async def _dispatch(cls, payload:bytearray) -> None:
+    async def _dispatch(cls, payload:bytearray) -> List[asyncio.Task]:
+        tasks = []
         if config['printer']['text']['buffer']:
-            await PrintBuffer.handle()
-        await CutPresent.handle()
+            tasks.append(asyncio.create_task(PrintBuffer.handle()))
+        tasks.append(asyncio.create_task(CutPresent.handle()))
+        return tasks
         
 
     

@@ -1,4 +1,4 @@
-from logging import exception
+from asyncio.unix_events import AbstractChildWatcher
 import operator
 from functools import reduce
 import asyncio
@@ -6,7 +6,6 @@ from binascii import hexlify
 from src.api.shtrih.commands import COMMANDS
 from src.api.shtrih import logger 
 class ShtrihProto:
-
 
     ENQ = bytearray((0x05,))
     STX = bytearray((0x02,))
@@ -106,7 +105,8 @@ class ShtrihProto:
         hdlr = next((c for c in COMMANDS if cmd == c._command_code),None)
         if hdlr:
             await self.write(ShtrihProto.ACK)
-            await hdlr.handle(data)
+            output,_ = await hdlr.handle()
+            await asyncio.gather(self._transmit(output), self.buffer.put(output))
         else:
             await asyncio.gather(self.write(ShtrihProto.NAK),logger.error(f"{cmd} not implemented in current build version "))
              

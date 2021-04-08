@@ -97,10 +97,13 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
                     open_date=timezone.now(), total_docs=0)
                 states_task = States.filter(id=1).update(mode=2)
                 await asyncio.gather(shift_task, states_task)
+                return response
             else:
                 await logger.error("Couldn't close shift")
+                return None
         except Exception as e:
             await logger.exception(e)
+            return
 
     @classmethod
     async def exc_callback(cls, exc, payload):

@@ -1,11 +1,12 @@
 import asyncio
+from typing import Awaitable, Callable
 import aioserial
 import os
 from serial.serialutil import SerialException, SerialTimeoutException
 from src.api.shtrih import logger
 from serial.tools import list_ports
 from itertools import groupby
-from src.api.device import *
+from src.api.device import Device, DeviceImpl, DeviceIOError, DeviceConnectionError
 from src.api.shtrih.protocol import ShtrihProto
 from binascii import hexlify
 
@@ -69,6 +70,7 @@ class SerialDevice(DeviceImpl):
             pass
 
 
+
 class Paykiosk(Device, ShtrihProto):
 
     def __init__(self):
@@ -100,6 +102,7 @@ class Paykiosk(Device, ShtrihProto):
             else:
                 await logger.info("Connecton to fiscalreg device established")
                 return self.device
+
 
     async def reconnect(self):
         self.impl.connected = False

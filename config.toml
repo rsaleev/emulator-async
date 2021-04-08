@@ -16,6 +16,7 @@ size=5
 
 [printer.barcode]
 impl ='bitImageColumn'
+center=false
 
 [printer.text]
 font='a'
