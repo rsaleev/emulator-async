@@ -150,7 +150,7 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def _dispatch(cls):
         if not config['emulator']['post_sale']:
-            await asyncio.create_task(WebkassaClientSale.handle())
+            await WebkassaClientSale.handle()
         
 
 
