@@ -42,7 +42,7 @@ class PrintXML(Printer):
 
 
     @classmethod
-    def _print_doc(cls, payload:Element, buffer:bool):
+    def _print_doc(cls, payload:Element):
         """_print_doc private scope method that handles XML document print by iteration over its' elements
 
 
@@ -51,7 +51,7 @@ class PrintXML(Printer):
             buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
         for elem in payload:
-            cls._print_element(elem, buffer)
+            cls._print_element(elem, cls.buffer)
 
     @classmethod
     def _print_element(cls, content:Element, buffer:bool):
