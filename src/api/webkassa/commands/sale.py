@@ -71,7 +71,10 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                     task_receipt_delete = Receipt.filter(id=receipt.id).delete()
                     task_shift_modify = Shift.filter(id=1).update(total_docs=F('total_docs')+1)
                     task_print = PrintXML.handle(rendered)
-                    await asyncio.gather(task_state_modify, task_receipt_delete, task_shift_modify, task_print)
+                    try:
+                        await asyncio.gather(task_state_modify, task_receipt_delete, task_shift_modify, task_print)
+                    except Exception as e:
+                        await logger.debug(e)
                     await CutPresent.handle()
 
 

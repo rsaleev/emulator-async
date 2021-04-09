@@ -1,6 +1,7 @@
 import asyncio
 import struct
 from uuid import uuid4
+from tortoise.expressions import F
 from src import config
 from typing import Tuple, Coroutine
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
@@ -9,6 +10,7 @@ from src.db.models.state import States
 from src.api.printer.commands import ClearBuffer
 from src.api.webkassa.commands import WebkassaClientSale
 from src.api.shtrih import logger
+
 
 class OpenSale(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x03,))
@@ -124,9 +126,8 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         else:
             cls.set_error(0x03)
         if payment:
-            receipt = await Receipt.get_or_none(id=1)
+            receipt = await Receipt.get_or_none()
             await logger.debug(f'Receipt: {receipt.ticket}')
-
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0))
             await Receipt.filter(uid=receipt.uid).update(payment_type=payment_type, payment=payment)
             if config['emulator']['post_sale']:
