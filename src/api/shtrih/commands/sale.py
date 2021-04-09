@@ -47,8 +47,8 @@ class OpenReceipt(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x8D,))
 
     @classmethod
-    async def handle(cls)->asyncio.Task:
-        return asyncio.create_task(asyncio.gather(cls._process(), cls._dispatch()))
+    async def handle(cls):
+        await asyncio.gather(cls._process(), cls._dispatch())
 
     @classmethod
     async def _process(cls):
@@ -68,8 +68,8 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x88,))
 
     @classmethod
-    async def handle(cls, payload:bytearray)->asyncio.Task:
-        return asyncio.create_task(asyncio.gather(cls._process(), cls._dispatch()))
+    async def handle(cls, payload:bytearray):
+        await asyncio.gather(cls._process(), cls._dispatch())
 
 
     @classmethod

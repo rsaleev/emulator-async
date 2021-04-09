@@ -9,8 +9,8 @@ class ZReport(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x41,))
             
     @classmethod
-    async def handle(cls, payload:bytearray) ->asyncio.Task:
-        return asyncio.create_task(asyncio.gather(cls._process(payload), cls._dispatch()))
+    async def handle(cls, payload:bytearray):
+        await asyncio.gather(cls._process(payload), cls._dispatch())
 
     @classmethod
     async def _process(cls, payload:bytearray) ->bytearray:

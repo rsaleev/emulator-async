@@ -10,8 +10,8 @@ class SerialNumber(ShtrihCommand, ShtrihCommandInterface):
     _fn_number = struct.pack('<16B',*[0x30]*16)
     
     @classmethod
-    async def handle(cls, payload) -> asyncio.Task:
-        return asyncio.create_task(asyncio.gather(cls._process(), cls._dispatch()))
+    async def handle(cls, payload):
+        await asyncio.gather(cls._process(), cls._dispatch())
 
     @classmethod
     async def _process(cls) -> bytearray:

@@ -12,7 +12,7 @@ class Withdraw(ShtrihCommand):
         
     @classmethod
     async def handle(cls, payload:bytearray):
-        return asyncio.create_task(asyncio.gather(cls._process(payload), cls._dispatch()))
+        await asyncio.gather(cls._process(payload), cls._dispatch())
 
     @classmethod
     async def _process(cls, payload:bytearray) -> bytearray:
@@ -36,7 +36,7 @@ class Deposit(ShtrihCommand):
         
     @classmethod
     async def handle(cls, payload:bytearray):
-        return asyncio.create_task(asyncio.gather(cls._process(payload), cls._dispatch()))
+        await asyncio.gather(cls._process(payload), cls._dispatch())
 
     @classmethod
     async def _process(cls, payload):

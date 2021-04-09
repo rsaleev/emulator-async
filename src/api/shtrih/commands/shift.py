@@ -13,7 +13,7 @@ class OpenShift(ShtrihCommand, ShtrihCommandInterface):
     
     @classmethod
     async def handle(cls, payload:bytearray):
-        return asyncio.create_task(asyncio.gather(cls._process(), cls._dispatch(payload)))
+        await asyncio.gather(cls._process(), cls._dispatch(payload))
 
     @classmethod
     async def _process(cls): 
@@ -36,7 +36,7 @@ class CloseShift(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def handle(cls, payload:bytearray):
-        return asyncio.create_task(asyncio.gather(cls._process(payload), cls._dispatch(payload)))
+        await asyncio.gather(cls._process(payload), cls._dispatch(payload))
 
     @classmethod
     async def _process(cls, payload:bytearray):

@@ -7,8 +7,8 @@ class SubTotal(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x89,))
 
     @classmethod
-    async def handle(cls, payload) -> asyncio.Task:
-        return asyncio.create_task(asyncio.gather(cls._process(), cls._dispatch()))
+    async def handle(cls, payload):
+        await asyncio.gather(cls._process(), cls._dispatch())
 
     @classmethod
     async def _process(cls) -> bytearray:
