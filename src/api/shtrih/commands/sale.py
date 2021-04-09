@@ -123,7 +123,8 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
             payment_type = 1
         else:
             cls.set_error(0x03)
-        if payment:
+        receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
+        if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
             await Receipt.filter(uid=receipt.uid).update(payment_type=payment_type, payment=payment) #type: ignore
             if config['emulator']['post_sale']:
