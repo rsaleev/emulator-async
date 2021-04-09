@@ -53,12 +53,12 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                                 payment_type=receipt.payment_type)], #type: ignore
                     external_check_number=str(receipt.uid))  #type: ignore   
                 try:
-                    request = cls.dispatch(endpoint=cls.endpoint, 
+                    request_task = cls.dispatch(endpoint=cls.endpoint, 
                                             request_data=request,   
                                             response_model=SaleResponse, #type: ignore
                                             callback_error=cls.exc_callback)
-                    record = Receipt.filter(id=receipt.id).update(sent=True) #type: ignore
-                    response,_ = await asyncio.gather(request, record) 
+                    record_task = Receipt.filter(id=receipt.id).update(sent=True) #type: ignore
+                    response,_ = await asyncio.gather(request_task, record_task) 
                 except Exception as e:
                     logger.exception(e)
                     raise e
