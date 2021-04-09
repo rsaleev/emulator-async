@@ -2,6 +2,7 @@ import asyncio
 from src.api.printer.device import Printer
 from xml.etree.ElementTree import Element
 from src import config
+from src.api.printer import logger
 
 from src.db.models import States
 
@@ -49,10 +50,12 @@ class PrintXML(Printer):
             payload (Element): XML object
             buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
-        [cls._print_element(elem, buffer) for elem in payload]
+        for elem in payload:
+            cls._print_element(elem, buffer)
 
     @classmethod
     def _print_element(cls, content:Element, buffer:bool):
+        logger.debug(content.tag)
         """_print_element [summary]
 
         parses XML object element attributes and values (text) and generates data for printing: font, type and etc.
@@ -84,8 +87,8 @@ class PrintXML(Printer):
                     Printer()._raw(cls.codepage_command) 
                     Printer().set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                     Printer()._raw(content.text.encode(cls.encoding_output)) 
-        elif content.tag == 'br':
             if buffer:
                 Printer().buffer._raw(bytes("\n", 'ascii'))             
             else:
-                Printer()._raw(bytes("\n", 'ascii'))          
+                Printer()._raw(bytes("\n", 'ascii'))  
+                    
