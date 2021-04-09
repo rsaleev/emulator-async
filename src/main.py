@@ -48,12 +48,6 @@ class Application:
         # close process
         sys.exit(0)
 
-    @classmethod
-    def _exception_handler(cls, loop, context):
-        loop.stop()
-        loop.close()
-        raise SystemExit(f'Stopping loop due to error: {context["exception"]}')
-
 
     @classmethod
     async def init(cls):
@@ -61,8 +55,6 @@ class Application:
         executor = ThreadPoolExecutor(max_workers=5)
         loop = asyncio.get_running_loop()
         loop.set_default_executor(executor)
-        loop.set_exception_handler(handler=cls._exception_handler)
-
         try:
             task_db_connect = cls.db.connect()
             task_fiscalreg_connect = cls.fiscalreg.connect()
