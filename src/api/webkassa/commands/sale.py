@@ -59,8 +59,9 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                                             callback_error=cls.exc_callback)
                     record_task = Receipt.filter(id=receipt.id).update(sent=True) #type: ignore
                     response,_ = await asyncio.gather(request_task, record_task) 
+                    await logger.debug('response')
                 except Exception as e:
-                    logger.exception(e)
+                    await logger.exception(e)
                     raise e
                 else:
                     company = CompanyData(name=config['webkassa']['company']['name'],

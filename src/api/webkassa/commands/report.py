@@ -149,14 +149,13 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
                 name = response.TaxPayerName  #type: ignore
                 name.replace(u'\u201c', '"')
                 name.replace(u'\u201d', '"')
-                rendered = fromstring(
-                    template.render(report_type='СМЕННЫЙ Х-ОТЧЕТ',
+                render = await template.render_async(report_type='СМЕННЫЙ Х-ОТЧЕТ',
                                     horizontal_delimiter='-',
                                     response=response,
                                     company_name=name,
-                                    tab=' '))
-
-                await PrintXML.handle(rendered)
+                                    tab=' ')
+                doc = fromstring(render)
+                await PrintXML.handle(doc)
                 await CutPresent.handle()
         except Exception as e:
             await logger.exception(e)

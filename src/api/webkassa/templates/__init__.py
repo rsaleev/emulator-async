@@ -12,6 +12,7 @@ TEMPLATE_ENVIRONMENT = jinja2.Environment(
     line_statement_prefix='#',
     comment_start_string='<!--',
     comment_end_string='-->',
+    enable_async=True
     )
 TEMPLATE_ENVIRONMENT.globals.update(f_cur=format_currency, f_qty=format_quantity, f_sp=format_spaces, c_l=count_len)
 
