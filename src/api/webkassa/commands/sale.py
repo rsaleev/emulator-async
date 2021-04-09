@@ -66,17 +66,18 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                     company = CompanyData(name=config['webkassa']['company']['name'],
                                         inn=config['webkassa']['company']['inn'])
                     template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
-                    rendered = fromstring(template.render(
+                    render = await template.render_async(
                         horizontal_delimiter='-',
                         dot_delimiter='.',
                         whitespace=' ',
                         company=company,
                         request=request,
-                        response=response))
+                        response=response)
+                    doc = fromstring(render)
                     task_state_modify = States.filter(id=1).update(gateway=1)
                     task_receipt_modify = Receipt.filter(id=receipt.id).update(ack=True) #type: ignore
                     task_shift_modify = Shift.filter(id=1).update(total_docs=F('total_docs')+1)
-                    task_print = PrintXML.handle(rendered)
+                    task_print = PrintXML.handle(doc)
                     try:
                         await asyncio.gather(task_state_modify, task_receipt_modify, task_shift_modify, task_print)
                     except Exception as e:
