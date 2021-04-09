@@ -32,7 +32,7 @@ class Application:
         await logger.warning('Shutting down application')
         closing_tasks = []
         closing_tasks.append(cls.db.disconnect())
-        closing_tasks.append(cls.printer.disconnect())
+        closing_tasks.append(loop.run_in_executor(None, cls.printer.disconnect))
         closing_tasks.append(cls.fiscalreg.disconnect())
         try:
             await asyncio.gather(*closing_tasks, return_exceptions=True)     
