@@ -39,12 +39,11 @@ class Deposit(ShtrihCommand):
     @classmethod
     def handle(cls, payload:bytearray):
         task_process = cls._process(payload)
-        task_execute = cls._dispatch()
+        task_execute = cls._dispatch(payload)
         return task_process, task_execute
 
     @classmethod
     async def _process(cls, payload):
-        await WebkassaClientCollection.handle(payload, 1)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -53,8 +52,8 @@ class Deposit(ShtrihCommand):
         return arr
 
     @classmethod
-    async def _dispatch(cls):
-        pass
+    async def _dispatch(cls, payload):
+        await WebkassaClientCollection.handle(payload, 1)
         
 
 

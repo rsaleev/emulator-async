@@ -72,10 +72,10 @@ class ShtrihProto:
 
     async def _stx_handle(self): 
         length = await self.read(1) 
-        await logger.debug(f'LEN:{hexlify(length, sep=":")}')
+        asyncio.create_task(logger.debug(f'LEN:{hexlify(length, sep=":")}'))
         # read bytes: total bytes size = length
         data = await self.read(length[0]) 
-        await logger.debug(f'DATA:{hexlify(data, sep=":")}')
+        asyncio.create_task(logger.debug(f'DATA:{hexlify(data, sep=":")}'))
         # check if data presented
         if not data:
             # if data not presented in payload 
@@ -83,18 +83,18 @@ class ShtrihProto:
         # # if data presented in payload
         else:
             crc = await self.read(1) 
-            await logger.debug(f'CRC:{hexlify(crc, sep=":")}')
+            asyncio.create_task(logger.debug(f'CRC:{hexlify(crc, sep=":")}'))
             # check crc
             crc_arr = bytearray()
             crc_arr.extend(length)
             crc_arr.extend(data)
             # if crc positive
             if self.crc_calc(crc_arr) == crc:
-                await logger.debug('CRC:ACCEPTED')
+                asyncio.create_task(logger.debug('CRC:ACCEPTED'))
                 await self._cmd_handle(data)
             # # if crc negative
             else:
-                await logger.debug('CRC:DECLINED')
+                asyncio.create_task(logger.debug('CRC:DECLINED'))
                 await self.write(ShtrihProto.NAK) 
 
     async def _cmd_handle(self, payload:bytearray):

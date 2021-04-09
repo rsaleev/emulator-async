@@ -2,8 +2,7 @@ import asyncio
 import signal
 import asyncio
 import sys
-import functools
-from uuid import uuid4
+import uvloop
 from src import logger
 from concurrent.futures import ThreadPoolExecutor
 from src.db.connector import DBConnector
@@ -14,11 +13,11 @@ from src.api.printer.commands import PrinterFullStatusQuery
 from src.api.webkassa.commands import WebkassaClientTokenCheck
 
 
+
 class Application:
 
     #asyncio 
     event = asyncio.Event()
-
     #instances
     printer = Printer()
     fiscalreg = Paykiosk()
@@ -85,6 +84,8 @@ class Application:
 
 
 if __name__ == '__main__':
+    # ASYNCIO LOOP POLICY
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     loop = asyncio.new_event_loop()
     app = Application()
     signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)

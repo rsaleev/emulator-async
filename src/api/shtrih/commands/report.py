@@ -14,7 +14,6 @@ class ZReport(ShtrihCommand, ShtrihCommandInterface):
         task_execute = cls._dispatch()
         return task_process, task_execute
 
-
     @classmethod
     async def _process(cls, payload:bytearray) ->bytearray:
         arr = bytearray()

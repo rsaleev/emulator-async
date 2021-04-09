@@ -1,5 +1,5 @@
 from src.api.webkassa.exceptions import ExpiredTokenError, ShiftAlreadyClosed, CredentialsError, UnrecoverableError
-from src.db.models import Shift, Token, States
+from src.db.models import Shift, Token, States, Receipt, ReceiptArchived
 from src import config
 from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa.command import WebcassaCommand
@@ -157,8 +157,27 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
                 doc = fromstring(render)
                 await PrintXML.handle(doc)
                 await CutPresent.handle()
+                asyncio.create_task(cls.flush_receipts(response.ShiftNumber))
         except Exception as e:
             await logger.exception(e)
+
+    @classmethod
+    async def flush_receipts(cls, shift_number):
+        receipts = await Receipt.all()
+        bulk = []
+        for receipt in receipts:
+            bulk.append(ReceiptArchived(uid=receipt.uid, 
+                                        ticket=receipt.ticket, 
+                                        count=receipt.count, 
+                                        price=receipt.price,
+                                        payment=receipt.payment,
+                                        payment_ts=receipt.payment_ts,
+                                        tax = receipt.tax,
+                                        tax_percent=receipt.tax_percent,
+                                        ack=receipt.ack,
+                                        sent=receipt.sent,
+                                        shift_number=shift_number))
+        await asyncio.gather(Receipt.all().delete(), ReceiptArchived.bulk_create(bulk))
 
     @classmethod
     async def exc_callback(cls, exc, payload):

@@ -34,7 +34,7 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def _dispatch(cls, payload:bytearray) ->None:
         if not config['webkassa']['receipt']['header']:
-            await ClearBuffer.handle()
+            asyncio.create_task(ClearBuffer.handle())
         count = struct.unpack('<iB',payload[4:9])[0]//10**3
         price = struct.unpack('<iB', payload[9:14])[0]//10**2     
         tax_percent = config['webkassa']['taxgroup'][str(payload[14])]
@@ -149,8 +149,8 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         
     @classmethod
     async def _dispatch(cls):
-        await asyncio.sleep(0.5)
         if not config['emulator']['post_sale']:
+            await asyncio.sleep(0.5)
             await WebkassaClientSale.handle()
         
 
