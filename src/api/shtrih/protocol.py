@@ -56,15 +56,15 @@ class ShtrihProto:
 
     async def _ack_handle(self):
         while not self.buffer.empty(): 
-            await self.buffer.get() 
+            await self.buffer.get_nowait() 
     
     async def _nak_handle(self):
         while not self.buffer.empty(): 
-            await self.buffer.get() 
+            await self.buffer.get_nowait() 
     
     async def _enq_handle(self):
         if not self.buffer.empty(): 
-            queued = await self.buffer.get()
+            queued = await self.buffer.get_nowait()
             await self.write(ShtrihProto.ACK)
             await self.write(queued) 
         else:
