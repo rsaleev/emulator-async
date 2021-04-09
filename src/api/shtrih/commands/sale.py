@@ -103,7 +103,7 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x85,)) #B[2] - 1 byte
 
     @classmethod
-    async def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
+    def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
         task_process = cls._process(payload)
         task_execute = cls._dispatch()
         return task_process, task_execute   

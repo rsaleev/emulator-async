@@ -7,7 +7,7 @@ class SubTotal(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x89,))
 
     @classmethod
-    async def handle(cls, payload):
+    def handle(cls, payload):
         task_process = cls._process()
         task_execute = cls._dispatch()
         return task_process, task_execute

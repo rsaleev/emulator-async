@@ -11,7 +11,7 @@ class Withdraw(ShtrihCommand):
     _doc_number = struct.pack('<H',0)
         
     @classmethod
-    async def handle(cls, payload:bytearray):
+    def handle(cls, payload:bytearray):
         task_process = cls._process(payload)
         task_execute = cls._dispatch()
         return task_process, task_execute
@@ -37,7 +37,7 @@ class Deposit(ShtrihCommand):
     _doc_number = struct.pack('<H',0)
         
     @classmethod
-    async def handle(cls, payload:bytearray):
+    def handle(cls, payload:bytearray):
         task_process = cls._process(payload)
         task_execute = cls._dispatch()
         return task_process, task_execute

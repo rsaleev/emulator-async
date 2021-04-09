@@ -10,7 +10,7 @@ class SerialNumber(ShtrihCommand, ShtrihCommandInterface):
     _fn_number = struct.pack('<16B',*[0x30]*16)
     
     @classmethod
-    async def handle(cls, payload):
+    def handle(cls, payload):
         task_process = cls._process()
         task_execute = cls._dispatch()
         return task_process, task_execute

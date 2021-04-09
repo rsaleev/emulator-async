@@ -39,7 +39,7 @@ class CloseShift(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0xFF,0x43))
 
     @classmethod
-    async def handle(cls, payload:bytearray):
+    def handle(cls, payload:bytearray):
         task_process = cls._process()
         task_execute = cls._dispatch(payload)
         return task_process, task_execute
