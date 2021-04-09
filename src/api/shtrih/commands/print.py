@@ -54,13 +54,13 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
    
     @classmethod
     def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
-        task_process = cls._process(payload)
-        task_execute = cls._dispatch(payload)
+        task_process = cls._process()
+        task_execute = cls._dispatch()
         return task_process, task_execute
 
 
     @classmethod
-    async def _process(cls, payload:bytearray) -> bytearray:
+    async def _process(cls) -> bytearray:
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -69,12 +69,11 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         return arr
         
     @classmethod
-    async def _dispatch(cls, payload:bytearray) -> List[asyncio.Task]:
+    async def _dispatch(cls):
         tasks = []
         if config['printer']['text']['buffer']:
             tasks.append(asyncio.create_task(PrintBuffer.handle()))
         tasks.append(asyncio.create_task(CutPresent.handle()))
-        return tasks
-        
+        await asyncio.gather(*tasks)        
 
     
