@@ -1,7 +1,7 @@
-from asyncio.unix_events import AbstractChildWatcher
 import operator
 from functools import reduce
 import asyncio
+from typing import Coroutine
 from binascii import hexlify
 from src.api.shtrih.commands import COMMANDS
 from src.api.shtrih import logger 
@@ -27,13 +27,14 @@ class ShtrihProto:
         return bytearray((reduce(operator.xor, payload),))
 
 
-    async def _transmit(self, arr:bytearray):
+    async def _transmit(self, task:Coroutine):
+        arr = await task
         output = bytearray()
         output.extend(ShtrihProto.STX)
         output.extend(arr)
         output.extend(self.crc_calc(arr))
         await self.write(output)
-       
+        await self.buffer.put(output)
 
     async def consume(self):
         try:
@@ -105,9 +106,8 @@ class ShtrihProto:
         hdlr = next((c for c in COMMANDS if cmd == c._command_code),None)
         if hdlr:
             await self.write(ShtrihProto.ACK)
-            process,execute = await hdlr.handle(data)
-            output = await process
-            await asyncio.gather(self._transmit(output), self.buffer.put(output), execute)
+            process,execute = hdlr.handle(data)
+            await asyncio.gather(self._transmit(process), execute)
         else:
             await asyncio.gather(self.write(ShtrihProto.NAK),logger.error(f"{cmd} not implemented in current build version "))
              
