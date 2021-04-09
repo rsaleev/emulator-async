@@ -37,6 +37,7 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
         tax = round(price*count/(100+int(tax_percent))*tax_percent,2)
         # check if record of ticket exists
         receipt = await Receipt.get_or_none(id=1)
+        await logger.debug(f'Receipt: {receipt.ticket}')
         if receipt:
             await Receipt.filter(id=1).update(count=count, price=price, tax_percent=tax_percent, tax=tax)
         # create record with empty ticket number
@@ -123,7 +124,9 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         else:
             cls.set_error(0x03)
         if payment:
-            receipt = await Receipt.get_or_none()
+            receipt = await Receipt.get_or_none(id=1)
+            await logger.debug(f'Receipt: {receipt.ticket}')
+
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0))
             await Receipt.filter(uid=receipt.uid).update(payment_type=payment_type, payment=payment)
             if config['emulator']['post_sale']:
