@@ -24,7 +24,6 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def _process(cls, payload) -> bytearray:
-        await PrintBytes.handle(payload=payload[4:])
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -34,6 +33,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def _dispatch(cls, payload:bytearray) -> None:
+        await PrintBytes.handle(payload=payload[4:])
         await cls.__parse_custom_line(payload)
         
     @classmethod
