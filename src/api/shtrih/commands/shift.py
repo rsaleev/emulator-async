@@ -13,7 +13,10 @@ class OpenShift(ShtrihCommand, ShtrihCommandInterface):
     
     @classmethod
     async def handle(cls, payload:bytearray):
-        await asyncio.gather(cls._process(), cls._dispatch(payload))
+        task_process = cls._process()
+        task_execute = cls._dispatch(payload)
+        return task_process, task_execute
+
 
     @classmethod
     async def _process(cls): 

@@ -10,7 +10,10 @@ class ZReport(ShtrihCommand, ShtrihCommandInterface):
             
     @classmethod
     async def handle(cls, payload:bytearray):
-        await asyncio.gather(cls._process(payload), cls._dispatch())
+        task_process = cls._process(payload)
+        task_execute = cls._dispatch()
+        return task_process, task_execute
+
 
     @classmethod
     async def _process(cls, payload:bytearray) ->bytearray:
