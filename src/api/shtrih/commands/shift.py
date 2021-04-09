@@ -1,6 +1,7 @@
 from datetime import datetime
 import asyncio
 import struct
+from typing import Tuple, Coroutine
 from dateutil import parser
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.api.webkassa.commands import WebkassaClientCloseShift
@@ -39,10 +40,12 @@ class CloseShift(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def handle(cls, payload:bytearray):
-        await asyncio.gather(cls._process(payload), cls._dispatch(payload))
+        task_process = cls._process()
+        task_execute = cls._dispatch(payload)
+        return task_process, task_execute
 
     @classmethod
-    async def _process(cls, payload:bytearray):
+    async def _process(cls):
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)

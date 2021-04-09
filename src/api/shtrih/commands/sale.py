@@ -2,6 +2,7 @@ import asyncio
 import struct
 from uuid import uuid4
 from src import config
+from typing import Tuple, Coroutine
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.db.models.receipt import Receipt
 from src.db.models.state import States
@@ -14,8 +15,10 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x80,))
 
     @classmethod
-    async def handle(cls, payload:bytearray):
-        return asyncio.create_task(asyncio.gather(cls._process(), cls._dispatch(payload)))
+    async def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
+        task_process = cls._process()
+        task_execute = cls._dispatch(payload)
+        return task_process, task_execute
 
     @classmethod
     async def _process(cls):
@@ -47,7 +50,7 @@ class OpenReceipt(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x8D,))
 
     @classmethod
-    async def handle(cls):
+    async def handle(cls) -> Tuple[Coroutine, Coroutine]:
         task_process = cls._process()
         task_execute = cls._dispatch()
         return task_process, task_execute
@@ -71,8 +74,10 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x88,))
 
     @classmethod
-    async def handle(cls, payload:bytearray):
-        await asyncio.gather(cls._process(), cls._dispatch())
+    async def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
+        task_process = cls._process()
+        task_execute = cls._dispatch()
+        return task_process, task_execute
 
 
     @classmethod
@@ -98,8 +103,10 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x85,)) #B[2] - 1 byte
 
     @classmethod
-    async def handle(cls, payload:bytearray) -> asyncio.Task:
-        return asyncio.create_task(asyncio.gather(cls._process(payload), cls._dispatch()))
+    async def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
+        task_process = cls._process(payload)
+        task_execute = cls._dispatch()
+        return task_process, task_execute   
 
     @classmethod
     async def _process(cls, payload:bytearray):
