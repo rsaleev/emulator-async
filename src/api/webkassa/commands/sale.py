@@ -74,6 +74,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                         request=request,
                         response=response)
                     doc = fromstring(render)
+                    await logger.debug(doc)
                     task_state_modify = States.filter(id=1).update(gateway=1)
                     task_receipt_modify = Receipt.filter(id=receipt.id).update(ack=True) #type: ignore
                     task_shift_modify = Shift.filter(id=1).update(total_docs=F('total_docs')+1)
