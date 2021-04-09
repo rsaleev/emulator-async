@@ -70,10 +70,8 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         
     @classmethod
     async def _dispatch(cls):
-        tasks = []
         if config['printer']['text']['buffer']:
-            tasks.append(asyncio.create_task(PrintBuffer.handle()))
-        tasks.append(asyncio.create_task(CutPresent.handle()))
-        await asyncio.gather(*tasks)        
+            await PrintBuffer.handle()
+        await CutPresent.handle()
 
     
