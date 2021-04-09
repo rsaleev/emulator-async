@@ -59,32 +59,32 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                                             callback_error=cls.exc_callback)
                     record_task = Receipt.filter(id=receipt.id).update(sent=True) #type: ignore
                     response,_ = await asyncio.gather(request_task, record_task) 
-                    await logger.debug('response')
                 except Exception as e:
                     await logger.exception(e)
                     raise e
                 else:
-                    company = CompanyData(name=config['webkassa']['company']['name'],
-                                        inn=config['webkassa']['company']['inn'])
-                    template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
-                    render = await template.render_async(
-                        horizontal_delimiter='-',
-                        dot_delimiter='.',
-                        whitespace=' ',
-                        company=company,
-                        request=request,
-                        response=response)
-                    doc = fromstring(render)
-                    await logger.debug(doc)
-                    task_state_modify = States.filter(id=1).update(gateway=1)
-                    task_receipt_modify = Receipt.filter(id=receipt.id).update(ack=True) #type: ignore
-                    task_shift_modify = Shift.filter(id=1).update(total_docs=F('total_docs')+1)
-                    task_print = PrintXML.handle(doc)
                     try:
+                        company = CompanyData(name=config['webkassa']['company']['name'],
+                                            inn=config['webkassa']['company']['inn'])
+                        template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
+                        render = await template.render_async(
+                            horizontal_delimiter='-',
+                            dot_delimiter='.',
+                            whitespace=' ',
+                            company=company,
+                            request=request,
+                            response=response)
+                        doc = fromstring(render)
+                        await logger.debug(doc)
+                        task_state_modify = States.filter(id=1).update(gateway=1)
+                        task_receipt_modify = Receipt.filter(id=receipt.id).update(ack=True) #type: ignore
+                        task_shift_modify = Shift.filter(id=1).update(total_docs=F('total_docs')+1)
+                        task_print = PrintXML.handle(doc)
                         await asyncio.gather(task_state_modify, task_receipt_modify, task_shift_modify, task_print)
                     except Exception as e:
                         await logger.debug(e)
-                    await CutPresent.handle()
+                    else:
+                        await CutPresent.handle()
 
 
     @classmethod

@@ -68,20 +68,21 @@ class Application:
         else:
             await logger.warning('Application initialized')
 
-
-
     @classmethod
     async def serve(cls):
-        await logger.info('Serving...')
-        while not cls.event.is_set():
-            try:
-                await asyncio.ensure_future(cls.fiscalreg.poll())
-                await asyncio.ensure_future(cls.watchdog.poll())
-            except Exception as e:
-                await logger.exception(e)
-                cls.event.set()
-                raise SystemExit('Emergency shutdown.Check logs')
+        try:
+            await asyncio.create_task(cls.fiscalreg.poll())
+        except Exception as e:
+            await logger.exception(e)
+            raise SystemExit('Emergency shutdown.Check logs')
 
+    @classmethod
+    async def watch(cls):           
+        try:
+            await asyncio.create_task(cls.watchdog.poll())
+        except Exception as e:
+            await logger.exception(e)
+            raise SystemExit('Emergency shutdown.Check logs')
 
 if __name__ == '__main__':
     # ASYNCIO LOOP POLICY
@@ -93,5 +94,7 @@ if __name__ == '__main__':
     for s in signals:
         loop.add_signal_handler(s, lambda: asyncio.ensure_future(app._signal_handler(s, loop)))
     loop.run_until_complete(app.init())
-    loop.run_until_complete(app.serve())
-    
+    loop.run_until_complete(logger.info('Serving...'))
+    asyncio.create_task(app.serve())
+    asyncio.create_task(app.watch())
+    loop.run_forever()
