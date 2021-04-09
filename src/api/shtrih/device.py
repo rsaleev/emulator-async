@@ -44,7 +44,6 @@ class SerialDevice(DeviceImpl):
         else:
             cls.connected = True
 
-
     @classmethod
     async def _read(cls, size):
         try:
@@ -68,8 +67,6 @@ class SerialDevice(DeviceImpl):
             cls.device.close()
         except:
             pass
-
-
 
 class Paykiosk(Device, ShtrihProto):
 
