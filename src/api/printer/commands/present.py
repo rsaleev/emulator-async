@@ -23,12 +23,12 @@ class CutPresent(Printer):
     def _present(cls):
         try:
             if config['printer']['receipt']['eject']:
-               Printer()._raw(cls.cut)  #type: ignore
-               Printer()._raw(cls.eject)  #type: ignore
-               Printer().hw('INIT') #type: ignore
+                Printer()._raw(cls.cut)  #type: ignore
+                Printer().hw('INIT') #type: ignore
+                Printer()._raw(cls.eject)  #type: ignore
             else:        
-               Printer()._raw(cls.cut)  #type: ignore
-               Printer()._raw(cls.present.append(int(config['printer']['receipt']['present_length_mm']/7.3)))  #type: ignore
-               Printer().hw('INIT') #type: ignore
+                Printer()._raw(cls.cut)  #type: ignore
+                Printer().hw('INIT') #type: ignore
+                Printer()._raw(cls.present.append(int(config['printer']['receipt']['present_length_mm']/7.3)))  #type: ignore
         except Exception as e:
             logger.exception(e)
