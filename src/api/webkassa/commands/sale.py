@@ -27,7 +27,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         if receipt:
             if receipt.price ==0 or receipt.payment ==0:
                 await logger.error(f'Receipt {receipt.uid} has broken data')
-                if config['emulator']['flush_receipts']:
+                if config['emulator']['flush_receipt']:
                     await cls._flush(receipt) # flush receipt
             else:
                 request  = SaleRequest( 
