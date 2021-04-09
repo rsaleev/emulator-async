@@ -15,7 +15,7 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x80,))
 
     @classmethod
-    async def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
+    def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
         task_process = cls._process()
         task_execute = cls._dispatch(payload)
         return task_process, task_execute
@@ -50,7 +50,7 @@ class OpenReceipt(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x8D,))
 
     @classmethod
-    async def handle(cls) -> Tuple[Coroutine, Coroutine]:
+    def handle(cls) -> Tuple[Coroutine, Coroutine]:
         task_process = cls._process()
         task_execute = cls._dispatch()
         return task_process, task_execute
@@ -74,7 +74,7 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x88,))
 
     @classmethod
-    async def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
+    def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
         task_process = cls._process()
         task_execute = cls._dispatch()
         return task_process, task_execute
