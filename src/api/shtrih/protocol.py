@@ -34,7 +34,7 @@ class ShtrihProto:
         output.extend(arr)
         output.extend(self.crc_calc(arr))
         await self.write(output)
-        await self.buffer.put(output)
+        self.buffer.put_nowait(output)
 
     async def consume(self):
         try:
@@ -56,15 +56,15 @@ class ShtrihProto:
 
     async def _ack_handle(self):
         while not self.buffer.empty(): 
-            await self.buffer.get_nowait() 
+            self.buffer.get_nowait() 
     
     async def _nak_handle(self):
         while not self.buffer.empty(): 
-            await self.buffer.get_nowait() 
+            self.buffer.get_nowait() 
     
     async def _enq_handle(self):
         if not self.buffer.empty(): 
-            queued = await self.buffer.get_nowait()
+            queued = self.buffer.get_nowait()
             await self.write(ShtrihProto.ACK)
             await self.write(queued) 
         else:
