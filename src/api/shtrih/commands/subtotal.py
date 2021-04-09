@@ -1,7 +1,11 @@
-from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 import struct
-from src.db.models import Receipt
 import asyncio
+from tortoise.functions import Max
+
+from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
+from src.db.models import Receipt
+
+
 class SubTotal(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x03,))
     _command_code = bytearray((0x89,))
@@ -20,7 +24,7 @@ class SubTotal(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        receipt = await Receipt.get_or_none()
+        receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
         if receipt:
             cls.set_error(0x00)
             subtotal = bytearray(struct.pack('<iB', receipt.price*10**2, 0))

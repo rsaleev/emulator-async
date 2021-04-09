@@ -1,7 +1,6 @@
 import asyncio
 import struct
 from uuid import uuid4
-from tortoise.expressions import F
 from tortoise.functions import Max
 from src import config
 from typing import Tuple, Coroutine
@@ -34,6 +33,8 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def _dispatch(cls, payload:bytearray) ->None:
+        if not config['webkassa']['receipt']['header']:
+            await ClearBuffer.handle()
         count = struct.unpack('<iB',payload[4:9])[0]//10**3
         price = struct.unpack('<iB', payload[9:14])[0]//10**2     
         tax_percent = config['webkassa']['taxgroup'][str(payload[14])]
@@ -44,8 +45,7 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
         # create record with empty ticket number
         else:
             await Receipt.create(uid=uuid4(), ticket='', count=count, price=price, tax_percent=tax_percent, tax=tax)
-        if not config['webkassa']['receipt']['header']:
-            await ClearBuffer.handle()
+        
 
 class OpenReceipt(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x03,))
