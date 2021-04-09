@@ -38,7 +38,7 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
         price = struct.unpack('<iB', payload[9:14])[0]//10**2     
         tax_percent = config['webkassa']['taxgroup'][str(payload[14])]
         tax = round(price*count/(100+int(tax_percent))*tax_percent,2)
-        receipt = await Receipt.filter(ack=False).first().annotate(max_value = Max('id'))
+        receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
         if receipt.id: #type: ignore
             await Receipt.filter(id=receipt.id).update(count=count, price=price, tax_percent=tax_percent, tax=tax) #type:ignore
         # create record with empty ticket number
