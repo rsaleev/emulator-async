@@ -36,12 +36,12 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
         tax_percent = config['webkassa']['taxgroup'][str(payload[14])]
         tax = round(price*count/(100+int(tax_percent))*tax_percent,2)
         # check if record of ticket exists
-        receipt = await Receipt.get_or_none()
+        receipt = await Receipt.get_or_none(id=1)
         if receipt:
-            await Receipt.filter(uid=receipt.uid).update(count=count, price=price, tax_percent=tax_percent, tax=tax)
+            await Receipt.filter(id=1).update(count=count, price=price, tax_percent=tax_percent, tax=tax)
         # create record with empty ticket number
         else:
-            await Receipt.create(uid=uuid4(), ticket='', count=count, price=price, tax_percent=tax_percent, tax=tax)
+            await Receipt.create(id=1, uid=uuid4(), ticket='', count=count, price=price, tax_percent=tax_percent, tax=tax)
         if not config['webkassa']['receipt']['header']:
             await ClearBuffer.handle()
 

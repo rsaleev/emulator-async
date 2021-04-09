@@ -1,7 +1,8 @@
+import asyncio
 from src.api.printer.device import Printer
 from xml.etree.ElementTree import Element
 from src import config
-import asyncio
+
 from src.db.models import States
 
 class PrintXML(Printer):

@@ -21,7 +21,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
 
     @classmethod
     async def handle(cls):
-        task_receipt_fetch = Receipt.get_or_none()
+        task_receipt_fetch = Receipt.get_or_none(id=1)
         task_token_fetch = Token.get(id=1)
         receipt, token = await asyncio.gather(task_receipt_fetch, task_token_fetch) 
         if receipt:
@@ -52,6 +52,11 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                                             request_data=request,   
                                             response_model=SaleResponse, #type: ignore
                                             callback_error=cls.exc_callback)
+                    await logger.debug(f'RESPONSE: {response}')
+                except Exception as e:
+                    logger.exception(e)
+                    raise e
+                else:
                     company = CompanyData(name=config['webkassa']['company']['name'],
                                         inn=config['webkassa']['company']['inn'])
                     template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
@@ -63,14 +68,12 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                         request=request,
                         response=response))
                     task_state_modify = States.filter(id=1).update(gateway=1)
-                    task_receipt_delete = Receipt.filter(uid=receipt.uid).delete()
+                    task_receipt_delete = Receipt.filter(id=receipt.id).delete()
                     task_shift_modify = Shift.filter(id=1).update(total_docs=F('total_docs')+1)
                     task_print = PrintXML.handle(rendered)
                     await asyncio.gather(task_state_modify, task_receipt_delete, task_shift_modify, task_print)
                     await CutPresent.handle()
-                except Exception as e:
-                    logger.exception(e)
-                    raise e
+
 
     @classmethod
     async def exc_callback(cls, exc, payload):

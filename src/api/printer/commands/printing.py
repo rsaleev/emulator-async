@@ -1,7 +1,6 @@
-from typing import Container
+import asyncio 
 from src.api.printer.device import Printer
 from src import config
-import asyncio 
 
 
 class PrintText(Printer):
