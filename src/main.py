@@ -3,6 +3,7 @@ import signal
 import asyncio
 import sys
 import functools
+from uuid import uuid4
 from src import logger
 from concurrent.futures import ThreadPoolExecutor
 from src.db.connector import DBConnector
@@ -76,10 +77,19 @@ class Application:
     async def test(cls):
         from src.db.models import Receipt
         from tortoise.functions import Max
-        
-        receipt = await Receipt.filter(sent=False, ack=False).first().annotate(max_value = Max('id'))
-        print(receipt)
-   
+        from tortoise import timezone
+
+
+        await Receipt.create(uid=uuid4(), ticket='000000', count=1, price=0, payment=0, tax=0, tax_percent=0, payment_type=0, payment_ts=timezone.now())
+        receipt_filter = await Receipt.filter(sent=False, ack=False).first().annotate(max_value = Max('id'))
+        receipt_get = await Receipt.get_or_none().annotate(max_value = Max('id'))
+        print(receipt_get)
+        await Receipt.filter().annotate(max_value = Max('id')).update(sent=True)
+        receipt_get2 = await Receipt.get_or_none().annotate(max_value = Max('id'))
+        print(receipt_get2)
+
+
+
     @classmethod
     async def serve(cls):
         await logger.info('Serving...')
