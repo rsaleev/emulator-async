@@ -72,6 +72,13 @@ class Application:
         else:
             await logger.warning('Application initialized')
 
+    @classmethod
+    async def test(cls):
+        from src.db.models import Receipt
+        from tortoise.functions import Max
+        
+        receipt = await Receipt.filter(sent=False, ack=False).first().annotate(max_value = Max('id'))
+        print(receipt)
    
     @classmethod
     async def serve(cls):
@@ -95,5 +102,5 @@ if __name__ == '__main__':
         loop.add_signal_handler(s, functools.partial(asyncio.ensure_future,
                                                         app._signal_handler(s, loop)))
     loop.run_until_complete(app.init())
-    loop.run_until_complete(app.serve())
+    loop.run_until_complete(app.test())
     
