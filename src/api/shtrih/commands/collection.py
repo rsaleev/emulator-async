@@ -12,7 +12,7 @@ class Withdraw(ShtrihCommand):
         
     @classmethod
     async def handle(cls, payload:bytearray):
-        await asyncio.gather(cls._process(payload), cls._dispatch())
+        return asyncio.gather(cls._process(payload), cls._dispatch())
 
     @classmethod
     async def _process(cls, payload:bytearray) -> bytearray:
