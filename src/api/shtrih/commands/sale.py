@@ -2,6 +2,7 @@ import asyncio
 import struct
 from uuid import uuid4
 from tortoise.expressions import F
+from tortoise.functions import Max
 from src import config
 from typing import Tuple, Coroutine
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
@@ -37,14 +38,12 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
         price = struct.unpack('<iB', payload[9:14])[0]//10**2     
         tax_percent = config['webkassa']['taxgroup'][str(payload[14])]
         tax = round(price*count/(100+int(tax_percent))*tax_percent,2)
-        # check if record of ticket exists
-        receipt = await Receipt.get_or_none(id=1)
-        await logger.debug(f'Receipt: {receipt.ticket}')
-        if receipt:
-            await Receipt.filter(id=1).update(count=count, price=price, tax_percent=tax_percent, tax=tax)
+        receipt = await Receipt.filter(sent=False).annotate(max_value = Max('id'))
+        if receipt.id: #type: ignore
+            await Receipt.filter(id=receipt.id).update(count=count, price=price, tax_percent=tax_percent, tax=tax) #type:ignore
         # create record with empty ticket number
         else:
-            await Receipt.create(id=1, uid=uuid4(), ticket='', count=count, price=price, tax_percent=tax_percent, tax=tax)
+            await Receipt.create(uid=uuid4(), ticket='', count=count, price=price, tax_percent=tax_percent, tax=tax)
         if not config['webkassa']['receipt']['header']:
             await ClearBuffer.handle()
 
@@ -85,9 +84,8 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def _process(cls):
-        task_cancel_receipt =  Receipt.filter(ack=False).delete()
         task_modify_states = States.filter(id=1).update(gateway=1)
-        await asyncio.gather(task_cancel_receipt, task_modify_states)
+        await asyncio.gather(task_modify_states)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -126,17 +124,19 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         else:
             cls.set_error(0x03)
         if payment:
-            receipt = await Receipt.get_or_none()
-            await logger.debug(f'Receipt: {receipt.ticket}')
-            change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0))
-            await Receipt.filter(uid=receipt.uid).update(payment_type=payment_type, payment=payment)
-            if config['emulator']['post_sale']:
-                try:
-                    await WebkassaClientSale.handle()
-                except:
-                    cls.set_error(0x03)
-                else:
-                    cls.set_error(0x00)
+            receipt = Receipt.get_or_none(sent=False).annotate(max_value = Max('id'))
+            if receipt.id: #type: ignore
+                change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
+                await Receipt.filter(uid=receipt.uid).update(payment_type=payment_type, payment=payment) #type: ignore
+                if config['emulator']['post_sale']:
+                    try:
+                        await WebkassaClientSale.handle()
+                    except:
+                        cls.set_error(0x03)
+                    else:
+                        cls.set_error(0x00)
+            else:
+                cls.set_error(0x03)
         else:
             asyncio.ensure_future(logger.error('No payment data'))
             cls.set_error(0x03)

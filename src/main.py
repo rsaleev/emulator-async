@@ -15,17 +15,21 @@ from src.api.webkassa.commands import WebkassaClientTokenCheck
 
 
 class Application:
+
+    #asyncio 
+    event = asyncio.Event()
+
+    #instances
     printer = Printer()
     fiscalreg = Paykiosk()
     db = DBConnector()
     watchdog = Watchdog()
-    event = asyncio.Event()
 
 
     @classmethod
     async def _signal_handler(cls, signal, loop):
-        await logger.warning('Shutting down application')
         cls.event.set()
+        await logger.warning('Shutting down application')
         closing_tasks = []
         closing_tasks.append(cls.db.disconnect())
         closing_tasks.append(cls.printer.disconnect())
@@ -73,21 +77,6 @@ class Application:
         else:
             await logger.warning('Application initialized')
 
-    @classmethod
-    async def test(cls):
-        from src.db.models import Receipt
-        from tortoise.functions import Max
-        from tortoise import timezone
-
-
-        await Receipt.create(uid=uuid4(), ticket='000000', count=1, price=0, payment=0, tax=0, tax_percent=0, payment_type=0, payment_ts=timezone.now())
-        receipt_filter = await Receipt.filter(sent=False, ack=False).first().annotate(max_value = Max('id'))
-        receipt_get = await Receipt.get_or_none().annotate(max_value = Max('id'))
-        print(receipt_get)
-        await Receipt.filter().annotate(max_value = Max('id')).update(sent=True)
-        receipt_get2 = await Receipt.get_or_none().annotate(max_value = Max('id'))
-        print(receipt_get2)
-
 
 
     @classmethod
@@ -109,8 +98,7 @@ if __name__ == '__main__':
     signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
     # add signal handler to loop
     for s in signals:
-        loop.add_signal_handler(s, functools.partial(asyncio.ensure_future,
-                                                        app._signal_handler(s, loop)))
+        loop.add_signal_handler(s, lambda: asyncio.ensure_future(app._signal_handler(s, loop)))
     loop.run_until_complete(app.init())
-    loop.run_until_complete(app.test())
+    loop.run_until_complete(app.serve())
     
