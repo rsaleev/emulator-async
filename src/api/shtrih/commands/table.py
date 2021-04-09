@@ -13,7 +13,7 @@ class SerialNumber(ShtrihCommand, ShtrihCommandInterface):
     async def handle(cls, payload):
         task_process = asyncio.create_task(cls._process())
         task_execute = asyncio.create_task(cls._dispatch())
-        return task_process, task_execute
+        return (task_process, task_execute)
 
     @classmethod
     async def _process(cls) -> bytearray:
