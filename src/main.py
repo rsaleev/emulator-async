@@ -89,5 +89,4 @@ if __name__ == '__main__':
         loop.add_signal_handler(s, lambda: asyncio.ensure_future(app._signal_handler(s, loop)))
     loop.run_until_complete(app.init())
     loop.run_until_complete(app.serve())
-    loop.run_forever()
    
