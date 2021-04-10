@@ -51,11 +51,10 @@ class PrintXML(Printer):
             buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
         for child in payload:
-            print(child.tag, child.attrib)
+            cls._print_element(child, buffer=cls.buffer)
 
     @classmethod
     def _print_element(cls, content:Element, buffer:bool):
-        logger.debug(content.tag)
         """_print_element [summary]
 
         parses XML object element attributes and values (text) and generates data for printing: font, type and etc.
