@@ -1,13 +1,12 @@
 from datetime import datetime
 from tortoise.models import Model
 from tortoise.fields.data import IntField, DatetimeField
-from tortoise import timezone
 
 
 
 class Shift(Model):
     id = IntField(pk=True)
-    open_date = DatetimeField(default=timezone.now())
+    open_date = DatetimeField(default=datetime.now())
     total_docs = IntField(default=0)
 
     class Meta:
