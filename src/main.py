@@ -70,19 +70,14 @@ class Application:
 
     @classmethod
     async def serve(cls):
-        try:
-            await cls.fiscalreg.poll()
-        except Exception as e:
-            await logger.exception(e)
-            raise SystemExit('Emergency shutdown.Check logs')
+        while not cls.event.is_set():
+            try:
+                asyncio.create_task(cls.fiscalreg.poll())
+                asyncio.create_task(cls.watchdog.poll())
+            except Exception as e:
+                await logger.exception(e)
+                raise SystemExit('Emergency shutdown.Check logs')
 
-    @classmethod
-    async def watch(cls):           
-        try:
-            await cls.watchdog.poll()
-        except Exception as e:
-            await logger.exception(e)
-            raise SystemExit('Emergency shutdown.Check logs')
 
 if __name__ == '__main__':
     # ASYNCIO LOOP POLICY
@@ -95,6 +90,6 @@ if __name__ == '__main__':
         loop.add_signal_handler(s, lambda: asyncio.ensure_future(app._signal_handler(s, loop)))
     loop.run_until_complete(app.init())
     loop.run_until_complete(logger.info('Serving...'))
-    asyncio.create_task(app.serve())
-    asyncio.create_task(app.watch())
+    loop.run_until_complete(app.serve())
     loop.run_forever()
+   
