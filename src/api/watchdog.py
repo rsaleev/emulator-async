@@ -27,6 +27,6 @@ class Watchdog:
                     request_task = WebkassaClientCloseShift.handle()
                     await asyncio.gather(log_task, request_task)
                 else:
-                    await States.filter(id=1).update(mode=4)
+                    await States.filter(id=1).update(mode=3)
         await asyncio.sleep(1)
     
