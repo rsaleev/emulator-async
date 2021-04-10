@@ -104,9 +104,9 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x85,)) #B[2] - 1 byte
 
     @classmethod
-    def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
-        task_process = cls._process(payload)
-        task_execute = cls._dispatch()
+    def handle(cls, payload:bytearray) -> Tuple[asyncio.Task, asyncio.Task]:
+        task_process = asyncio.create_task(cls._process(payload))
+        task_execute = asyncio.create_task(cls._dispatch())
         return task_process, task_execute   
 
     @classmethod
@@ -134,8 +134,6 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
                     cls.set_error(0x03)
                 else:
                     cls.set_error(0x00)
-            else:
-                cls.set_error(0x03)
         else:
             asyncio.ensure_future(logger.error('No payment data'))
             cls.set_error(0x03)
@@ -150,7 +148,6 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def _dispatch(cls):
         if not config['emulator']['post_sale']:
-            await asyncio.sleep(0.5)
             await WebkassaClientSale.handle()
         
 

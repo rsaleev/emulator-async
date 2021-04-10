@@ -1,12 +1,10 @@
 
-from asyncio.tasks import ensure_future
 import aiofiles
 import os
 import asyncio
-
+from datetime import datetime
 from xml.etree.ElementTree import fromstring
 import asyncio
-from tortoise import timezone
 from tortoise.expressions import F
 from tortoise.functions import Max
 
@@ -27,7 +25,14 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
 
     @classmethod
     async def handle(cls):
+        data = await cls._process()
         await asyncio.sleep(0.5)
+        if data:
+            await cls._dispatch(data)
+
+
+    @classmethod
+    async def _process(cls):
         task_receipt_fetch = Receipt.get_or_none(sent=False).annotate(max_value = Max('id'))
         task_token_fetch = Token.get(id=1)
         receipt, token = await asyncio.gather(task_receipt_fetch, task_token_fetch) 
@@ -36,6 +41,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 await logger.error(f'Receipt {receipt.uid} has broken data')#type: ignore 
                 # if config['emulator']['flush_receipt']:
                 #     await cls._flush(receipt) # flush receipt
+                return
             else:
                 request  = SaleRequest( 
                     token=token.token,
@@ -61,30 +67,34 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 record_task = Receipt.filter(id=receipt.id).update(sent=True) #type: ignore
                 response,_ = await asyncio.gather(request_task, record_task) 
                 if response:
-                    await asyncio.sleep(0.5)
-                    try:
-                        company = CompanyData(name=config['webkassa']['company']['name'],
-                                            inn=config['webkassa']['company']['inn'])
-                        template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
-                        render = await template.render_async(
-                            horizontal_delimiter='-',
-                            dot_delimiter='.',
-                            whitespace=' ',
-                            company=company,
-                            request=request,
-                            response=response)
-                        await asyncio.sleep(0.5)
-                        doc = fromstring(render)
-                        asyncio.ensure_future(States.filter(id=1).update(gateway=1))
-                        asyncio.ensure_future(Receipt.filter(id=receipt.id).update(ack=True)) #type: ignore
-                        asyncio.ensure_future(Shift.filter(id=1).update(total_docs=F('total_docs')+1))
-                        asyncio.ensure_future(PrintXML.handle(doc))
-                        asyncio.ensure_future(PrintQR.handle(response.ticket_print_url))
-                    except Exception as e:
-                        await logger.debug(e)
-                    else:
-                        await asyncio.sleep(0.5)
-                        await CutPresent.handle()
+                    return request, response 
+        
+    @classmethod
+    async def _dispatch(cls, data):
+        try:
+            company = CompanyData(name=config['webkassa']['company']['name'],
+                                inn=config['webkassa']['company']['inn'])
+            template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
+            render = await template.render_async(
+                horizontal_delimiter='-',
+                dot_delimiter='.',
+                whitespace=' ',
+                company=company,
+                request=data[0],
+                response=data[1])
+            await asyncio.sleep(0.5)
+            doc = fromstring(render)
+            asyncio.ensure_future(States.filter(id=1).update(gateway=1))
+            asyncio.ensure_future(Receipt.filter(id=receipt.id).update(ack=True)) #type: ignore
+            asyncio.ensure_future(Shift.filter(id=1).update(total_docs=F('total_docs')+1))
+            asyncio.ensure_future(PrintXML.handle(doc))
+            asyncio.ensure_future(PrintQR.handle(data[1].ticket_print_url))
+        except Exception as e:
+            await logger.debug(e)
+            raise e 
+        else:
+            await asyncio.sleep(0.5)
+            await CutPresent.handle()
 
 
     @classmethod
@@ -93,7 +103,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         if isinstance(exc, ShiftExceededTime):
             if config['webkassa']['shift']['autoclose']:
                 task_shift_close = WebkassaClientCloseShift.handle()
-                task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
+                task_shift_modify = Shift.filter(id=1).update(open_date=datetime.now(),
                                     total_docs=0)
                 task_states_modify = States.filter(id=1).update(mode=2)
                 await asyncio.gather(task_shift_close, task_shift_modify, task_states_modify)
@@ -103,7 +113,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 shift = await Shift.get(id=1)
                 # check if total_docs were 0
                 if shift.total_docs ==0:
-                    await Shift.filter(id=1).update(open_date=timezone.now(),
+                    await Shift.filter(id=1).update(open_date=datetime.now(),
                                     total_docs=0)
                     return True
                 else:
