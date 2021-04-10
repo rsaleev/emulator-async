@@ -1,4 +1,5 @@
 
+from asyncio.tasks import ensure_future
 import aiofiles
 import os
 import asyncio
@@ -60,6 +61,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 record_task = Receipt.filter(id=receipt.id).update(sent=True) #type: ignore
                 response,_ = await asyncio.gather(request_task, record_task) 
                 if response:
+                    await asyncio.sleep(0.5)
                     try:
                         company = CompanyData(name=config['webkassa']['company']['name'],
                                             inn=config['webkassa']['company']['inn'])
@@ -71,16 +73,17 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                             company=company,
                             request=request,
                             response=response)
+                        await asyncio.sleep(0.5)
                         doc = fromstring(render)
-                        task_state_modify = States.filter(id=1).update(gateway=1)
-                        task_receipt_modify = Receipt.filter(id=receipt.id).update(ack=True) #type: ignore
-                        task_shift_modify = Shift.filter(id=1).update(total_docs=F('total_docs')+1)
-                        task_print = PrintXML.handle(doc)
-                        await asyncio.gather(task_state_modify, task_receipt_modify, task_shift_modify, task_print)
+                        asyncio.ensure_future(States.filter(id=1).update(gateway=1))
+                        asyncio.ensure_future(Receipt.filter(id=receipt.id).update(ack=True)) #type: ignore
+                        asyncio.ensure_future(Shift.filter(id=1).update(total_docs=F('total_docs')+1))
+                        asyncio.ensure_future(PrintXML.handle(doc))
+                        asyncio.ensure_future(PrintQR.handle(response.ticket_print_url))
                     except Exception as e:
                         await logger.debug(e)
                     else:
-                        await PrintQR.handle(response.ticket_print_url)
+                        await asyncio.sleep(0.5)
                         await CutPresent.handle()
 
 
