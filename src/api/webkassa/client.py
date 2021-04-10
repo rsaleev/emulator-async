@@ -81,8 +81,8 @@ class WebcassaClient:
                 else:
                     asyncio.ensure_future(States.filter(id=1).update(gateway=1))
                     return response_model(**output.data)  #type:ignore
-            except (UnrecoverableError, ReceiptUniqueNumDuplication,
-                    ShiftAlreadyClosed, ShiftExceededTime) as e:
+            except (ReceiptUniqueNumDuplication,
+                    ShiftAlreadyClosed, ShiftExceededTime,ExpiredTokenError) as e:
                 # default state on error -> 0
                 resolver = await callback_error(e, request_data)
                 if resolver:
@@ -98,6 +98,12 @@ class WebcassaClient:
                         f'Max attempts exhausted. Attempt: {counter} Error:{repr(e)}'
                     ))
                     return
+
+            except (UnrecoverableError):
+                asyncio.ensure_future(logger.error(
+                        f'Catched API error {repr(e)}. Attempt: {counter}. Continue'
+                    ))
+                return 
             except ConnectionError as e:
                 counter += 1
                 asyncio.ensure_future(logger.error(
