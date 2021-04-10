@@ -26,6 +26,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
 
     @classmethod
     async def handle(cls):
+        await asyncio.sleep(0.5)
         task_receipt_fetch = Receipt.get_or_none(sent=False).annotate(max_value = Max('id'))
         task_token_fetch = Token.get(id=1)
         receipt, token = await asyncio.gather(task_receipt_fetch, task_token_fetch) 

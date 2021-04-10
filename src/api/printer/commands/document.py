@@ -50,8 +50,8 @@ class PrintXML(Printer):
             payload (Element): XML object
             buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
-        for elem in payload:
-            cls._print_element(elem, cls.buffer)
+        for child in payload:
+            print(child.tag, child.attrib)
 
     @classmethod
     def _print_element(cls, content:Element, buffer:bool):
