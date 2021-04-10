@@ -86,10 +86,12 @@ class WebcassaClient:
                 # default state on error -> 0
                 resolver = await callback_error(e, request_data)
                 if resolver:
+                    asyncio.ensure_future(logger.debug(f'Callback {resolver}'))
                     asyncio.ensure_future(logger.error(
                         f'Catched API error {repr(e)}. Attempt: {counter}. Continue'
                     ))
                     counter += 1
+                    await asyncio.sleep(0.2)
                     continue
                 else:
                     asyncio.ensure_future(logger.error(

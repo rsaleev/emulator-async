@@ -52,17 +52,13 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                                 sum= receipt.payment, #type: ignore
                                 payment_type=receipt.payment_type)], #type: ignore
                     external_check_number=str(receipt.uid))  #type: ignore   
-                try:
-                    request_task = cls.dispatch(endpoint=cls.endpoint, 
+                request_task = cls.dispatch(endpoint=cls.endpoint, 
                                             request_data=request,   
                                             response_model=SaleResponse, #type: ignore
                                             callback_error=cls.exc_callback)
-                    record_task = Receipt.filter(id=receipt.id).update(sent=True) #type: ignore
-                    response,_ = await asyncio.gather(request_task, record_task) 
-                except Exception as e:
-                    await logger.exception(e)
-                    raise e
-                else:
+                record_task = Receipt.filter(id=receipt.id).update(sent=True) #type: ignore
+                response,_ = await asyncio.gather(request_task, record_task) 
+                if response:
                     try:
                         company = CompanyData(name=config['webkassa']['company']['name'],
                                             inn=config['webkassa']['company']['inn'])
@@ -89,6 +85,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
 
     @classmethod
     async def exc_callback(cls, exc, payload):
+        asyncio.ensure_future(logger.debug(f'Resolving {exc}'))
         if isinstance(exc, ShiftExceededTime):
             if config['webkassa']['shift']['autoclose']:
                 task_shift_close = WebkassaClientCloseShift.handle()
@@ -110,8 +107,11 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                     return False
         elif isinstance(exc, ExpiredTokenError):
             response = await WebkassaClientToken.handle()
-            payload.token = response
-            return True
+            if response:
+                payload.token = response
+                return True
+            else:
+                return False
         elif isinstance(exc, UnrecoverableError):
             await States.filter(id=1).update(gateway=0)
             return False
