@@ -71,7 +71,7 @@ class Application:
     @classmethod
     async def serve(cls):
         try:
-            await asyncio.create_task(cls.fiscalreg.poll())
+            await cls.fiscalreg.poll()
         except Exception as e:
             await logger.exception(e)
             raise SystemExit('Emergency shutdown.Check logs')
@@ -79,7 +79,7 @@ class Application:
     @classmethod
     async def watch(cls):           
         try:
-            await asyncio.create_task(cls.watchdog.poll())
+            await cls.watchdog.poll()
         except Exception as e:
             await logger.exception(e)
             raise SystemExit('Emergency shutdown.Check logs')
