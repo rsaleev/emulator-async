@@ -68,9 +68,9 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     def handle(cls, payload):
-        task_process = cls._process()
-        task_execute = cls._dispatch()
-        return task_process, task_execute
+        task1 = asyncio.create_task(cls._process())
+        task2 = asyncio.create_task(cls._dispatch())
+        return task1, task2
 
     @classmethod
     async def _process(cls) -> bytearray:

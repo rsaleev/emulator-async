@@ -66,8 +66,8 @@ class Application:
             await logger.exception(e)
         else:
             await logger.warning('Application initialized.Serving')
-            task1 = cls.fiscalreg.poll()
-            task2= cls.watchdog.poll()
+            task1 = asyncio.create_task(cls.fiscalreg.poll())
+            task2= asyncio.create_task(cls.watchdog.poll())
             while not cls.event.is_set():
                 try:
                     await task1

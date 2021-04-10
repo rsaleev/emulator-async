@@ -107,7 +107,11 @@ class ShtrihProto:
         if hdlr:
             await self.write(ShtrihProto.ACK)
             process,execute = hdlr.handle(data)
-            await asyncio.gather(self._transmit(process), execute)
+            output = await process
+            task_response = asyncio.create_task(self._transmit(output))
+            task_execute = asyncio.create_task(execute)
+            await task_response
+            await task_execute
         else:
             await asyncio.gather(self.write(ShtrihProto.NAK),logger.error(f"{cmd} not implemented in current build version "))
              

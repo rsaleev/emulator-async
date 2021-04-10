@@ -16,10 +16,10 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x17,))
             
     @classmethod
-    def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
-        task_process = cls._process(payload)
-        task_execute = cls._dispatch(payload)
-        return task_process, task_execute
+    def handle(cls, payload:bytearray) -> Tuple[asyncio.Task, asyncio.Task]:
+        task1 = asyncio.create_task(cls._process(payload))
+        task2 = asyncio.create_task(cls._dispatch(payload))
+        return task1, task2
 
 
     @classmethod
@@ -35,7 +35,8 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
     async def _dispatch(cls, payload:bytearray) -> None:
         await PrintBytes.handle(payload=payload[4:])
         await cls.__parse_custom_line(payload)
-        
+
+
     @classmethod
     async def __parse_custom_line(cls, payload:bytearray) -> None:
         try:
