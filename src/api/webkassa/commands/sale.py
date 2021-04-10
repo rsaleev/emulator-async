@@ -70,6 +70,8 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 company = CompanyData(name=config['webkassa']['company']['name'],
                                     inn=config['webkassa']['company']['inn'])
                 template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
+            try:
+                await asyncio.sleep(0.2)
                 render = await template.render_async(
                     horizontal_delimiter='-',
                     dot_delimiter='.',
@@ -77,7 +79,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                     company=company,
                     request=request,
                     response=response)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.2)
                 doc = fromstring(render)
                 asyncio.ensure_future(States.filter(id=1).update(gateway=1))
                 asyncio.ensure_future(Receipt.filter(id=receipt.id).update(ack=True)) #type: ignore
@@ -87,7 +89,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 await logger.debug(e)
                 raise e 
             else:
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.2)
                 await CutPresent.handle()
 
 
