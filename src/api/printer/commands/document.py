@@ -1,9 +1,9 @@
 import asyncio
+from urllib.parse import unquote
 from src.api.printer.device import Printer
 from xml.etree.ElementTree import Element
 from src import config
 from src.api.printer import logger
-
 from src.db.models import States
 
 class PrintXML(Printer):
@@ -88,8 +88,15 @@ class PrintXML(Printer):
                 Printer().set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore 
                 output = content.text.encode(cls.encoding_output)         
                 Printer()._raw(output) 
+        elif content.tag == 'br':
             if cls.buffer:
                 Printer().buffer._raw(bytes("\n", 'ascii'))             
             else:
                 Printer()._raw(bytes("\n", 'ascii'))  
+        elif content.tag == 'qr':
+            if cls.buffer:
+                Printer().buffer.qr(unquote(str(content.text)))
+            else:
+                Printer().qr(unquote(str(content.text)))
+
                     
