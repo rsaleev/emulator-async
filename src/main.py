@@ -72,8 +72,8 @@ class Application:
     async def serve(cls):
         while not cls.event.is_set():
             try:
-                asyncio.create_task(cls.fiscalreg.poll())
-                asyncio.create_task(cls.watchdog.poll())
+                asyncio.ensure_future((cls.fiscalreg.poll()))
+                asyncio.ensure_future((cls.watchdog.poll()))
             except Exception as e:
                 await logger.exception(e)
                 raise SystemExit('Emergency shutdown.Check logs')
@@ -89,7 +89,6 @@ if __name__ == '__main__':
     for s in signals:
         loop.add_signal_handler(s, lambda: asyncio.ensure_future(app._signal_handler(s, loop)))
     loop.run_until_complete(app.init())
-    loop.run_until_complete(logger.info('Serving...'))
     loop.run_until_complete(app.serve())
     loop.run_forever()
    

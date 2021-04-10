@@ -9,6 +9,7 @@ class Watchdog:
 
     @classmethod
     async def poll(cls):
+        await logger.debug('Polling Shift')
         shift = await Shift.get(id=1)
         period = timezone.now() - shift.open_date
         hours= int(period.total_seconds() // 3600)
