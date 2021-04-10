@@ -51,10 +51,10 @@ class PrintXML(Printer):
             buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
         for child in payload:
-            cls._print_element(child, buffer=cls.buffer)
+            cls._print_element(child)
 
     @classmethod
-    def _print_element(cls, content:Element, buffer:bool):
+    def _print_element(cls, content:Element):
         """_print_element [summary]
 
         parses XML object element attributes and values (text) and generates data for printing: font, type and etc.
@@ -69,7 +69,7 @@ class PrintXML(Printer):
             content.text = content.text.replace(u'\u201c','"')
             content.text = content.text.replace(u'\u201d', '"')
             content.text = content.text.replace(u'\u202f', ' ')
-            if buffer:
+            if cls.buffer:
                 if config['printer']['doc']['send_encoding']:
                     if cls.encoding_output == 'cp1251':
                         Printer()._raw(cls.codepage_command.extend(cls.CP1251)) 
@@ -86,7 +86,7 @@ class PrintXML(Printer):
                     Printer()._raw(cls.codepage_command) 
                     Printer().set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                     Printer()._raw(content.text.encode(cls.encoding_output)) 
-            if buffer:
+            if cls.buffer:
                 Printer().buffer._raw(bytes("\n", 'ascii'))             
             else:
                 Printer()._raw(bytes("\n", 'ascii'))  

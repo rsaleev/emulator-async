@@ -18,7 +18,7 @@ from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa import logger
 from src.api.webkassa.commands import WebkassaClientToken,WebkassaClientCloseShift
 from src.api.webkassa.models import SaleRequest, SaleResponse, Position, Payments, CompanyData
-from src.api.printer.commands import PrintXML, CutPresent
+from src.api.printer.commands import PrintXML, CutPresent, PrintQR
 
 class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     endpoint = 'Check'
@@ -60,6 +60,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 record_task = Receipt.filter(id=receipt.id).update(sent=True) #type: ignore
                 response,_ = await asyncio.gather(request_task, record_task) 
                 if response:
+                    print(dir(response))
                     try:
                         company = CompanyData(name=config['webkassa']['company']['name'],
                                             inn=config['webkassa']['company']['inn'])
@@ -81,6 +82,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                     except Exception as e:
                         await logger.debug(e)
                     else:
+                        await PrintQR.handle(response.TicketPrintUrl)
                         await CutPresent.handle()
 
 
