@@ -37,7 +37,7 @@ class PrintXML(Printer):
         """
         loop = asyncio.get_running_loop()
         task_submode_change = States.filter(id=1).update(submode=5)
-        task_print_buffer = loop.run_in_executor(None, cls._print_doc, payload, cls.buffer)
+        task_print_buffer = loop.run_in_executor(None, cls._print_doc, payload)
         await asyncio.gather(task_submode_change, task_print_buffer)
 
 

@@ -1,6 +1,10 @@
-from src.api.webkassa.exceptions import ExpiredTokenError, ShiftAlreadyClosed, CredentialsError, UnrecoverableError
-from src.db.models import Shift, Token, States, Receipt, ReceiptArchived
+from datetime import datetime
+import asyncio
+
 from src import config
+
+from src.db.models import Shift, Token, States, Receipt, ReceiptArchived
+from src.api.webkassa.exceptions import ExpiredTokenError, ShiftAlreadyClosed, CredentialsError, UnrecoverableError
 from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa.command import WebcassaCommand
 from src.api.webkassa.client import WebcassaClient
@@ -8,8 +12,6 @@ from src.api.webkassa.models import ZXReportRequest, ZXReportResponse
 from src.api.webkassa.commands.authorization import WebkassaClientToken
 from src.api.webkassa import logger
 from xml.etree.ElementTree import fromstring
-import asyncio
-from tortoise import timezone
 from src.api.printer.commands import PrintXML, CutPresent
 
 class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
@@ -43,7 +45,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
                                 company_name=name,
                                 tab=' '))
                 
-            task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
+            task_shift_modify = Shift.filter(id=1).update(open_date=datetime.now(),
                                             total_docs=0)
             task_states_modify =  States.filter(id=1).update(mode=2)
             tasks_print_xml = PrintXML.handle(rendered)
@@ -56,7 +58,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
     @classmethod
     async def exc_callback(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
-            task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
+            task_shift_modify = Shift.filter(id=1).update(open_date=datetime.now(),
                                             total_docs=0)
             task_states_modify=  States.filter(id=1).update(mode=2)
             await asyncio.gather(task_shift_modify, task_states_modify)
@@ -94,7 +96,7 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
                                           callback_error=cls.exc_callback)
             if response:
                 shift_task = Shift.filter(id=1).update(
-                    open_date=timezone.now(), total_docs=0)
+                    open_date=datetime.now(), total_docs=0)
                 states_task = States.filter(id=1).update(mode=2)
                 await asyncio.gather(shift_task, states_task)
                 return response
@@ -108,7 +110,7 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
     @classmethod
     async def exc_callback(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
-            task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
+            task_shift_modify = Shift.filter(id=1).update(open_date=datetime.now(),
                                           total_docs=0)
             task_states_modify = States.filter(id=1).update(mode=2)
             await asyncio.gather(task_shift_modify, task_states_modify)
