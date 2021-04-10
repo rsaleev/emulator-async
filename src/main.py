@@ -58,7 +58,6 @@ class Application:
             task_db_connect = cls.db.connect()
             task_fiscalreg_connect = cls.fiscalreg.connect()
             task_printer_connect = loop.run_in_executor(None, cls.printer.connect)
-            await task_printer_connect
             await asyncio.gather(task_db_connect, task_fiscalreg_connect, task_printer_connect)
             task_printer_check = PrinterFullStatusQuery.handle()
             task_webkassa_check = WebkassaClientTokenCheck.handle()
