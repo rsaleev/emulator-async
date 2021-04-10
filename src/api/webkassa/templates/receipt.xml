@@ -58,6 +58,7 @@
     {% endif %}
     <hLineDelimiter align='left' text='normal'>{{ horizontal_delimiter*54 }}</hLineDelimiter>
     <br></br>
+    <qr> {{ response.ticket_print_url }}</qr>
     <fiscalRequired align='center' text='bold'> ФИСКАЛЬНЫЙ ЧЕК  ФП</fiscalRequired>
     <br></br>
     <cassaUniqueNumber align='center' text='normal'>ИНК: {{ response.cashbox.identity_number}}</cassaUniqueNumber>
