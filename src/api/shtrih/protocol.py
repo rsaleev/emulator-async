@@ -107,8 +107,7 @@ class ShtrihProto:
         if hdlr:
             await self.write(ShtrihProto.ACK)
             process,execute = hdlr.handle(data)
-            output = await process
-            task_response = asyncio.create_task(self._transmit(output))
+            task_response = asyncio.create_task(self._transmit(process))
             task_execute = asyncio.create_task(execute)
             await task_response
             await task_execute
