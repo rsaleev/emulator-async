@@ -76,7 +76,8 @@ class PrintXML(Printer):
                     elif cls.encoding_output == 'cp866':
                         Printer().buffer._raw(cls.codepage_command.extend(cls.CP866)) 
                 Printer().buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
-                Printer().buffer._raw(content.text.encode(cls.encoding_output)) 
+                output = content.text.encode(cls.encoding_output)
+                Printer().buffer._raw(output) 
             else:
                 if config['printer']['doc']['send_encoding']:
                     if cls.encoding_output == 'cp1251':
@@ -84,8 +85,9 @@ class PrintXML(Printer):
                     elif cls.encoding_output == 'cp866':
                         Printer()._raw(cls.codepage_command.extend(cls.CP866)) 
                     Printer()._raw(cls.codepage_command) 
-                    Printer().set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
-                    Printer()._raw(content.text.encode(cls.encoding_output)) 
+                Printer().set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore 
+                output = content.text.encode(cls.encoding_output)         
+                Printer()._raw(output) 
             if cls.buffer:
                 Printer().buffer._raw(bytes("\n", 'ascii'))             
             else:
