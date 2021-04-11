@@ -34,19 +34,27 @@ class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
             operation_type=operation_type,
             sum = struct.unpack('<5B', payload[4:9]),
             external_check_number=str(uuid4()))
+        await asyncio.sleep(0.2)
         try:
             response = await cls.dispatch(endpoint=cls.endpoint, 
                                     request_data=request, 
                                     response_model=MoneyCollectionResponse, #type: ignore
                                     callback_error=cls.exc_callback)
+            await asyncio.sleep(0.2)
             if response:
-                template = TEMPLATE_ENVIRONMENT.get_or_select_template('collection.xml')
-                rendered = fromstring(template.render(
-                    operation_type = operation_type,
-                    request=request,
-                    response=response))
-                await PrintXML.handle(rendered)
-                await CutPresent.handle()
+                try:
+                    template = TEMPLATE_ENVIRONMENT.get_or_select_template('collection.xml')
+                    render = await template.render_async(
+                        operation_type = operation_type,
+                        request=request,
+                        response=response)
+                    doc = fromstring(render)
+                except Exception as e:
+                    await logger.debug(e)
+                    raise e 
+                else:
+                    await asyncio.sleep(0.2)
+                    asyncio.ensure_future(PrintXML.handle(doc)).add_done_callback(CutPresent.handle)
         except Exception as e:
             await logger.exception(e)
             return 

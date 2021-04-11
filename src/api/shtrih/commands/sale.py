@@ -17,10 +17,10 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x80,))
 
     @classmethod
-    def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
-        task_process = cls._process()
-        task_execute = cls._dispatch(payload)
-        return task_process, task_execute
+    async def handle(cls, payload:bytearray) ->Tuple[bytearray, asyncio.Task]:
+        output = await cls._process()
+        task = asyncio.create_task(cls._dispatch(payload))
+        return output, task
 
     @classmethod
     async def _process(cls):

@@ -33,22 +33,23 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
                                           request_data=request,
                                           response_model=ZXReportResponse,#type: ignore
                                           callback_error=cls.exc_callback)
+            await asyncio.sleep(0.2)
             template = TEMPLATE_ENVIRONMENT.get_or_select_template(
                 'report.xml')
             name = response.TaxPayerName  #type: ignore
             name.replace(u'\u201c', '"')
             name.replace(u'\u201d', '"')
-            rendered = fromstring(
-                template.render(report_type='СМЕННЫЙ Z-ОТЧЕТ',
+            render = await template.render_async(report_type='СМЕННЫЙ Z-ОТЧЕТ',
                                 horizontal_delimiter='-',
                                 response=response,
                                 company_name=name,
-                                tab=' '))
-                
+                                tab=' ')
+            doc = fromstring(render)
+            await asyncio.sleep(0.2)
             task_shift_modify = Shift.filter(id=1).update(open_date=datetime.now(),
                                             total_docs=0)
             task_states_modify =  States.filter(id=1).update(mode=2)
-            tasks_print_xml = PrintXML.handle(rendered)
+            tasks_print_xml = PrintXML.handle(doc)
             await asyncio.gather(task_shift_modify, task_states_modify, tasks_print_xml)
             await CutPresent.handle()
         except Exception as e:
@@ -60,7 +61,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
         if isinstance(exc, ShiftAlreadyClosed):
             task_shift_modify = Shift.filter(id=1).update(open_date=datetime.now(),
                                             total_docs=0)
-            task_states_modify=  States.filter(id=1).update(mode=2)
+            task_states_modify= States.filter(id=1).update(mode=2)
             await asyncio.gather(task_shift_modify, task_states_modify)
             return False
         elif isinstance(exc, CredentialsError):
@@ -157,9 +158,8 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
                                     company_name=name,
                                     tab=' ')
                 doc = fromstring(render)
-                await PrintXML.handle(doc)
-                await CutPresent.handle()
-                asyncio.create_task(cls.flush_receipts(response.ShiftNumber))
+                asyncio.ensure_future(PrintXML.handle(doc)).add_done_callback(CutPresent.handle)
+                asyncio.ensure_future(cls.flush_receipts(response.ShiftNumber))
         except Exception as e:
             await logger.exception(e)
 

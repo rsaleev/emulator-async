@@ -30,11 +30,13 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         receipt, token = await asyncio.gather(task_receipt_fetch, task_token_fetch) 
         if receipt.id: #type: ignore
             if receipt.price ==0 or receipt.payment ==0: #type: ignore
-                await logger.error(f'Receipt {receipt.uid} has broken data')#type: ignore 
+                asyncio.ensure_future(logger.error(f'Receipt {receipt.uid} has broken data'))#type: ignore 
                 # if config['emulator']['flush_receipt']:
                 #     await cls._flush(receipt) # flush receipt
                 return
             else:
+                # sleep 
+                await asyncio.sleep(0.2)
                 request  = SaleRequest( 
                     token=token.token,
                     cashbox_unique_number=config['webkassa']['cassa_unique_number'],
@@ -57,13 +59,13 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                                             response_model=SaleResponse, #type: ignore
                                             callback_error=cls.exc_callback)
                 record_task = Receipt.filter(id=receipt.id).update(sent=True) #type: ignore
-                response,_ = await asyncio.gather(request_task, record_task) 
-                await asyncio.sleep(0.5)
+                response,_ = await asyncio.gather(request_task, record_task)
+                #sleep
+                await asyncio.sleep(0.2)
                 company = CompanyData(name=config['webkassa']['company']['name'],
                                     inn=config['webkassa']['company']['inn'])
                 template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
             try:
-                await asyncio.sleep(0.2)
                 render = await template.render_async(
                     horizontal_delimiter='-',
                     dot_delimiter='.',
@@ -71,23 +73,24 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                     company=company,
                     request=request,
                     response=response)
+                #sleep
                 await asyncio.sleep(0.2)
                 doc = fromstring(render)
-                asyncio.ensure_future(States.filter(id=1).update(gateway=1))
-                asyncio.ensure_future(Receipt.filter(id=receipt.id).update(ack=True)) #type: ignore
-                asyncio.ensure_future(Shift.filter(id=1).update(total_docs=F('total_docs')+1))
-                asyncio.ensure_future(PrintXML.handle(doc))
+                task_modify_states = States.filter(id=1).update(gateway=1)
+                task_modify_receipt = Receipt.filter(id=receipt.id).update(ack=True) #type: ignore
+                task_modify_shift= Shift.filter(id=1).update(total_docs=F('total_docs')+1)
+                await asyncio.gather(task_modify_receipt, task_modify_states, task_modify_shift)
             except Exception as e:
                 await logger.debug(e)
                 raise e 
             else:
                 await asyncio.sleep(0.2)
-                await CutPresent.handle()
-
+                asyncio.ensure_future(PrintXML.handle(doc)).add_done_callback(CutPresent.handle)
 
     @classmethod
     async def exc_callback(cls, exc, payload):
         asyncio.ensure_future(logger.debug(f'Resolving {exc}'))
+        await asyncio.sleep(0.2)
         if isinstance(exc, ShiftExceededTime):
             if config['webkassa']['shift']['autoclose']:
                 task_shift_close = WebkassaClientCloseShift.handle()

@@ -66,12 +66,10 @@ class Application:
             await logger.exception(e)
         else:
             await logger.warning('Application initialized.Serving')
-            task1 = asyncio.create_task(cls.fiscalreg.poll())
-            task2= asyncio.create_task(cls.watchdog.poll())
             while not cls.event.is_set():
                 try:
-                    await task1
-                    await task2
+                    asyncio.ensure_future(cls.fiscalreg.poll())
+                    asyncio.ensure_future(cls.watchdog.poll())
                 except Exception as e:
                     await logger.exception(e)
                     raise SystemExit('Emergency shutdown.Check logs')
