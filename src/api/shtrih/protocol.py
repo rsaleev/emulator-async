@@ -49,7 +49,7 @@ class ShtrihProtoInterface:
                 await self._nak_handle()
             else:
                 await self.write(ShtrihProto.NAK) 
-                asyncio.create_task(logger.error(f'INPUT:{hexlify(payload, sep=":")}.Unknown byte controls '))
+                asyncio.ensure_future(logger.error(f'INPUT:{hexlify(payload, sep=":")}.Unknown byte controls '))
             for task in asyncio.all_tasks():
                 await task
         except Exception as e:
