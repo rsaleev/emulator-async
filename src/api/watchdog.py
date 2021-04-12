@@ -1,5 +1,5 @@
-from src.api.webkassa.commands import WebkassaClientTokenCheck, WebkassaClientCloseShift
-from src.db.models import States, Shift
+from src.api.webkassa.commands import WebkassaClientToken, WebkassaClientCloseShift
+from src.db.models import States, Shift, Token
 from src import logger, config
 import asyncio
 from tortoise import timezone
@@ -20,15 +20,28 @@ class Watchdog:
                 await asyncio.gather(shift_task, states_task)
             else:
                 if config['webkassa']['shift']['autoclose']:
-                    log_task = logger.info(f'Autoclosing shift')
-                    request_task = WebkassaClientCloseShift.handle()
-                    await asyncio.gather(log_task, request_task)
+                    await WebkassaClientCloseShift.handle()
                 else:
                     await States.filter(id=1).update(mode=3)
+        await asyncio.sleep(1)
+
+    @classmethod
+    async def _token_check(cls):
+        token_in_db = await Token.filter(id=1).get()
+        if token_in_db.token =='' or (token_in_db.ts-timezone.now()).total_seconds()//3600 > 23:
+            try:
+                token = await WebkassaClientToken.handle()
+                await Token.filter(id=1).update(
+                                            token=token,
+                                            ts=timezone.now())
+            except:
+                pass
+        await asyncio.sleep(1)
+
     @classmethod
     async def poll(cls):
-        await asyncio.sleep(1)
-        await cls._check_shift()
+        asyncio.create_task(cls._check_shift())
+        asyncio.create_task(cls._token_check())
         
         
     
