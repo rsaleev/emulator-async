@@ -68,15 +68,9 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def handle(cls, payload):
-        output = await cls._process()
-        task = asyncio.create_task(cls._dispatch())
-        return output, task
-
-    @classmethod
-    async def _process(cls) -> bytearray:
         task_printer_check = PrinterFullStatusQuery.handle()
-        task_token_check = WebkassaClientTokenCheck.handle()
-        await asyncio.gather(task_printer_check, task_token_check)
+        #task_token_check = WebkassaClientTokenCheck.handle()
+        await asyncio.gather(task_printer_check)
         states = await States.get(id=1)
         mode = states.mode
         if states.gateway == 0:
