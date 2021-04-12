@@ -93,29 +93,21 @@ class PrintBuffer(Printer):
     @classmethod
     async def handle(cls, payload=None):
         loop = asyncio.get_running_loop()
-        await States.filter(id=1).update(submode=2)
-        await loop.run_in_executor(None, cls._print_buffer) 
-        await States.filter(id=1).update(submode=3)
-     
-    @classmethod
-    def _print_buffer(cls):
-        Printer()._raw(cls.buffer.output)
-        Printer().buffer.clear()  
-     
-
-
-    @classmethod
-    def _poll_for_recover(cls):
-        while True:
-            time.sleep(0.2)
-            status = PrintingStatusQuery.handle()
-            if status:
-                Printer()._raw(cls.buffer.output) 
-                break
-            else:
-                time.sleep(0.2)
-                continue
-
+        while 1:
+            try:
+                await loop.run_in_executor(None, Printer()._raw, cls.buffer.output)
+                asyncio.sleep(0.2)
+                status = await loop.run_in_executor(None, PrintingStatusQuery.handle) 
+                if status:
+                    await asyncio.gather(States.filter(id=1).update(submode=3),
+                                        loop.run_in_executor(None, ClearBuffer.handle))
+                    break
+                else:
+                    asyncio.sleep(0.2)
+                    continue
+            except Exception as e:
+                raise e 
+                
 class ClearBuffer(Printer):
 
     alias = 'clear'
