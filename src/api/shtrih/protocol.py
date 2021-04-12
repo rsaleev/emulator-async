@@ -108,7 +108,7 @@ class ShtrihProtoInterface:
         if hdlr:
             await self.write(ShtrihProto.ACK)
             output = await hdlr.handle()
-            await self.write(output)
+            await self.write(ShtrihProto.payload_pack(output))
             self.buffer.put_nowait(output)
         else:
             await self.write(ShtrihProto.NAK)

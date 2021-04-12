@@ -1,8 +1,7 @@
 from abc import ABC, abstractclassmethod
 import struct
-from src.api.shtrih.protocol import ShtrihProto
 
-class ShtrihCommand(ShtrihProto):
+class ShtrihCommand:
     _password = bytearray((0x30,))
     _error_code = bytearray((0x00,))
 

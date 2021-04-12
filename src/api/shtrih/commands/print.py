@@ -26,7 +26,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        return ShtrihProto.payload_pack(arr)
+        return arr
         
     @classmethod
     async def __parse_custom_line(cls, payload:bytearray) -> None:
@@ -57,5 +57,5 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        return ShtrihProto.payload_pack(arr)
+        return arr
  

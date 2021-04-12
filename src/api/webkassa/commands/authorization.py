@@ -4,7 +4,6 @@ from src import config
 from src.db.models import Token
 from datetime import datetime
 from src.api.webkassa.exceptions import CredentialsError, UnrecoverableError
-from tortoise import timezone
 
 class WebkassaClientToken(WebcassaClient):
     endpoint = 'Authorize'
