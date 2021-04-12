@@ -1,6 +1,5 @@
 import re
 import asyncio
-from src.api.shtrih.protocol import ShtrihProto
 from uuid import uuid4
 from src import config
 from src.api.printer.commands import PrintBytes, CutPresent, PrintBuffer
