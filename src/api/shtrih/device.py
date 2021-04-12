@@ -7,7 +7,7 @@ from src.api.shtrih import logger
 from serial.tools import list_ports
 from itertools import groupby
 from src.api.device import Device, DeviceImpl, DeviceIOError, DeviceConnectionError
-from src.api.shtrih.protocol import ShtrihProto, ShtrihProtoInterface
+from src.api.shtrih.protocol import ShtrihProtoInterface
 from binascii import hexlify
 
 
