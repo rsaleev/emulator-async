@@ -39,6 +39,10 @@ class SerialDevice(DeviceImpl):
                 rtscts=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))),
                 write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000), #type: ignore
                 loop=asyncio.get_running_loop())
+            try:
+                cls.device.flushInput()
+            except:
+                pass
         except Exception as e:
             raise e 
         else:
