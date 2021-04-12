@@ -123,7 +123,7 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
             await Receipt.filter(id=receipt.id).update(payment_type=payment_type, payment=payment)
-            receipt_updated = Receipt.filter(id=receipt.id).first()
+            receipt_updated = await Receipt.filter(id=receipt.id).first()
             response =  await WebkassaClientSale.handle(receipt_updated)
             if not response:
                 cls.set_error(0x03)
