@@ -111,7 +111,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
        while True:
             try:
                 data = await self.impl._read(size)
-                asyncio.ensure_future(asyncio.create_task(logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}')))
+                asyncio.ensure_future(logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}'))
                 return data
             except (DeviceConnectionError, DeviceIOError):
                 await self.reconnect()
