@@ -6,7 +6,7 @@ from tortoise.timezone import now
 
 class Shift(Model):
     id = IntField(pk=True)
-    open_date = DatetimeField(default=now())
+    open_date = DatetimeField(auto_now=True)
     total_docs = IntField(default=0)
 
     class Meta:
