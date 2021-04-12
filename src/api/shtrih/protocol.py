@@ -1,3 +1,4 @@
+from asyncio.tasks import current_task
 import operator
 from functools import reduce
 import asyncio
@@ -50,8 +51,7 @@ class ShtrihProtoInterface:
             else:
                 await self.write(ShtrihProto.NAK) 
                 asyncio.ensure_future(logger.error(f'INPUT:{hexlify(payload, sep=":")}.Unknown byte controls '))
-            for task in asyncio.all_tasks():
-                await task
+            [await  task  for task in asyncio.all_tasks() if not asyncio.current_task()]
         except Exception as e:
             await logger.exception(e)
 
@@ -97,7 +97,6 @@ class ShtrihProtoInterface:
             else:
                 asyncio.ensure_future(logger.debug('CRC:DECLINED'))
                 await self.write(ShtrihProto.NAK) 
-        [await task for task in asyncio.all_tasks()]
 
     async def _cmd_handle(self, payload:bytearray):
         cmd = payload[0:1]
@@ -108,7 +107,7 @@ class ShtrihProtoInterface:
         hdlr = next((c for c in COMMANDS if cmd == c._command_code),None)
         if hdlr:
             await self.write(ShtrihProto.ACK)
-            output = await hdlr.handle()
+            output = await hdlr.handle(payload)
             await self.write(ShtrihProto.payload_pack(output))
             self.buffer.put_nowait(output)
         else:
