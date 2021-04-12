@@ -12,7 +12,6 @@ from uuid import uuid4
 from src.api.printer.commands import PrintXML, CutPresent
 import asyncio
 from src.api.webkassa import logger
-from tortoise import timezone
 
 
 """
@@ -22,6 +21,7 @@ Withdraw/deposit money
 """
 
 class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
+    
     endpoint = 'MoneyOperation'
     alias = 'deposit'
 
@@ -34,30 +34,33 @@ class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
             operation_type=operation_type,
             sum = struct.unpack('<5B', payload[4:9]),
             external_check_number=str(uuid4()))
-        await asyncio.sleep(0.2)
         try:
             response = await cls.dispatch(endpoint=cls.endpoint, 
                                     request_data=request, 
                                     response_model=MoneyCollectionResponse, #type: ignore
                                     callback_error=cls.exc_callback)
-            await asyncio.sleep(0.2)
-            if response:
-                try:
-                    template = TEMPLATE_ENVIRONMENT.get_or_select_template('collection.xml')
-                    render = await template.render_async(
-                        operation_type = operation_type,
-                        request=request,
-                        response=response)
-                    doc = fromstring(render)
-                except Exception as e:
-                    await logger.debug(e)
-                    raise e 
-                else:
-                    await asyncio.sleep(0.2)
-                    asyncio.ensure_future(PrintXML.handle(doc)).add_done_callback(CutPresent.handle)
+            asyncio.create_task(cls._render_collection(request, response))
         except Exception as e:
             await logger.exception(e)
             return 
+
+    @classmethod
+    async def _render_collection(cls, request, response):
+        try:
+            template = TEMPLATE_ENVIRONMENT.get_or_select_template('collection.xml')
+            render = await template.render_async(
+                operation_type = request.operation_type,
+                request=request,
+                response=response)
+            await asyncio.sleep(0.1)
+            doc = fromstring(render)
+        except Exception as e:
+            await logger.debug(e)
+        else:
+            await asyncio.sleep(0.1)
+            await PrintXML.handle(doc)
+            await asyncio.sleep(0.1)
+            await CutPresent.handle()
 
     @classmethod
     async def exc_callback(cls, exc, payload):
