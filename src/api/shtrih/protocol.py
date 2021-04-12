@@ -107,7 +107,7 @@ class ShtrihProtoInterface:
         hdlr = next((c for c in COMMANDS if cmd == c._command_code),None)
         if hdlr:
             await self.write(ShtrihProto.ACK)
-            output = await hdlr.handle(payload)
+            output = await hdlr.handle(data)
             await self.write(ShtrihProto.payload_pack(output))
             self.buffer.put_nowait(output)
         else:

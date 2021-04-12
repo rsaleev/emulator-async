@@ -20,7 +20,7 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
     async def handle(cls, payload:bytearray) ->bytearray:
         try:
             count = struct.unpack('<iB',payload[4:9])[0]//10**3
-            price = struct.unpack('<iB', payload[9:14])[0]//10**2     
+            price = struct.unpack('<iB', payload[9:14])[0]//10**2
             tax_percent = config['webkassa']['taxgroup'][str(payload[14])]
             tax = round(price*count/(100+int(tax_percent))*tax_percent,2)
             receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
@@ -29,8 +29,7 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
             # create record with empty ticket number
             else:
                 await Receipt.create(uid=uuid4(), ticket='', count=count, price=price, tax_percent=tax_percent, tax=tax)
-            if not config['webkassa']['receipt']['header']:
-                await (ClearBuffer.handle())
+           
         except Exception as e:
             asyncio.create_task(logger.exception(e))
             cls.set_error(3)

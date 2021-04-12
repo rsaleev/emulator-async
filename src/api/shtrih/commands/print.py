@@ -2,7 +2,7 @@ import re
 import asyncio
 from uuid import uuid4
 from src import config
-from src.api.printer.commands import PrintBytes, CutPresent, PrintBuffer
+from src.api.printer.commands import PrintBytes, CutPresent, PrintBuffer, ClearBuffer
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.db.models.receipt import Receipt
 
@@ -35,6 +35,8 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
         if line:
             num = line.group(2)
             await Receipt.create(uid=uuid4(), ticket=num)
+            if not config['webkassa']['receipt']['header']:
+                await ClearBuffer.handle()
         
 class Cut(ShtrihCommand, ShtrihCommandInterface):
 
