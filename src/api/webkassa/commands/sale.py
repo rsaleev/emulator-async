@@ -2,11 +2,10 @@
 import aiofiles
 import os
 import asyncio
-from datetime import datetime
 from xml.etree.ElementTree import fromstring
-import asyncio
 from tortoise.expressions import F
 from tortoise.functions import Max
+from tortoise import timezone
 
 from src import config
 from src.api.webkassa.client import WebcassaClient
@@ -17,7 +16,7 @@ from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa import logger
 from src.api.webkassa.commands import WebkassaClientToken,WebkassaClientCloseShift
 from src.api.webkassa.models import SaleRequest, SaleResponse, Position, Payments, CompanyData
-from src.api.printer.commands import PrintXML, CutPresent, PrintQR
+from src.api.printer.commands import PrintXML, CutPresent
 
 class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     endpoint = 'Check'
@@ -48,16 +47,19 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 payments=[Payments(
                             sum= receipt.payment, 
                             payment_type=receipt.payment_type)], 
-                external_check_number=str(receipt.uid))     
-            request_task = cls.dispatch(endpoint=cls.endpoint, 
-                                        request_data=request,   
-                                        response_model=SaleResponse, #type: ignore
-                                        callback_error=cls.exc_callback)
-            record_task = Receipt.filter(id=receipt.id).update(sent=True) 
-            response,_ = await asyncio.gather(request_task, record_task)
-            if response:
-                asyncio.ensure_future(cls._render_receipt(request, response))
-            return response 
+                external_check_number=str(receipt.uid)) 
+            try:    
+                await receipt.update_from_dict({'sent':True})
+                response = await cls.dispatch(endpoint=cls.endpoint, 
+                                            request_data=request,   
+                                            response_model=SaleResponse, #type: ignore
+                                            callback_error=cls.exc_callback)
+            except Exception as e:
+                asyncio.create_task(logger.exception(e))
+                raise e
+            else:
+                asyncio.create_task(cls._render_receipt(request, response))
+
 
     @classmethod
     async def _render_receipt(cls, request, response):
@@ -78,44 +80,42 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
             task_modify_shift= Shift.filter(id=1).update(total_docs=F('total_docs')+1)
             await asyncio.gather(task_modify_receipt, task_modify_states, task_modify_shift)
         except Exception as e:
-            await logger.debug(e)
-            return
+            await logger.exception(e)
         else:
-            await PrintXML.handle(doc)
-            await CutPresent.handle()
-        
+            try:
+                await PrintXML.handle(doc)
+                await CutPresent.handle()
+            except Exception as e:
+                await logger.exception(e)
+
     @classmethod
     async def exc_callback(cls, exc, payload):
-        asyncio.ensure_future(logger.debug(f'Resolving {exc}'))
-        await asyncio.sleep(0.2)
         if isinstance(exc, ShiftExceededTime):
             if config['webkassa']['shift']['autoclose']:
-                task_shift_close = WebkassaClientCloseShift.handle()
-                task_shift_modify = Shift.filter(id=1).update(open_date=datetime.now(),
-                                    total_docs=0)
-                task_states_modify = States.filter(id=1).update(mode=2)
-                await asyncio.gather(task_shift_close, task_shift_modify, task_states_modify)
-                return True
+                try:
+                    await WebkassaClientCloseShift.handle()
+                except:
+                    return False
+                else:
+                    return True
             else:
                 # recover from day when no payments were produced and shift wasn't closed on Webkassa service
                 shift = await Shift.get(id=1)
                 # check if total_docs were 0
                 if shift.total_docs ==0:
-                    await Shift.filter(id=1).update(open_date=datetime.now(),
-                                    total_docs=0)
+                    await shift.update_from_dict({'open_date':timezone.now()})
                     return True
                 else:
                     await States.filter(id=1).update(mode=4)
                     return False
         elif isinstance(exc, ExpiredTokenError):
-            response = await WebkassaClientToken.handle()
-            if response:
+            try:
+                response = await WebkassaClientToken.handle()
                 payload.token = response
                 return True
-            else:
+            except:
                 return False
         elif isinstance(exc, UnrecoverableError):
-            await States.filter(id=1).update(gateway=0)
             return False
         
 
