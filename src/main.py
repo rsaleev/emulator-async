@@ -6,11 +6,12 @@ import uvloop
 from src import logger
 from concurrent.futures import ThreadPoolExecutor
 from src.db.connector import DBConnector
+from src.db.models import Shift, States, Token
 from src.api.printer.device import Printer
 from src.api.shtrih.device import Paykiosk
 from src.api.watchdog import Watchdog
 from src.api.printer.commands import PrinterFullStatusQuery
-from src.api.webkassa.commands import WebkassaClientTokenCheck
+from src.api.webkassa.commands import WebkassaClientToken
 
 
 
@@ -59,11 +60,15 @@ class Application:
             task_fiscalreg_connect = cls.fiscalreg.connect()
             task_printer_connect = loop.run_in_executor(None, cls.printer.connect)
             await asyncio.gather(task_db_connect, task_fiscalreg_connect, task_printer_connect)
-            task_printer_check = PrinterFullStatusQuery.handle()
-            task_webkassa_check = WebkassaClientTokenCheck.handle()
-            await asyncio.gather(task_printer_check, task_webkassa_check)
+             # initialize records
+            await asyncio.gather(Shift.get_or_create(id=1), 
+                                States.get_or_create(id=1))
+            await PrinterFullStatusQuery.handle()
+            token = WebkassaClientToken.handle()
+            await Token.get_or_create(id=1, token=token)
         except Exception as e:
             await logger.exception(e)
+            raise SystemExit(f'Emergency shutdown: {repr(e)}')
         else:
             await logger.warning('Application initialized.Serving')
 
@@ -71,12 +76,11 @@ class Application:
     async def run(cls):
         while not cls.event.is_set():
             try:
+                await cls.fiscalreg.poll()
                 asyncio.create_task(cls.watchdog.poll())
-                asyncio.create_task(cls.fiscalreg.poll())
-                [await task for task in asyncio.all_tasks() if not asyncio.current_task()]
             except Exception as e:
                 await logger.exception(e)
-                raise SystemExit('Emergency shutdown.Check logs')
+                raise SystemExit(f'Emergency shutdown: {repr(e)}')
 
 if __name__ == '__main__':
     # ASYNCIO LOOP POLICY
@@ -89,4 +93,5 @@ if __name__ == '__main__':
         loop.add_signal_handler(s, lambda: asyncio.ensure_future(app._signal_handler(s, loop)))
     loop.run_until_complete(app.init())
     loop.run_until_complete(app.run())
+    loop.run_forever()
    
