@@ -71,8 +71,9 @@ class Application:
     async def run(cls):
         while not cls.event.is_set():
             try:
-                asyncio.ensure_future(cls.watchdog.poll())
-                asyncio.ensure_future(cls.fiscalreg.poll())
+                asyncio.create_task(cls.watchdog.poll())
+                asyncio.create_task(cls.fiscalreg.poll())
+                [await task for task in asyncio.all_tasks() if not asyncio.current_task()]
             except Exception as e:
                 await logger.exception(e)
                 raise SystemExit('Emergency shutdown.Check logs')
