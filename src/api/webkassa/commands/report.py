@@ -1,17 +1,16 @@
-from datetime import datetime
 import asyncio
+from tortoise import timezone
+from xml.etree.ElementTree import fromstring
 
 from src import config
-
 from src.db.models import Shift, Token, States, Receipt, ReceiptArchived
-from src.api.webkassa.exceptions import ExpiredTokenError, ShiftAlreadyClosed, CredentialsError, UnrecoverableError
+from src.api.webkassa.exceptions import ExpiredTokenError, ShiftAlreadyClosed, CredentialsError, UnrecoverableError, UnresolvedCommand
 from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa.command import WebcassaCommand
 from src.api.webkassa.client import WebcassaClient
 from src.api.webkassa.models import ZXReportRequest, ZXReportResponse
 from src.api.webkassa.commands.authorization import WebkassaClientToken
 from src.api.webkassa import logger
-from xml.etree.ElementTree import fromstring
 from src.api.printer.commands import PrintXML, CutPresent
 
 class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
@@ -30,54 +29,61 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
             cashbox_unique_number=config['webkassa']['cassa_unique_number'])
         try:
             response = await cls.dispatch(endpoint=cls.endpoint,
-                                          request_data=request,
-                                          response_model=ZXReportResponse,#type: ignore
-                                          callback_error=cls.exc_callback)
-            await asyncio.sleep(0.2)
-            template = TEMPLATE_ENVIRONMENT.get_or_select_template(
-                'report.xml')
-            name = response.TaxPayerName  #type: ignore
-            name.replace(u'\u201c', '"')
-            name.replace(u'\u201d', '"')
+                                            request_data=request,
+                                            response_model=ZXReportResponse,#type: ignore
+                                            callback_error=cls.exc_callback)
+    
+            asyncio.create_task(cls._render_report(request, response))
+            task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
+                                            total_docs=0)
+            task_states_modify =  States.filter(id=1).update(mode=2)
+            await asyncio.gather(task_shift_modify, task_states_modify)
+        except Exception as e:
+            raise UnresolvedCommand(f'{cls.alias}:{repr(e)}')
+            
+    @classmethod
+    async def _render_report(cls, request, response):
+        await asyncio.sleep(0.1)
+        template = TEMPLATE_ENVIRONMENT.get_or_select_template(
+            'report.xml')
+        name = response.TaxPayerName  #type: ignore
+        name.replace(u'\u201c', '"')
+        name.replace(u'\u201d', '"')
+        try:
             render = await template.render_async(report_type='СМЕННЫЙ Z-ОТЧЕТ',
                                 horizontal_delimiter='-',
                                 response=response,
                                 company_name=name,
                                 tab=' ')
+            await asyncio.sleep(0.1)
             doc = fromstring(render)
-            await asyncio.sleep(0.2)
-            task_shift_modify = Shift.filter(id=1).update(open_date=datetime.now(),
-                                            total_docs=0)
-            task_states_modify =  States.filter(id=1).update(mode=2)
-            tasks_print_xml = PrintXML.handle(doc)
-            await asyncio.gather(task_shift_modify, task_states_modify, tasks_print_xml)
+            
+            await PrintXML.handle(doc)
+            await asyncio.sleep(0.1)
             await CutPresent.handle()
         except Exception as e:
             await logger.exception(e)
-            return 
 
     @classmethod
     async def exc_callback(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
-            task_shift_modify = Shift.filter(id=1).update(open_date=datetime.now(),
-                                            total_docs=0)
-            task_states_modify= States.filter(id=1).update(mode=2)
-            await asyncio.gather(task_shift_modify, task_states_modify)
+            asyncio.create_task(Shift.filter(id=1).update(open_date=timezone.now(),
+                                            total_docs=0))
+            asyncio.create_task(States.filter(id=1).update(mode=2))
             return False
         elif isinstance(exc, CredentialsError):
-            await States.filter(id=1).update(gateway=0)
+            asyncio.create_task(States.filter(id=1).update(gateway=0))
             return False
         elif isinstance(exc, UnrecoverableError):
-            await States.filter(id=1).update(gateway=0)
+            asyncio.create_task(States.filter(id=1).update(gateway=0))
             return False
         elif isinstance(exc, ExpiredTokenError):
-            response = await WebkassaClientToken.handle()
-            if response:
+            try:
+                response = await WebkassaClientToken.handle()
                 payload.token = response
                 return True
-            else:
+            except:
                 return False
-
 
 class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
 
@@ -97,31 +103,30 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
                                           callback_error=cls.exc_callback)
             if response:
                 shift_task = Shift.filter(id=1).update(
-                    open_date=datetime.now(), total_docs=0)
+                    open_date=timezone.now(), total_docs=0)
                 states_task = States.filter(id=1).update(mode=2)
                 await asyncio.gather(shift_task, states_task)
-                return response
             else:
                 await logger.error("Couldn't close shift")
-                return None
+                 
         except Exception as e:
             await logger.exception(e)
-            return
+            raise e
 
     @classmethod
     async def exc_callback(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
-            task_shift_modify = Shift.filter(id=1).update(open_date=datetime.now(),
+            task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
                                           total_docs=0)
             task_states_modify = States.filter(id=1).update(mode=2)
             await asyncio.gather(task_shift_modify, task_states_modify)
             return False
         elif isinstance(exc, CredentialsError):
-            response = await WebkassaClientToken.handle()
-            if response:
+            try:
+                response = await WebkassaClientToken.handle()
                 payload.token = response
                 return True
-            else:
+            except:
                 return False
         elif isinstance(exc, UnrecoverableError):
             return False
@@ -141,11 +146,11 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
         request = ZXReportRequest(
             token=token.token,
             cashbox_unique_number=config['webkassa']['cassa_unique_number'])
-        response = await cls.dispatch(endpoint=cls.endpoint,
+        try:
+            response = await cls.dispatch(endpoint=cls.endpoint,
                                       request_data=request,
                                       response_model=ZXReportResponse, #type: ignore
                                       callback_error=cls.exc_callback)
-        try:
             if config['webkassa']['report']['printable']:
                 template = TEMPLATE_ENVIRONMENT.get_or_select_template(
                     'report.xml')
@@ -158,10 +163,11 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
                                     company_name=name,
                                     tab=' ')
                 doc = fromstring(render)
-                asyncio.ensure_future(PrintXML.handle(doc)).add_done_callback(CutPresent.handle)
-                asyncio.ensure_future(cls.flush_receipts(response.ShiftNumber))
+                asyncio.create_task(PrintXML.handle(doc)).add_done_callback(CutPresent.handle)
+                asyncio.create_task(cls.flush_receipts(response.ShiftNumber))
         except Exception as e:
-            await logger.exception(e)
+            asyncio.create_task(logger.exception(e))
+            raise e
 
     @classmethod
     async def flush_receipts(cls, shift_number):
@@ -188,9 +194,9 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
         elif isinstance(exc, UnrecoverableError):
             return False
         elif isinstance(exc, ExpiredTokenError):
-            response = await WebkassaClientToken.handle()
-            if response:
+            try:
+                response = await WebkassaClientToken.handle()
                 payload.token = response
                 return True
-            else:
+            except:
                 return False
