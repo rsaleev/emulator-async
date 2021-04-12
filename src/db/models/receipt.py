@@ -12,7 +12,7 @@ class Receipt(Model):
     tax = FloatField(default=0)
     tax_percent = IntField(default=0)
     payment_type = IntField(default=1)
-    payment_ts = DatetimeField(default=datetime.now())
+    payment_ts = DatetimeField(auto_now=True)
     sent = BooleanField(default=False)
     ack = BooleanField(default=False)
 
