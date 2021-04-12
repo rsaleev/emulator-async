@@ -2,14 +2,14 @@ from src.api.webkassa.commands import WebkassaClientTokenCheck, WebkassaClientCl
 from src.db.models import States, Shift
 from src import logger, config
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Watchdog:
 
     @classmethod
     async def _check_shift(cls):
         shift = await Shift.get(id=1)
-        period = datetime.now().replace(tzinfo=None) - shift.open_date
+        period = datetime.now() - shift.open_date
         hours= int(period.total_seconds() // 3600)
         if (hours < 24
              and shift.total_docs == 0):
@@ -28,6 +28,6 @@ class Watchdog:
                     await States.filter(id=1).update(mode=3)
     @classmethod
     async def poll(cls):
-        asyncio.create_task(cls._check_shift())
+        #asyncio.create_task(cls._check_shift())
         await asyncio.sleep(1)
     
