@@ -4,7 +4,6 @@ import struct
 from datetime import datetime
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.api.printer.commands import PrinterFullStatusQuery
-from src.api.webkassa.commands import WebkassaClientTokenCheck
 from src.db.models import States
 from bitarray import bitarray #type: ignore
 class FullState(ShtrihCommand, ShtrihCommandInterface):
@@ -68,14 +67,14 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def handle(cls, payload):
-        task_printer_check = PrinterFullStatusQuery.handle()
-        #task_token_check = WebkassaClientTokenCheck.handle()
-        await asyncio.gather(task_printer_check)
+        await PrinterFullStatusQuery.handle()
         states = await States.get(id=1)
         mode = states.mode
         if states.gateway == 0:
             mode = 4
-            cls.set_error(0x11)
+            cls.set_error(11)
+        else:
+            cls.set_error(0)
         ### response body
         arr = bytearray()
         arr.extend(cls._length)

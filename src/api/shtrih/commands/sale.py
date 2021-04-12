@@ -7,7 +7,6 @@ from typing import Tuple, Coroutine
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.db.models.receipt import Receipt
 from src.db.models.state import States
-from src.api.printer.commands import ClearBuffer
 from src.api.webkassa.commands import WebkassaClientSale
 from src.api.shtrih import logger
 
@@ -31,7 +30,7 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
                 await Receipt.create(uid=uuid4(), ticket='', count=count, price=price, tax_percent=tax_percent, tax=tax)
            
         except Exception as e:
-            asyncio.create_task(logger.exception(e))
+            asyncio.ensure_future(logger.exception(e))
             cls.set_error(3)
         else:
             cls.set_error(0)
@@ -122,15 +121,14 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
         if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
-            await Receipt.filter(id=receipt.id).update(payment_type=payment_type, payment=payment)
-            receipt_updated = await Receipt.filter(id=receipt.id).first()
-            response =  await WebkassaClientSale.handle(receipt_updated)
+            await receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
+            response =  await WebkassaClientSale.handle(receipt)
             if not response:
                 cls.set_error(0x03)
             else:
                 cls.set_error(0x00) 
         else:
-            asyncio.ensure_future(logger.error('No payment data'))
+            asyncio.create_task(logger.error('No payment data'))
             cls.set_error(0x03)
         arr = bytearray()
         arr.extend(cls._length)
@@ -138,7 +136,7 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._error_code)
         arr.extend(cls._password)
         arr.extend(change)
-        return arr 
+        return arr
         
 
 
