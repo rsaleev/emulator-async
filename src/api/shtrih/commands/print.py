@@ -1,5 +1,6 @@
 import re
 import asyncio
+from src.api.shtrih.protocol import ShtrihProto
 from typing import Tuple, Coroutine
 from uuid import uuid4
 from src import config
@@ -16,64 +17,48 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x17,))
             
     @classmethod
-    def handle(cls, payload:bytearray) -> Tuple[asyncio.Task, asyncio.Task]:
-        task1 = asyncio.create_task(cls._process(payload))
-        task2 = asyncio.create_task(cls._dispatch(payload))
-        return task1, task2
-
-
-    @classmethod
-    async def _process(cls, payload) -> bytearray:
+    async def handle(cls, payload:bytearray) ->bytearray:
+        try:
+            await asyncio.gather(PrintBytes.handle(payload=payload[4:]),cls.__parse_custom_line(payload))
+        except:
+            cls.set_error(200) # printer error: no connection or no signal from sensors
+        else:
+            cls.set_error(0)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        return arr
-
-    @classmethod
-    async def _dispatch(cls, payload:bytearray) -> None:
-        await PrintBytes.handle(payload=payload[4:])
-        await cls.__parse_custom_line(payload)
-
-
+        return ShtrihProto.payload_pack(arr)
+        
     @classmethod
     async def __parse_custom_line(cls, payload:bytearray) -> None:
-        try:
-            line_to_print = bytes(payload[5:]).decode('cp1251')
-            regex = config['webkassa']['receipt']['regex']
-            line = re.match(regex, line_to_print, flags=re.IGNORECASE)
-            if line:
-                num = line.group(2)
-                await Receipt.create(uid=uuid4(), ticket=num)
-        except Exception as e:
-            await logger.exception(e)
-            
+        line_to_print = bytes(payload[5:]).decode('cp1251')
+        regex = config['webkassa']['receipt']['regex']
+        line = re.match(regex, line_to_print, flags=re.IGNORECASE)
+        if line:
+            num = line.group(2)
+            await Receipt.create(uid=uuid4(), ticket=num)
+        
 class Cut(ShtrihCommand, ShtrihCommandInterface):
 
     _length = bytearray((0x03,))
     _command_code = bytearray((0x25,))
    
     @classmethod
-    def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
-        task_process = cls._process()
-        task_execute = cls._dispatch()
-        return task_process, task_execute
-
-
-    @classmethod
-    async def _process(cls) -> bytearray:
+    async def handle(cls, payload:bytearray) -> bytearray:
+        try:
+            if config['printer']['text']['buffer']:
+                await PrintBuffer.handle()
+            await CutPresent.handle()
+        except:
+            cls.set_error(200) # printer error: no connection or no signal from sensors
+        else:
+            cls.set_error(0)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
         arr.extend(cls._password)
-        return arr
-        
-    @classmethod
-    async def _dispatch(cls):
-        if config['printer']['text']['buffer']:
-            await PrintBuffer.handle()
-        await CutPresent.handle()
-
-    
+        return ShtrihProto.payload_pack(arr)
+ 
