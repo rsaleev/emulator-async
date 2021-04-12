@@ -63,7 +63,7 @@ class WebcassaClient:
         attempts = config['webkassa']['attempts']
         while counter <= attempts:
             try:
-                asyncio.ensure_future(logger.info(f'Dispatching to Webkassa: {endpoint}'\
+                asyncio.create_task(logger.info(f'Dispatching to Webkassa: {endpoint}'\
                                     f'{request_data.dict(by_alias=True,exclude_unset=True)}'))
                 response = await cls._send(endpoint=endpoint,
                                         payload=request_data.dict(
@@ -75,38 +75,36 @@ class WebcassaClient:
                 )  
                 if output.errors:
                     task_state_modify_0= States.filter(id=1).update(gateway=0)
-                    asyncio.ensure_future(asyncio.gather(task_log_debug_incoming, task_state_modify_0))
+                    asyncio.create_task(asyncio.gather(task_log_debug_incoming, task_state_modify_0))
                     for err in output.errors:
                         cls._err_hdlr(err)
                 else:
-                    asyncio.ensure_future(States.filter(id=1).update(gateway=1))
+                    asyncio.create_task(States.filter(id=1).update(gateway=1))
                     return response_model(**output.data)  #type:ignore
             except (ReceiptUniqueNumDuplication,
                     ShiftAlreadyClosed, ShiftExceededTime,ExpiredTokenError) as e:
                 # default state on error -> 0
                 resolver = await callback_error(e, request_data)
                 if resolver:
-                    asyncio.ensure_future(logger.debug(f'Callback {resolver}'))
-                    asyncio.ensure_future(logger.error(
+                    asyncio.create_task(logger.error(
                         f'Catched API error {repr(e)}. Attempt: {counter}. Continue'
                     ))
                     counter += 1
-                    await asyncio.sleep(0.2)
                     continue
                 else:
-                    asyncio.ensure_future(logger.error(
+                    asyncio.create_task(logger.error(
                         f'Max attempts exhausted. Attempt: {counter} Error:{repr(e)}'
                     ))
                     return
-
             except (UnrecoverableError) as e:
-                asyncio.ensure_future(logger.error(
+                asyncio.create_task(logger.error(
                         f'Catched API error {repr(e)}. Attempt: {counter}. Continue'
                     ))
                 return 
             except ConnectionError as e:
                 counter += 1
-                asyncio.ensure_future(logger.error(
+                await States.filter(id=1).update(gateway=0)
+                asyncio.create_task(logger.error(
                     f'Cacthed connection error. Attempt: {counter} Error:{repr(e)}. Continue'
                 ))
                 continue
