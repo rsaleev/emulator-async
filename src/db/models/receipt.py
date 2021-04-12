@@ -1,7 +1,7 @@
 from datetime import datetime
 from tortoise.models import Model
 from tortoise.fields.data import UUIDField, CharField, IntField, FloatField, DatetimeField, BooleanField, BigIntField
-
+from tortoise.timezone import now
 
 class Receipt(Model):
     id = IntField(pk=True)
@@ -13,7 +13,7 @@ class Receipt(Model):
     tax = FloatField(default=0)
     tax_percent = IntField(default=0)
     payment_type = IntField(default=1)
-    payment_ts = DatetimeField(auto_now=True)
+    payment_ts = DatetimeField(auto_now=True, auto_now_add=True)
     sent = BooleanField(default=False)
     ack = BooleanField(default=False)
 
@@ -40,7 +40,7 @@ class ReceiptArchived(Model):
     tax = FloatField(default=0)
     tax_percent = IntField(default=0)
     payment_type = IntField(default=1)
-    payment_ts = DatetimeField(default=datetime.now(),auto_now=True)
+    payment_ts = DatetimeField(auto_now=True)
     sent = BooleanField(default=False)
     ack = BooleanField(default=False)
     shift_num = IntField(default=0)
