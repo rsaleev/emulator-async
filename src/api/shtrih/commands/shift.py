@@ -6,6 +6,7 @@ from dateutil import parser
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.api.webkassa.commands import WebkassaClientCloseShift
 from src.db.models import States, Shift
+from tortoise.timezone import now
 
 
 class OpenShift(ShtrihCommand, ShtrihCommandInterface):
@@ -22,7 +23,7 @@ class OpenShift(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def _process(cls): 
         task_modify_state = States.filter(id=1).update(mode=2)
-        task_modify_shift = Shift.filter(id=1).update(open_date=datetime.now(), total_docs=0)
+        task_modify_shift = Shift.filter(id=1).update(open_date=now(), total_docs=0)
         await asyncio.gather(task_modify_shift, task_modify_state)
         arr = bytearray()
         arr.extend(cls._length)
