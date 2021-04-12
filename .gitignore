@@ -148,3 +148,7 @@ webcassa*
 webassa.db
 webcassa.db-shm 
 webcassa.db-wal
+
+/tests/
+config.toml
+*.log*
