@@ -110,6 +110,8 @@ class ShtrihProtoInterface:
             output = await hdlr.handle()
             await self.write(ShtrihProto.payload_pack(output))
             self.buffer.put_nowait(output)
+            for task in asyncio.all_tasks():
+                await task
         else:
             await self.write(ShtrihProto.NAK)
             asyncio.create_task(logger.error(f"{cmd} not implemented in current build version "))
