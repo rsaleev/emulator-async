@@ -7,7 +7,7 @@ from src.api.shtrih import logger
 from serial.tools import list_ports
 from itertools import groupby
 from src.api.device import Device, DeviceImpl, DeviceIOError, DeviceConnectionError
-from src.api.shtrih.protocol import ShtrihProto
+from src.api.shtrih.protocol import ShtrihProto, ShtrihProtoInterface
 from binascii import hexlify
 
 
@@ -68,11 +68,11 @@ class SerialDevice(DeviceImpl):
         except:
             pass
 
-class Paykiosk(Device, ShtrihProto):
+class Paykiosk(Device, ShtrihProtoInterface):
 
     def __init__(self):
         Device.__init__(self)
-        ShtrihProto.__init__(self)
+        ShtrihProtoInterface.__init__(self)
         self.impl = None
         self.discover()
 
@@ -98,7 +98,6 @@ class Paykiosk(Device, ShtrihProto):
                 continue
             else:
                 await logger.info("Connecton to fiscalreg device established")
-                return self.device
 
 
     async def reconnect(self):
@@ -112,7 +111,7 @@ class Paykiosk(Device, ShtrihProto):
        while True:
             try:
                 data = await self.impl._read(size)
-                await logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}') 
+                asyncio.create_task(logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}'))
                 return data
             except (DeviceConnectionError, DeviceIOError):
                 await self.reconnect()
@@ -121,23 +120,21 @@ class Paykiosk(Device, ShtrihProto):
     async def write(self, data:bytearray):
         while True:
             try:
-                task_write = self.impl._write(data)
-                task_log = logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}')
-                await asyncio.gather(task_log, task_write)
+                await self.impl._write(data)
+                asyncio.create_task(logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}'))
                 break
             except (DeviceConnectionError, DeviceIOError):
                 await self.reconnect()
                 continue
 
     async def poll(self):
-        while True:
-            try:
-                if self.in_waiting >0:
-                    await self.consume()
-                else:
-                    await asyncio.sleep(0.1)
-            except (OSError, DeviceConnectionError, DeviceIOError):
-                await self.reconnect()
+        try:
+            if self.in_waiting >0:
+                await self.consume()
+            else:
+                await asyncio.sleep(0.1)
+        except (OSError, DeviceConnectionError, DeviceIOError):
+            await self.reconnect()
     
           
         

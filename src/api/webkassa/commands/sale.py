@@ -24,69 +24,66 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     alias = 'sale'
 
     @classmethod
-    async def handle(cls):
-        task_receipt_fetch = Receipt.get_or_none(sent=False).annotate(max_value = Max('id'))
-        task_token_fetch = Token.get(id=1)
-        receipt, token = await asyncio.gather(task_receipt_fetch, task_token_fetch) 
-        if receipt.id: #type: ignore
-            if receipt.price ==0 or receipt.payment ==0: #type: ignore
-                asyncio.ensure_future(logger.error(f'Receipt {receipt.uid} has broken data'))#type: ignore 
-                # if config['emulator']['flush_receipt']:
-                #     await cls._flush(receipt) # flush receipt
-                return
-            else:
-                # sleep 
-                await asyncio.sleep(0.2)
-                request  = SaleRequest( 
-                    token=token.token,
-                    cashbox_unique_number=config['webkassa']['cassa_unique_number'],
-                    round_type = 2,
-                    change = receipt.payment-receipt.price, #type: ignore
-                    operation_type = 2,
-                    positions=[Position(
-                                count = receipt.count, #type: ignore
-                                price = receipt.price, #type: ignore
-                                tax_type =100,
-                                tax_percent = receipt.tax_percent, #type: ignore
-                                tax = receipt.tax, #type: ignore
-                                position_name = f"Оплата парковки по билету:{receipt.ticket}")], #type: ignore
-                    payments=[Payments(
-                                sum= receipt.payment, #type: ignore
-                                payment_type=receipt.payment_type)], #type: ignore
-                    external_check_number=str(receipt.uid))  #type: ignore   
-                request_task = cls.dispatch(endpoint=cls.endpoint, 
-                                            request_data=request,   
-                                            response_model=SaleResponse, #type: ignore
-                                            callback_error=cls.exc_callback)
-                record_task = Receipt.filter(id=receipt.id).update(sent=True) #type: ignore
-                response,_ = await asyncio.gather(request_task, record_task)
-                #sleep
-                await asyncio.sleep(0.2)
-                company = CompanyData(name=config['webkassa']['company']['name'],
-                                    inn=config['webkassa']['company']['inn'])
-                template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
-            try:
-                render = await template.render_async(
-                    horizontal_delimiter='-',
-                    dot_delimiter='.',
-                    whitespace=' ',
-                    company=company,
-                    request=request,
-                    response=response)
-                #sleep
-                await asyncio.sleep(0.2)
-                doc = fromstring(render)
-                task_modify_states = States.filter(id=1).update(gateway=1)
-                task_modify_receipt = Receipt.filter(id=receipt.id).update(ack=True) #type: ignore
-                task_modify_shift= Shift.filter(id=1).update(total_docs=F('total_docs')+1)
-                await asyncio.gather(task_modify_receipt, task_modify_states, task_modify_shift)
-            except Exception as e:
-                await logger.debug(e)
-                raise e 
-            else:
-                await asyncio.sleep(0.2)
-                asyncio.ensure_future(PrintXML.handle(doc)).add_done_callback(CutPresent.handle)
+    async def handle(cls, receipt:Receipt):
+        token = await Token.get(id=1)
+        if receipt.price ==0 or receipt.payment ==0: #type: ignore
+            asyncio.create_task(logger.error(f'Receipt {receipt.uid} has broken data'))#type: ignore 
+            # if config['emulator']['flush_receipt']:
+            #     await cls._flush(receipt) # flush receipt
+            return
+        else:
+            request  = SaleRequest( 
+                token=token.token,
+                cashbox_unique_number=config['webkassa']['cassa_unique_number'],
+                round_type = 2,
+                change = receipt.payment-receipt.price, 
+                operation_type = 2,
+                positions=[Position(
+                            count = receipt.count,
+                            price = receipt.price, #
+                            tax_type =100,
+                            tax_percent = receipt.tax_percent, 
+                            tax = receipt.tax, 
+                            position_name = f"Оплата парковки по билету:{receipt.ticket}")], 
+                payments=[Payments(
+                            sum= receipt.payment, 
+                            payment_type=receipt.payment_type)], 
+                external_check_number=str(receipt.uid))     
+            request_task = cls.dispatch(endpoint=cls.endpoint, 
+                                        request_data=request,   
+                                        response_model=SaleResponse, #type: ignore
+                                        callback_error=cls.exc_callback)
+            record_task = Receipt.filter(id=receipt.id).update(sent=True) 
+            response,_ = await asyncio.gather(request_task, record_task)
+            if response:
+                asyncio.create_task(cls._render_receipt(request, response))
+            return response 
 
+    @classmethod
+    async def _render_receipt(cls, request, response):
+        company = CompanyData(name=config['webkassa']['company']['name'],
+                            inn=config['webkassa']['company']['inn'])
+        template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
+        try:
+            render = await template.render_async(
+                horizontal_delimiter='-',
+                dot_delimiter='.',
+                whitespace=' ',
+                company=company,
+                request=request,
+                response=response)
+            doc = fromstring(render)
+            task_modify_states = States.filter(id=1).update(gateway=1)
+            task_modify_receipt = Receipt.filter(id=receipt.id).update(ack=True) #type: ignore
+            task_modify_shift= Shift.filter(id=1).update(total_docs=F('total_docs')+1)
+            await asyncio.gather(task_modify_receipt, task_modify_states, task_modify_shift)
+        except Exception as e:
+            await logger.debug(e)
+            return
+        else:
+            await PrintXML.handle(doc)
+            await CutPresent.handle()
+        
     @classmethod
     async def exc_callback(cls, exc, payload):
         asyncio.ensure_future(logger.debug(f'Resolving {exc}'))

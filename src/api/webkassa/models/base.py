@@ -3,7 +3,13 @@ from typing import Optional, Any, List
 from pydantic import BaseModel
 
 
-class WebcassaOutputErrors(BaseModel):
+class WebkassaRequest(BaseModel):
+    pass
+
+class WebkassaResponse(BaseModel):
+    pass
+
+class WebcassaOutputErrors(WebkassaResponse):
     code: int
     text: str
 
@@ -11,7 +17,7 @@ class WebcassaOutputErrors(BaseModel):
         alias_generator = to_camel
         allow_population_by_field_name = True
 
-class WebcassaOutput(BaseModel):
+class WebcassaOutput(WebkassaResponse):
     data: Optional[Any] = None
     errors: Optional[List[WebcassaOutputErrors]] = None
 

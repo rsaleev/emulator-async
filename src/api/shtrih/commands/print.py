@@ -1,12 +1,9 @@
 import re
 import asyncio
 from src.api.shtrih.protocol import ShtrihProto
-from typing import Tuple, Coroutine
 from uuid import uuid4
 from src import config
-from typing import List
 from src.api.printer.commands import PrintBytes, CutPresent, PrintBuffer
-from src.api.shtrih import logger
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.db.models.receipt import Receipt
 

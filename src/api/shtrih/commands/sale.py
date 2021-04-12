@@ -17,13 +17,25 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x80,))
 
     @classmethod
-    async def handle(cls, payload:bytearray) ->Tuple[bytearray, asyncio.Task]:
-        output = await cls._process()
-        task = asyncio.create_task(cls._dispatch(payload))
-        return output, task
-
-    @classmethod
-    async def _process(cls):
+    async def handle(cls, payload:bytearray) ->bytearray:
+        try:
+            count = struct.unpack('<iB',payload[4:9])[0]//10**3
+            price = struct.unpack('<iB', payload[9:14])[0]//10**2     
+            tax_percent = config['webkassa']['taxgroup'][str(payload[14])]
+            tax = round(price*count/(100+int(tax_percent))*tax_percent,2)
+            receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
+            if receipt.id: #type: ignore
+                await Receipt.filter(id=receipt.id).update(count=count, price=price, tax_percent=tax_percent, tax=tax) #type:ignore
+            # create record with empty ticket number
+            else:
+                await Receipt.create(uid=uuid4(), ticket='', count=count, price=price, tax_percent=tax_percent, tax=tax)
+            if not config['webkassa']['receipt']['header']:
+                await (ClearBuffer.handle())
+        except Exception as e:
+            asyncio.create_task(logger.exception(e))
+            cls.set_error(3)
+        else:
+            cls.set_error(0)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -31,23 +43,9 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._password)
         return arr 
 
-    @classmethod
-    async def _dispatch(cls, payload:bytearray) ->None:
-        if not config['webkassa']['receipt']['header']:
-            asyncio.create_task(ClearBuffer.handle())
-        count = struct.unpack('<iB',payload[4:9])[0]//10**3
-        price = struct.unpack('<iB', payload[9:14])[0]//10**2     
-        tax_percent = config['webkassa']['taxgroup'][str(payload[14])]
-        tax = round(price*count/(100+int(tax_percent))*tax_percent,2)
-        receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
-        if receipt.id: #type: ignore
-            await Receipt.filter(id=receipt.id).update(count=count, price=price, tax_percent=tax_percent, tax=tax) #type:ignore
-        # create record with empty ticket number
-        else:
-            await Receipt.create(uid=uuid4(), ticket='', count=count, price=price, tax_percent=tax_percent, tax=tax)
-        
 
 class OpenReceipt(ShtrihCommand, ShtrihCommandInterface):
+    # TODO: TEST
     _length = bytearray((0x03,))
     _command_code = bytearray((0x8D,))
 
@@ -84,8 +82,13 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def _process(cls):
-        task_modify_states = States.filter(id=1).update(gateway=1)
-        await asyncio.gather(task_modify_states)
+        try:
+            await States.filter(id=1).update(gateway=1)
+        except Exception as e:
+            asyncio.ensure_future(logger.exception(e))
+            cls.set_error(3)
+        else:
+            cls.set_error(0)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -104,13 +107,7 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x85,)) #B[2] - 1 byte
 
     @classmethod
-    def handle(cls, payload:bytearray) -> Tuple[asyncio.Task, asyncio.Task]:
-        task_process = asyncio.create_task(cls._process(payload))
-        task_execute = asyncio.create_task(cls._dispatch())
-        return task_process, task_execute   
-
-    @classmethod
-    async def _process(cls, payload:bytearray):
+    async def handle(cls, payload:bytearray):
         change = bytearray((0x00,0x00,0x00,0x00,0x00))
         payment_type = 0
         payment = 0
@@ -126,16 +123,15 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
         if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
-            await Receipt.filter(uid=receipt.uid).update(payment_type=payment_type, payment=payment) #type: ignore
-            if config['emulator']['post_sale']:
-                try:
-                    await WebkassaClientSale.handle()
-                except:
+            receipt_updated = await Receipt(payment_type = payment_type, payment=payment).save(update_fields=['payment_type', 'payment'])
+            if receipt_updated:
+                response =  await WebkassaClientSale.handle(receipt_updated)
+                if not response:
                     cls.set_error(0x03)
                 else:
-                    cls.set_error(0x00)
+                    cls.set_error(0x00) 
         else:
-            asyncio.ensure_future(logger.error('No payment data'))
+            asyncio.create_task(logger.error('No payment data'))
             cls.set_error(0x03)
         arr = bytearray()
         arr.extend(cls._length)
@@ -144,11 +140,6 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._password)
         arr.extend(change)
         return arr 
-        
-    @classmethod
-    async def _dispatch(cls):
-        if not config['emulator']['post_sale']:
-            await WebkassaClientSale.handle()
         
 
 

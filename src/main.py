@@ -49,7 +49,7 @@ class Application:
 
 
     @classmethod
-    async def run(cls):
+    async def init(cls):
         await logger.warning('Initializing application...')
         executor = ThreadPoolExecutor(max_workers=5)
         loop = asyncio.get_running_loop()
@@ -66,17 +66,15 @@ class Application:
             await logger.exception(e)
         else:
             await logger.warning('Application initialized.Serving')
-            while not cls.event.is_set():
-                try:
-                    asyncio.ensure_future(cls.fiscalreg.poll())
-                    asyncio.ensure_future(cls.watchdog.poll())
-                except Exception as e:
-                    await logger.exception(e)
-                    raise SystemExit('Emergency shutdown.Check logs')
 
-   
-
-
+    @classmethod
+    async def run(cls):
+        while not cls.event.is_set():
+            try:
+                await asyncio.gather(cls.watchdog.poll(), cls.fiscalreg.poll())
+            except Exception as e:
+                await logger.exception(e)
+                raise SystemExit('Emergency shutdown.Check logs')
 
 if __name__ == '__main__':
     # ASYNCIO LOOP POLICY
