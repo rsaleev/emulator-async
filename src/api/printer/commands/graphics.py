@@ -1,9 +1,10 @@
-from src.api.printer.device import Printer
 import struct
-from PIL import Image
-from src import config
 import asyncio
 from PIL import Image, ImageOps
+from src import config
+from src.api.printer.device import Printer
+from src.api.printer import logger 
+
 class PrintQR(Printer):
 
     alias = 'qr'
@@ -27,7 +28,11 @@ class PrintGraphicLines(Printer):
     @classmethod
     async def handle(cls, payload:bytearray):
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, cls._print_graphics, payload)
+        try:
+            await loop.run_in_executor(None, cls._print_graphics, payload)
+        except Exception as e:
+            logger.exception(e)
+            raise e
 
     @classmethod
     def _print_graphics(cls, payload:bytearray):
