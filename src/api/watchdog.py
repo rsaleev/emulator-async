@@ -27,6 +27,8 @@ class Watchdog:
                     await States.filter(id=1).update(mode=3)
     @classmethod
     async def poll(cls):
-        #asyncio.create_task(cls._check_shift())
         await asyncio.sleep(1)
+        await cls._check_shift()
+        
+        
     

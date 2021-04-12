@@ -71,7 +71,8 @@ class Application:
     async def run(cls):
         while not cls.event.is_set():
             try:
-                await asyncio.gather(cls.watchdog.poll(), cls.fiscalreg.poll())
+                asyncio.ensure_future(cls.watchdog.poll())
+                asyncio.ensure_future(cls.fiscalreg.poll())
             except Exception as e:
                 await logger.exception(e)
                 raise SystemExit('Emergency shutdown.Check logs')
