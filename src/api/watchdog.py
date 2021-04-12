@@ -9,7 +9,7 @@ class Watchdog:
     @classmethod
     async def _check_shift(cls):
         shift = await Shift.get(id=1)
-        period = datetime.now() - shift.open_date
+        period = datetime.now().replace(tzinfo=None) - shift.open_date
         hours= int(period.total_seconds() // 3600)
         if (hours < 24
              and shift.total_docs == 0):
