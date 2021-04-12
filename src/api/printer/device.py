@@ -102,7 +102,7 @@ class Printer(PrinterProto, Device):
                     self._impl._open()
                 except DeviceConnectionError as e:
                     logger.error(e)
-                    time.sleep(3)
+                    time.sleep(1)
                     continue
                 else:
                     logger.info('Connection to printer established')
