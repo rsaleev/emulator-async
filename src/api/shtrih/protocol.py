@@ -1,7 +1,6 @@
 import operator
 from functools import reduce
 import asyncio
-from typing import Coroutine
 from binascii import hexlify
 from src.api.shtrih.commands import COMMANDS
 from src.api.shtrih import logger 
@@ -13,6 +12,19 @@ class ShtrihProto:
     NAK = bytearray((0x15,))
     PING = bytearray((0x00,))
 
+    @classmethod
+    def payload_crc_calc(cls, payload:bytearray) -> bytearray:
+        return bytearray((reduce(operator.xor, payload),))
+
+    @classmethod
+    def payload_pack(cls, payload:bytearray) -> bytearray:
+        output = bytearray()
+        output.extend(ShtrihProto.STX)
+        output.extend(payload)
+        output.extend(cls.payload_crc_calc(output))
+        return output
+
+class ShtrihProtoInterface:
     def __init__(self):
         self.buffer = asyncio.Queue()
         self.device = None 
@@ -22,19 +34,6 @@ class ShtrihProto:
 
     async def read(self, *args, **kwargs):
         raise NotImplementedError
-
-    def crc_calc(self, payload:bytearray) -> bytearray:
-        return bytearray((reduce(operator.xor, payload),))
-
-
-    async def _transmit(self, task:Coroutine):
-        arr = await task
-        output = bytearray()
-        output.extend(ShtrihProto.STX)
-        output.extend(arr)
-        output.extend(self.crc_calc(arr))
-        await self.write(output)
-        self.buffer.put_nowait(output)
 
     async def consume(self):
         try:
@@ -52,7 +51,6 @@ class ShtrihProto:
                 await logger.error(f'INPUT:{hexlify(payload, sep=":")}.Unknown byte controls ')
         except Exception as e:
             await logger.exception(e)
-
 
     async def _ack_handle(self):
         while not self.buffer.empty(): 
@@ -89,7 +87,7 @@ class ShtrihProto:
             crc_arr.extend(length)
             crc_arr.extend(data)
             # if crc positive
-            if self.crc_calc(crc_arr) == crc:
+            if ShtrihProto.payload_crc_calc(crc_arr) == crc:
                 asyncio.ensure_future(logger.debug('CRC:ACCEPTED'))
                 await self._cmd_handle(data)
             # # if crc negative
@@ -102,14 +100,13 @@ class ShtrihProto:
         if cmd == bytearray((0xFF,)):
             cmd = payload[0:2]
         data = payload[len(cmd):]
-        await logger.debug(f'CMD:{hexlify(cmd, sep=":")} DATA:{hexlify(data, sep=":")}')
+        asyncio.ensure_future(logger.debug(f'CMD:{hexlify(cmd, sep=":")} DATA:{hexlify(data, sep=":")}'))
         hdlr = next((c for c in COMMANDS if cmd == c._command_code),None)
         if hdlr:
             await self.write(ShtrihProto.ACK)
-            output,task = await hdlr.handle(data)
-            response = asyncio.create_task(self._transmit(output))
-            await response
-            await task
+            output = await hdlr.handle()
+            await self.write(output)
+            self.buffer.put_nowait(output)
         else:
             await asyncio.gather(self.write(ShtrihProto.NAK),logger.error(f"{cmd} not implemented in current build version "))
              
