@@ -24,10 +24,10 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     alias = 'sale'
 
     @classmethod
-    async def handle(cls, receipt:Receipt):
+    async def handle(cls, receipt):
         token = await Token.get(id=1)
         if receipt.price ==0 or receipt.payment ==0: #type: ignore
-            asyncio.create_task(logger.error(f'Receipt {receipt.uid} has broken data'))#type: ignore 
+            asyncio.ensure_future(logger.error(f'Receipt {receipt.uid} has broken data'))#type: ignore 
             # if config['emulator']['flush_receipt']:
             #     await cls._flush(receipt) # flush receipt
             return
@@ -56,7 +56,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
             record_task = Receipt.filter(id=receipt.id).update(sent=True) 
             response,_ = await asyncio.gather(request_task, record_task)
             if response:
-                asyncio.create_task(cls._render_receipt(request, response))
+                asyncio.ensure_future(cls._render_receipt(request, response))
             return response 
 
     @classmethod

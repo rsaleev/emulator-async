@@ -122,13 +122,13 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
         if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
-            receipt_updated = await Receipt(payment_type = payment_type, payment=payment).save(update_fields=['payment_type', 'payment'])
-            if receipt_updated:
-                response =  await WebkassaClientSale.handle(receipt_updated)
-                if not response:
-                    cls.set_error(0x03)
-                else:
-                    cls.set_error(0x00) 
+            await Receipt.filter(id=receipt.id).update(payment_type = payment_type, payment=payment)
+            receipt_updated = Receipt.get(id=receipt.id)
+            response =  await WebkassaClientSale.handle(receipt_updated)
+            if not response:
+                cls.set_error(0x03)
+            else:
+                cls.set_error(0x00) 
         else:
             asyncio.create_task(logger.error('No payment data'))
             cls.set_error(0x03)
