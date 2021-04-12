@@ -10,7 +10,7 @@ class DBConnector:
         self.connected = Tortoise._inited
         
     async def connect(self):
-        """connect 
+        """connect
 
         initializes Tortoise connection
 
@@ -20,7 +20,7 @@ class DBConnector:
 
         await self.db.init(
             db_url=f'sqlite://{os.path.abspath(os.getcwd())}/{os.environ.get("SQLITE_DB")}',
-            use_tz=False, 
+            use_tz=True, 
             timezone = str(tzlocal.get_localzone()),
             modules={'models': ['src.db.models']}
         )
