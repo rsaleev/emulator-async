@@ -70,12 +70,11 @@ class WebcassaClient:
                                         by_alias=True,
                                         exclude_unset=True))  
                 output = WebcassaOutput(**response)
-                task_log_debug_incoming = logger.debug(
+                asyncio.create_task(logger.info(
                     f'Response from Webkassa:{json.dumps(response)}'
-                )  
+                )) 
                 if output.errors:
-                    task_state_modify_0= States.filter(id=1).update(gateway=0)
-                    asyncio.create_task(asyncio.gather(task_log_debug_incoming, task_state_modify_0))
+                    asyncio.create_task(States.filter(id=1).update(gateway=0))
                     for err in output.errors:
                         cls._err_hdlr(err)
                 else:
