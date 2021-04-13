@@ -107,7 +107,7 @@ class PrintBuffer(Printer):
         #             continue
         #     except Exception as e:
         #         raise e 
-        await loop.run_in_executor(None, Printer()._raw, cls.buffer.output)
+        await loop.run_in_executor(None, Printer()._raw, Printer().buffer.output)
 
                 
 class ClearBuffer(Printer):

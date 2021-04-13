@@ -69,6 +69,7 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         try:
             if config['printer']['text']['buffer']:
                 await PrintBuffer.handle()
+                await ClearBuffer.handle()
             await CutPresent.handle()
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
