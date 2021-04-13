@@ -1,11 +1,6 @@
 from src.api.webkassa.helpers import to_camel
 from typing import Optional, Any, List
 from pydantic import BaseModel
-
-
-class WebkassaRequest(BaseModel):
-    pass
-
 class WebkassaResponse(BaseModel):
     pass
 
@@ -17,7 +12,7 @@ class WebcassaOutputErrors(WebkassaResponse):
         alias_generator = to_camel
         allow_population_by_field_name = True
 
-class WebcassaOutput(WebkassaResponse):
+class WebcassaOutput(BaseModel):
     data: Optional[Any] = None
     errors: Optional[List[WebcassaOutputErrors]] = None
 
