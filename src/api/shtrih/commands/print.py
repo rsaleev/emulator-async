@@ -16,7 +16,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
     async def handle(cls, payload:bytearray) ->bytearray:
         try:
             await PrintBytes.handle(payload=payload[4:])
-            asyncio.create_task(cls._parse_custom_line(payload))
+            asyncio.ensure_future(cls._parse_custom_line(payload))
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
         else:
@@ -37,7 +37,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
             num = line.group(2)
             await Receipt.create(uid=uuid4(), ticket=num)
             if not config['webkassa']['receipt']['header']:
-                asyncio.create_task(ClearBuffer.handle())
+                asyncio.ensure_future(ClearBuffer.handle())
 
 class PrintOneDimensionalBarcode(ShtrihCommand, ShtrihCommandInterface):
     _length =  bytearray((0x03,))
@@ -68,8 +68,8 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
     async def handle(cls, payload:bytearray) -> bytearray:
         try:
             if config['printer']['text']['buffer']:
-                asyncio.create_task(PrintBuffer.handle())
-            asyncio.create_task(CutPresent.handle())
+                asyncio.ensure_future(PrintBuffer.handle())
+            asyncio.ensure_future(CutPresent.handle())
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
         else:

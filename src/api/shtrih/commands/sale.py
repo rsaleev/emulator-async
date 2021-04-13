@@ -128,7 +128,7 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
             else:
                 cls.set_error(0x00) 
         else:
-            asyncio.create_task(logger.error('No payment data'))
+            asyncio.ensure_future(logger.error('No payment data'))
             cls.set_error(0x03)
         arr = bytearray()
         arr.extend(cls._length)
