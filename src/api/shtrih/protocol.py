@@ -90,12 +90,14 @@ class ShtrihProtoInterface:
             crc_arr.extend(data)
             # if crc positive
             if ShtrihProto.payload_crc_calc(crc_arr) == crc:
-                asyncio.create_task(logger.debug('CRC:ACCEPTED'))
                 await self._cmd_handle(data)
+                asyncio.create_task(logger.debug('CRC:ACCEPTED'))
+
             # # if crc negative
             else:
+                await self.write(ShtrihProto.NAK)
                 asyncio.create_task(logger.debug('CRC:DECLINED'))
-                await self.write(ShtrihProto.NAK) 
+
 
     async def _cmd_handle(self, payload:bytearray):
         cmd = payload[0:1]

@@ -1,5 +1,4 @@
 import asyncio
-from typing import Awaitable, Callable
 import aioserial
 import os
 from serial.serialutil import SerialException, SerialTimeoutException
