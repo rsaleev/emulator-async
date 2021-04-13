@@ -101,6 +101,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 continue
             else:
                 await logger.info("Connecton to fiscalreg device established")
+                break
 
 
     async def reconnect(self):
