@@ -93,20 +93,22 @@ class PrintBuffer(Printer):
     @classmethod
     async def handle(cls, payload=None):
         loop = asyncio.get_running_loop()
-        while 1:
-            try:
-                await loop.run_in_executor(None, Printer()._raw, cls.buffer.output)
-                await asyncio.sleep(0.2)
-                status = await loop.run_in_executor(None, PrintingStatusQuery.handle) 
-                if status:
-                    await asyncio.gather(States.filter(id=1).update(submode=3),
-                                        loop.run_in_executor(None, ClearBuffer.handle))
-                    break
-                else:
-                    asyncio.sleep(0.2)
-                    continue
-            except Exception as e:
-                raise e 
+        # while 1:
+        #     try:
+        #         await loop.run_in_executor(None, Printer()._raw, cls.buffer.output)
+        #         await asyncio.sleep(0.2)
+        #         status = await loop.run_in_executor(None, PrintingStatusQuery.handle) 
+        #         if status:
+        #             await asyncio.gather(States.filter(id=1).update(submode=3),
+        #                                 loop.run_in_executor(None, ClearBuffer.handle))
+        #             break
+        #         else:
+        #             asyncio.sleep(0.2)
+        #             continue
+        #     except Exception as e:
+        #         raise e 
+        await loop.run_in_executor(None, Printer()._raw, cls.buffer.output)
+
                 
 class ClearBuffer(Printer):
 
