@@ -55,9 +55,12 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                                             response_model=SaleResponse, #type: ignore
                                             callback_error=cls.exc_callback)
             except Exception as e:
-                asyncio.create_task(logger.exception(e))
+                asyncio.ensure_future(logger.exception(e))
                 raise e
             else:
+                await asyncio.gather(receipt.update_from_dict({'ack':True}),
+                                    States.filter(id=1).update(gateway=1),
+                                    Shift.filter(id=1).update(total_docs=F('total_docs')+1))
                 asyncio.create_task(cls._render_receipt(request, response))
 
 
@@ -75,10 +78,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 request=request,
                 response=response)
             doc = fromstring(render)
-            task_modify_states = States.filter(id=1).update(gateway=1)
-            task_modify_receipt = Receipt.filter(id=receipt.id).update(ack=True) #type: ignore
-            task_modify_shift= Shift.filter(id=1).update(total_docs=F('total_docs')+1)
-            await asyncio.gather(task_modify_receipt, task_modify_states, task_modify_shift)
+            await asyncio.sleep(0.2)
         except Exception as e:
             await logger.exception(e)
         else:
