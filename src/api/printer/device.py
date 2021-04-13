@@ -1,18 +1,22 @@
-from src.api.printer.protocol import PrinterProto
-from src.api.printer import logger
 import os
 import time
+import usb
+import aioserial
+import asyncio
+from itertools import groupby
+from serial.serialutil import SerialException, SerialTimeoutException
+from src.api.shtrih import logger
+from serial.tools import list_ports
+from src import config
 from src.api.device import *
 from escpos.printer import Dummy
-from src import config
-import usb
-
+from src.api.printer.protocol import PrinterProto
+from src.api.printer import logger, async_logger
 
 class UsbDevice(DeviceImpl):
 
     device = None
     connected = False
-
 
     @classmethod
     def _open(cls):
@@ -49,9 +53,7 @@ class UsbDevice(DeviceImpl):
                 "Could not set configuration: {0}".format(str(e)))
         else:
             cls.connected = True
-
-
-
+    
     @classmethod
     def _read(cls, size):
         try:
@@ -77,6 +79,66 @@ class UsbDevice(DeviceImpl):
         except:
             pass
 
+class SerialDevice(DeviceImpl):
+    device = None 
+    connected = False
+
+    @classmethod
+    async def _open(cls):
+        port = os.environ.get("SHTRIH_SERIAL_PORT", "/dev/ttyUSB0")
+        ports = list(list_ports.comports())
+        if len(ports) > 1:
+            hwids = [str(p[2]).split(" ") for p in ports] 
+            counter, group = [(len(list(group)), key)
+                              for key, group in groupby(hwids)][0]
+            if counter > 1:
+                await async_logger.error(f"Found multiple devices {counter} with same group {group}")
+            else:
+                port = ports[0][0]
+        elif len(ports) == 0:
+            await async_logger.error(f"Device not found with autodiscover connecting with default params")
+        elif len(ports) == 1:
+            port = ports[0][0]
+        try:
+            cls.device = aioserial.AioSerial(
+                port=str(port), 
+                baudrate=int(os.environ.get("PAYKIOSK_BAUDRATE")), #type: ignore
+                dsrdtr=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))), 
+                rtscts=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))),
+                write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000), #type: ignore
+                loop=asyncio.get_running_loop())
+            try:
+                cls.device.flushInput()
+            except:
+                pass
+        except Exception as e:
+            raise e 
+        else:
+            cls.connected = True
+
+    @classmethod
+    async def _read(cls, size):
+        try:
+            output = await cls.device.read_async(size)
+            return output
+        except (SerialException, SerialTimeoutException, IOError) as e:
+            raise DeviceIOError(e)
+
+    @classmethod
+    async def _write(cls, data):
+        try:
+            await cls.device.write_async(data)
+        except (SerialException, SerialTimeoutException, IOError) as e:
+            raise DeviceIOError(e)
+
+    @classmethod
+    async def _close(cls):
+        try:
+            cls.device.cancel_read()
+            cls.device.cancel_write()
+            cls.device.close()
+        except:
+            pass
 
 class Printer(PrinterProto, Device):
     
@@ -91,7 +153,7 @@ class Printer(PrinterProto, Device):
         if os.environ['PRINTER_TYPE'] == 'USB':
             self._impl = UsbDevice()
         elif os.environ['PRINTER_TYPE'] == 'SERIAL':
-            raise NotImplementedError
+            self._impl = SerialDevice()
         return self._impl
 
     def connect(self):
