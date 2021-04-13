@@ -56,16 +56,17 @@ class Application:
         loop = asyncio.get_running_loop()
         loop.set_default_executor(executor)
         try:
-            task_db_connect = cls.db.connect()
+            await logger.warning('Initializing DB')
+            await cls.db.connect()
+            await Shift.get_or_create(id=1) 
+            await States.get_or_create(id=1)
+            await PrinterFullStatusQuery.handle()
+            token = await  WebkassaClientToken.handle()
+            await Token.get_or_create(id=1, token=token)
+            await logger.warning('Initializing devices')
             task_fiscalreg_connect = cls.fiscalreg.connect()
             task_printer_connect = loop.run_in_executor(None, cls.printer.connect)
-            await asyncio.gather(task_db_connect, task_fiscalreg_connect, task_printer_connect)
-             # initialize records
-            await asyncio.gather(Shift.get_or_create(id=1), 
-                                States.get_or_create(id=1))
-            await PrinterFullStatusQuery.handle()
-            token = WebkassaClientToken.handle()
-            await Token.get_or_create(id=1, token=token)
+            await asyncio.gather(task_fiscalreg_connect, task_printer_connect)
         except Exception as e:
             await logger.exception(e)
             raise SystemExit(f'Emergency shutdown: {repr(e)}')
