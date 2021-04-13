@@ -61,13 +61,15 @@ class Application:
             await Shift.get_or_create(id=1) 
             await States.get_or_create(id=1)
             await PrinterFullStatusQuery.handle()
-            token = await  WebkassaClientToken.handle()
+            token = await WebkassaClientToken.handle()
+            print(token)
             await Token.get_or_create(id=1, token=token)
             await logger.warning('Initializing devices')
             task_fiscalreg_connect = cls.fiscalreg.connect()
             task_printer_connect = loop.run_in_executor(None, cls.printer.connect)
             await asyncio.gather(task_fiscalreg_connect, task_printer_connect)
         except Exception as e:
+            print(e)
             await logger.exception(e)
             raise SystemExit(f'Emergency shutdown: {repr(e)}')
         else:
