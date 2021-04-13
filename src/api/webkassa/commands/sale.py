@@ -16,7 +16,7 @@ from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa import logger
 from src.api.webkassa.commands import WebkassaClientToken,WebkassaClientCloseShift
 from src.api.webkassa.models import SaleRequest, SaleResponse, Position, Payments, CompanyData
-from src.api.printer.commands import PrintXML, CutPresent
+from src.api.printer.commands import PrintXML, CutPresent, PrintQR
 
 class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     endpoint = 'Check'
@@ -29,7 +29,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
             asyncio.ensure_future(logger.error(f'Receipt {receipt.uid} has broken data'))#type: ignore 
             # if config['emulator']['flush_receipt']:
             #     await cls._flush(receipt) # flush receipt
-            return
+            raise UnresolvedCommand(f'{cls.alias}: Receipt {receipt.uid} has broken data')
         else:
             request  = SaleRequest( 
                 token=token.token,
@@ -49,7 +49,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                             payment_type=receipt.payment_type)], 
                 external_check_number=str(receipt.uid)) 
             try:    
-                await receipt.update_from_dict({'sent':True})
+                asyncio.ensure_future(receipt.update_from_dict({'sent':True}))
                 response = await cls.dispatch(endpoint=cls.endpoint, 
                                             request_data=request,   
                                             response_model=SaleResponse, #type: ignore
@@ -84,6 +84,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         else:
             try:
                 await PrintXML.handle(doc)
+                await PrintQR.handle(response.ticket_print_url)
                 await CutPresent.handle()
             except Exception as e:
                 await logger.exception(e)
