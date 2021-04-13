@@ -1,10 +1,8 @@
 from src.api.webkassa.helpers import to_camel
 from typing import Optional, Any, List
 from pydantic import BaseModel
-class WebkassaResponse(BaseModel):
-    pass
 
-class WebcassaOutputErrors(WebkassaResponse):
+class WebcassaOutputErrors(BaseModel):
     code: int
     text: str
 
