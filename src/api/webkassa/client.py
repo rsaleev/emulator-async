@@ -63,8 +63,8 @@ class WebcassaClient:
         attempts = config['webkassa']['attempts']
         while counter <= attempts:
             try:
-                asyncio.create_task(logger.info(f'Dispatching to Webkassa: {endpoint}'\
-                                    f'{request_data.dict(by_alias=True,exclude_unset=True)}'))
+                await logger.info(f'Dispatching to Webkassa: {endpoint}'\
+                                    f'{request_data.dict(by_alias=True,exclude_unset=True)}')
                 response = await cls._send(endpoint=endpoint,
                                         payload=request_data.dict(
                                         by_alias=True,
