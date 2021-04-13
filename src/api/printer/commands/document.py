@@ -60,20 +60,25 @@ class PrintXML(Printer):
                 content.text = content.text.replace(u'\u202f', ' ')
                 if cls.buffer:
                     if config['printer']['doc']['send_encoding']:
+                        cmd = bytearray()
+                        cmd.extend(cls.codepage_command)
                         if cls.encoding_output == 'cp1251':
-                            Printer()._raw(cls.codepage_command.extend(cls.CP1251)) 
+                            cmd.extend(cls.CP1251)
                         elif cls.encoding_output == 'cp866':
-                            Printer().buffer._raw(cls.codepage_command.extend(cls.CP866)) 
+                            cmd.extend(cls.CP866)
+                        Printer().buffer._raw(cmd)
                     Printer().buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                     output = content.text.encode(cls.encoding_output)
                     Printer().buffer._raw(output) 
                 else:
                     if config['printer']['doc']['send_encoding']:
+                        cmd = bytearray()
+                        cmd.extend(cls.codepage_command)
                         if cls.encoding_output == 'cp1251':
-                            Printer()._raw(cls.codepage_command.extend(cls.CP1251))
+                            cmd.extend(cls.CP1251)
                         elif cls.encoding_output == 'cp866':
-                            Printer()._raw(cls.codepage_command.extend(cls.CP866)) 
-                        Printer()._raw(cls.codepage_command) 
+                            cmd.extend(cls.CP866)
+                        Printer()._raw(cmd)
                     Printer().set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore 
                     output = content.text.encode(cls.encoding_output)         
                     Printer()._raw(output) 

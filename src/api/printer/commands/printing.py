@@ -70,10 +70,13 @@ class PrintBytes(Printer):
                         height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=cls.double_width, double_height=cls.double_heigth, 
                         custom_size=cls.custom_size)
                 if config['printer']['text']['send_encoding']:
+                    cmd = bytearray()
+                    cmd.extend(cls.codepage_command)
                     if cls.encoding_output == 'cp1251':
-                        Printer().buffer._raw(cls.codepage_command.extend(cls.CP1251))
+                        cmd.extend(cls.CP1251)
                     elif cls.encoding_output == 'cp866':
-                        Printer().buffer._raw(cls.codepage_command.extend(cls.CP866)) 
+                        cmd.extend(cls.CP866)
+                    Printer().buffer._raw(cmd)
                 content_decoded = payload[1:].decode(cls.encoding_input)
                 if bits[6]:
                     content_decoded=f'{content_decoded}\n'
@@ -84,10 +87,13 @@ class PrintBytes(Printer):
                         height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=False, double_height=False, 
                         custom_size=cls.custom_size) 
                 if config['printer']['text']['send_encoding']:
-                        if cls.encoding_output == 'cp1251':
-                            Printer()._raw(cls.codepage_command.extend(cls.CP1251)) 
-                        elif cls.encoding_output == 'cp866':
-                            Printer().buffer._raw(cls.codepage_command.extend(cls.CP866))
+                    cmd = bytearray()
+                    cmd.extend(cls.codepage_command)
+                    if cls.encoding_output == 'cp1251':
+                        cmd.extend(cls.CP1251)
+                    elif cls.encoding_output == 'cp866':
+                        cmd.extend(cls.CP866)
+                    Printer().buffer._raw(cmd)
                 content_decoded = payload[1:].decode(cls.encoding_input)
                 if bits[6]:
                     content_decoded=f'{content_decoded}\n'
