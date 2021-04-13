@@ -63,17 +63,16 @@ class WebcassaClient:
         attempts = config['webkassa']['attempts']
         while counter <= attempts:
             try:
-                await logger.info(f'Dispatching to Webkassa: {endpoint}'\
-                                    f'{request_data.dict(by_alias=True,exclude_unset=True)}')
+               
                 response = await cls._send(endpoint=endpoint,
                                         payload=request_data.dict(
                                         by_alias=True,
-                                        exclude_unset=True))  
-                asyncio.create_task(logger.info(
-                    f'Response from Webkassa:{json.dumps(response)}'
-                )) 
+                                        exclude_unset=True)) 
+                asyncio.create_task(logger.info(f'Dispatching to Webkassa: {endpoint}'\
+                                    f'{request_data.dict(by_alias=True,exclude_unset=True)}')) 
                 output = WebcassaOutput(**response)
-                
+                asyncio.create_task(logger.info(
+                )) 
                 if output.errors:
                     asyncio.create_task(States.filter(id=1).update(gateway=0))
                     for err in output.errors:
