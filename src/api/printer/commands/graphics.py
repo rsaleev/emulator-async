@@ -17,9 +17,7 @@ class PrintQR(Printer):
 
     @classmethod
     def _print_qr(cls, payload:str):
-        Printer().hw('INIT')
         Printer().qr(content=payload, center=True, size=cls.size)
-        Printer().hw('INIT')
 
         
 class PrintGraphicLines(Printer):
@@ -39,7 +37,6 @@ class PrintGraphicLines(Printer):
 
     @classmethod
     def _print_graphics(cls, payload:bytearray):
-        Printer().hw('INIT')
         arr = struct.unpack(f'<{len(payload)}B', payload)[6:66]
         img = Image.frombytes(data=bytes(arr), size=(len(arr)*8,1), mode='1')
         repeats = struct.unpack('<2B', payload[4:6])[0]
@@ -48,7 +45,6 @@ class PrintGraphicLines(Printer):
             bc.paste(img, (0,i))
         bc_inverted = ImageOps.invert(bc.convert('L'))
         Printer().image(bc_inverted, impl=cls.impl, center=cls.center)
-        Printer().hw('INIT')
 
      
 
