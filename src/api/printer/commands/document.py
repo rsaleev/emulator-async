@@ -1,4 +1,3 @@
-import asyncio
 from urllib.parse import unquote
 from src.api.printer.device import Printer
 from xml.etree.ElementTree import Element
@@ -8,8 +7,8 @@ from src.db.models import States
 
 class PrintXML(Printer):
     alias = 'xml'
-    CP866 = bytearray((0x17))
-    CP1251 = bytearray((0x46))
+    CP866 = bytearray((0x17,))
+    CP1251 = bytearray((0x46,))
     codepage_command = bytearray((0x1B,0x74))
     encoding_input = config['printer']['doc']['input']
     encoding_output = config['printer']['doc']['output']
@@ -35,11 +34,9 @@ class PrintXML(Printer):
             payload (Element): XML object - document
             buffer (bool, optional): perform printing in buffer or bypass. Defaults to True.
         """
-        loop = asyncio.get_running_loop()
         await States.filter(id=1).update(submode=5)
-        await asyncio.sleep(0.1)
-        for child in payload:
-            await loop.run_in_executor(None, cls._print_element, child)
+        for elem in payload:
+            cls._print_element(elem)
 
     @classmethod
     def _print_element(cls, content:Element):
@@ -58,40 +55,21 @@ class PrintXML(Printer):
                 content.text = content.text.replace(u'\u201c','"')
                 content.text = content.text.replace(u'\u201d', '"')
                 content.text = content.text.replace(u'\u202f', ' ')
-                if cls.buffer:
-                    if config['printer']['doc']['send_encoding']:
-                        cmd = bytearray()
-                        cmd.extend(cls.codepage_command)
-                        if cls.encoding_output == 'cp1251':
-                            cmd.extend(cls.CP1251)
-                        elif cls.encoding_output == 'cp866':
-                            cmd.extend(cls.CP866)
-                        Printer().buffer._raw(cmd)
+                if config['printer']['doc']['send_encoding']:
+                    cmd = bytearray()
+                    cmd.extend(cls.codepage_command)
+                    if cls.encoding_output == 'cp1251':
+                        cmd.extend(cls.CP1251)
+                    elif cls.encoding_output == 'cp866':
+                        cmd.extend(cls.CP866)
+                    Printer().buffer._raw(cmd)
                     Printer().buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                     output = content.text.encode(cls.encoding_output)
                     Printer().buffer._raw(output) 
-                else:
-                    if config['printer']['doc']['send_encoding']:
-                        cmd = bytearray()
-                        cmd.extend(cls.codepage_command)
-                        if cls.encoding_output == 'cp1251':
-                            cmd.extend(cls.CP1251)
-                        elif cls.encoding_output == 'cp866':
-                            cmd.extend(cls.CP866)
-                        Printer()._raw(cmd)
-                    Printer().set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore 
-                    output = content.text.encode(cls.encoding_output)         
-                    Printer()._raw(output) 
             elif content.tag == 'br':
-                if cls.buffer:
-                    Printer().buffer._raw(bytes("\n", 'ascii'))             
-                else:
-                    Printer()._raw(bytes("\n", 'ascii'))  
+                Printer().buffer._raw(bytes("\n", 'ascii'))             
             elif content.tag == 'qr':
-                if cls.buffer:
-                    Printer().buffer.qr(unquote(str(content.text)))
-                else:
-                    Printer().qr(unquote(str(content.text)))
+                Printer().qr(unquote(str(content.text)))
         except Exception as e:
             logger.exception(e)
             raise e
