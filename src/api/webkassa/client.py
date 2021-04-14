@@ -18,6 +18,17 @@ class WebcassaClient:
 
     @classmethod
     async def _send(cls, endpoint: str, payload: dict):
+        """_send basic method for sending payload to gateway
+
+        Uses aiohttp.ClientSession() 
+
+        Args:
+            endpoint (str): endpoint name: e.g. /Check
+            payload (dict): data to send, that will be converted to JSON string
+
+        Returns:
+            ClientResponse:  returns response as dictionary. Unparsed from JSON with in-built method
+        """
         async with aiohttp.ClientSession() as session:
             async with session.post(url=f'{cls.url}/{endpoint}',
                                     headers=cls.headers,
@@ -29,6 +40,25 @@ class WebcassaClient:
 
     @classmethod
     def _err_hdlr(cls, err: WebcassaOutputErrors):
+        """_err_hdlr handler for responses with Errors attribute in payload
+
+        Since current API returns code 200 on every request that was processed successfully,
+        an implementation of handler to convert API error code to something meaningful. 
+        If API error code presented in payload (attr Errors:[]) callbacks or handlers can be defined 
+        for further decision making: continue process or break it immediatly
+
+        Args:
+            err (WebcassaOutputErrors): [description]
+
+        Raises:
+            UnrecoverableError: Issue that can't be recovered without User interference
+            CredentialsError: Issue that can't be recovered without User interference. Check config for credentials
+            ExpiredTokenError: Issue recovered automatically: request new token -> send request with new token in payload body
+            ShiftExceededTime: Issue can be recovered automatically or if not used autoclose with manually closing Shift
+            ReceiptUniqueNumDuplication: Issue has no recovering, just an important information from API to ensure that data was processed
+
+        See API docs for more information about error codes and what they mean
+        """
         if err.code in [
                 -1, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 16, 18, 1014, 505
         ]:
@@ -45,7 +75,7 @@ class WebcassaClient:
 
     @classmethod
     async def dispatch(cls, endpoint: str, request_data: BaseModel,
-                       response_model:BaseModel, callback_error: Callable):
+                       response_model:BaseModel, exc_handler: Callable):
         """
         Method for sending requests to Webkassa Service with retrying implementation
 
@@ -53,7 +83,8 @@ class WebcassaClient:
             endpoint (str): url to send
             request_data (object): request object created from Pydantic model
             response_model (object): Pydantic model for parsing JSON response
-            callback_error (Callable): handler for exceptions
+            exc_handler (Callable): handler for exceptions that returns boolean value, 
+                                    that define to proceed to next iteration or break with exception raised
 
         Returns:
             [Union[dict, None]]: if successfull response return object, else returns 
@@ -67,13 +98,17 @@ class WebcassaClient:
                                         payload=request_data.dict(
                                         by_alias=True,
                                         exclude_unset=True)) 
+                # assert status code 200 
                 asyncio.ensure_future(logger.info(f'Dispatching to Webkassa: {endpoint}'\
                                     f'{request_data.dict(by_alias=True,exclude_unset=True)}')) 
+                # convert dict to Pydantic model -> generates object
                 output = WebcassaOutput(**response)
                 asyncio.ensure_future(logger.info(
                     f'Response from Webkassa:{json.dumps(output.dict(by_alias=True, exclude_unset=True))}'
                 )) 
+                # check if errors are in payload
                 if output.errors:
+                    # change status to prevent new requests from Autocash. Show that process was unsuccessful
                     asyncio.ensure_future(States.filter(id=1).update(gateway=0))
                     for err in output.errors:
                         cls._err_hdlr(err)
@@ -82,14 +117,15 @@ class WebcassaClient:
                     return response_model(**output.data)  #type:ignore
             except (ReceiptUniqueNumDuplication,
                     ShiftAlreadyClosed, ShiftExceededTime,ExpiredTokenError) as e:
-                # default state on error -> 0
-                resolver = await callback_error(e, request_data)
+                # wait until resolver ends pre-processing and return bool: proceed to next attempt or not                
+                resolver = await exc_handler(e, request_data)
                 if resolver:
                     asyncio.ensure_future(logger.error(
                         f'Catched API error {repr(e)}. Attempt: {counter}. Continue'
                     ))
                     counter += 1
                     continue
+                # if resolver return False, then flush warning to log and break process
                 else:
                     asyncio.ensure_future(logger.error(
                         f'Max attempts exhausted. Attempt: {counter} Error:{repr(e)}'
@@ -101,13 +137,14 @@ class WebcassaClient:
                     ))
                 return 
             except ConnectionError as e:
+                # when connection error occures: send request until connection will be established (until attempts will be exhausted)
                 counter += 1
-                await States.filter(id=1).update(gateway=0)
                 asyncio.ensure_future(logger.error(
                     f'Cacthed connection error. Attempt: {counter} Error:{repr(e)}. Continue'
                 ))
                 continue
         else:
+            # if all attempts were used raise an exception to inform that process was broke.
             raise UnresolvedCommand(
                 f'Max attempts exhausted. Attempt: {counter}')
             
