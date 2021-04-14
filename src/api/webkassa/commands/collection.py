@@ -38,7 +38,7 @@ class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
             response = await cls.dispatch(endpoint=cls.endpoint, 
                                     request_data=request, 
                                     response_model=MoneyCollectionResponse, #type: ignore
-                                    callback_error=cls.exc_callback)
+                                    exc_handler=cls.exc_handler)
             asyncio.create_task(cls._render_collection(request, response))
         except Exception as e:
             await logger.exception(e)
@@ -63,7 +63,7 @@ class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
             await CutPresent.handle()
 
     @classmethod
-    async def exc_callback(cls, exc, payload):
+    async def exc_handler(cls, exc, payload):
         if isinstance(exc, CredentialsError):
             await States.filter(id=1).update(gateway=0)
             return False

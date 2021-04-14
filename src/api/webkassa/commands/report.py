@@ -31,7 +31,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
             response = await cls.dispatch(endpoint=cls.endpoint,
                                             request_data=request,
                                             response_model=ZXReportResponse,#type: ignore
-                                            callback_error=cls.exc_callback)
+                                            exc_handler=cls.exc_handler)
     
             asyncio.create_task(cls._render_report(request, response))
             task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
@@ -65,7 +65,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
             await logger.exception(e)
 
     @classmethod
-    async def exc_callback(cls, exc, payload):
+    async def exc_handler(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
             asyncio.create_task(Shift.filter(id=1).update(open_date=timezone.now(),
                                             total_docs=0))
@@ -100,7 +100,7 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
             response = await cls.dispatch(endpoint=cls.endpoint,
                                           request_data=request,
                                           response_model=ZXReportResponse, #type: ignore
-                                          callback_error=cls.exc_callback)
+                                          exc_handler=cls.exc_callback)
             if response:
                 shift_task = Shift.filter(id=1).update(
                     open_date=timezone.now(), total_docs=0)
@@ -150,7 +150,7 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
             response = await cls.dispatch(endpoint=cls.endpoint,
                                       request_data=request,
                                       response_model=ZXReportResponse, #type: ignore
-                                      callback_error=cls.exc_callback)
+                                      exc_handler=cls.exc_callback)
             if config['webkassa']['report']['printable']:
                 template = TEMPLATE_ENVIRONMENT.get_or_select_template(
                     'report.xml')

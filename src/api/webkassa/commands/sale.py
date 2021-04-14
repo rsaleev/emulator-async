@@ -1,7 +1,9 @@
 
+from src.api.printer.commands.querying import PrintBuffer
 import aiofiles
 import os
 import asyncio
+import functools
 from xml.etree.ElementTree import fromstring
 from tortoise.expressions import F
 from tortoise.functions import Max
@@ -53,7 +55,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 response = await cls.dispatch(endpoint=cls.endpoint, 
                                             request_data=request,   
                                             response_model=SaleResponse, #type: ignore
-                                            callback_error=cls.exc_callback)
+                                            exc_handler=cls.exc_callback)
             except Exception as e:
                 asyncio.ensure_future(logger.exception(e))
                 raise e
@@ -66,28 +68,40 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
 
     @classmethod
     async def _render_receipt(cls, request, response):
+        """_render_receipt [summary]
+
+        [extended_summary]
+
+        Args:
+            request ([type]): [description]
+            response ([type]): [description]
+        """
         company = CompanyData(name=config['webkassa']['company']['name'],
                             inn=config['webkassa']['company']['inn'])
         template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
         try:
-            render = await template.render_async(
-                horizontal_delimiter='-',
+            render = asyncio.ensure_future(template.render_async(horizontal_delimiter='-',
                 dot_delimiter='.',
                 whitespace=' ',
                 company=company,
                 request=request,
-                response=response)
-            doc = fromstring(render)
-            await asyncio.sleep(0.2)
+                response=response))
+            while not render.done():
+                await asyncio.sleep(0.1)
         except Exception as e:
             await logger.exception(e)
         else:
-            try:
-                await PrintXML.handle(doc)
-                await PrintQR.handle(response.ticket_print_url)
-                await CutPresent.handle()
-            except Exception as e:
-                await logger.exception(e)
+            doc = fromstring(render.result())
+            asyncio.create_task(cls._render_print(response, doc))
+
+    @classmethod
+    async def _render_print(cls, response, doc):
+        try:
+            await PrintXML.handle(doc)
+            await PrintBuffer.handle()            
+            await CutPresent.handle()
+        except Exception as e:
+            await logger.exception(e)
 
     @classmethod
     async def exc_callback(cls, exc, payload):
@@ -106,8 +120,9 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 if shift.total_docs ==0:
                     await shift.update_from_dict({'open_date':timezone.now()})
                     return True
+                # if docs counter >0 set to mode 3
                 else:
-                    await States.filter(id=1).update(mode=4)
+                    await States.filter(id=1).update(mode=3)
                     return False
         elif isinstance(exc, ExpiredTokenError):
             try:
