@@ -3,13 +3,12 @@ import struct
 from uuid import uuid4
 from tortoise.functions import Max
 from src import config
-from typing import Tuple, Coroutine
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.db.models.receipt import Receipt
 from src.db.models.state import States
 from src.api.webkassa.commands import WebkassaClientSale
 from src.api.shtrih import logger
-
+from src.api.printer.commands import ClearBuffer, PrintDeferredBytes
 
 class OpenSale(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x03,))
@@ -28,7 +27,8 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
             # create record with empty ticket number
             else:
                 await Receipt.create(uid=uuid4(), ticket='', count=count, price=price, tax_percent=tax_percent, tax=tax)
-           
+            if not config['webkassa']['receipt']['header']:
+                asyncio.ensure_future(ClearBuffer.handle())
         except Exception as e:
             asyncio.ensure_future(logger.exception(e))
             cls.set_error(3)
@@ -97,14 +97,16 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
             await receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
-            response =  await WebkassaClientSale.handle(receipt)
-            if not response:
+            try:
+                await WebkassaClientSale.handle(receipt)
+            except:
                 cls.set_error(0x03)
             else:
                 cls.set_error(0x00) 
         else:
             asyncio.ensure_future(logger.error('No payment data'))
             cls.set_error(0x03)
+        asyncio.ensure_future(PrintDeferredBytes.handle())
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
