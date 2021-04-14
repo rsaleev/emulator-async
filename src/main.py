@@ -1,6 +1,7 @@
 import asyncio
 import signal
 import asyncio
+from src.api.printer.commands.querying import ClearBuffer
 import sys
 import uvloop
 from src import logger
@@ -10,7 +11,7 @@ from src.db.models import Shift, States, Token
 from src.api.printer.device import Printer
 from src.api.shtrih.device import Paykiosk
 from src.api.watchdog import Watchdog
-from src.api.printer.commands import PrinterFullStatusQuery
+from src.api.printer.commands import PrinterFullStatusQuery, PrintBuffer, CutPresent, PrintQR, PrintBytes
 from src.api.webkassa.commands import WebkassaClientToken
 
 
@@ -52,26 +53,25 @@ class Application:
     @classmethod
     async def init(cls):
         await logger.warning('Initializing application...')
-        executor = ThreadPoolExecutor(max_workers=5)
+        executor = ThreadPoolExecutor(max_workers=1)
         loop = asyncio.get_running_loop()
         loop.set_default_executor(executor)
         try:
+            # blocking step by step operations
             await logger.warning('Initializing DB')
             await cls.db.connect()
             await Shift.get_or_create(id=1) 
-            await States.get_or_create(id=1)
-            await PrinterFullStatusQuery.handle()
+            await States.get_or_create(id=1)            
+            await logger.warning('Initializing gateway')
             token = await WebkassaClientToken.handle()
-            print(token)
             await Token.get_or_create(id=1, token=token)
             await logger.warning('Initializing devices')
-            task_fiscalreg_connect = cls.fiscalreg.connect()
-            task_printer_connect = loop.run_in_executor(None, cls.printer.connect)
-            await asyncio.gather(task_fiscalreg_connect, task_printer_connect)
+            await cls.printer.connect()
+            await PrinterFullStatusQuery.handle()
+            await cls.fiscalreg.connect()
         except Exception as e:
-            print(e)
             await logger.exception(e)
-            raise SystemExit(f'Emergency shutdown: {repr(e)}')
+            raise SystemExit('Emergency shutdown')
         else:
             await logger.warning('Application initialized.Serving')
 
@@ -80,10 +80,11 @@ class Application:
         while not cls.event.is_set():
             try:
                 await cls.fiscalreg.poll()
+                #background task: watchdog poller
                 asyncio.create_task(cls.watchdog.poll())
             except Exception as e:
                 await logger.exception(e)
-                raise SystemExit(f'Emergency shutdown: {repr(e)}')
+                raise SystemExit(f'Emergency shutdown')
 
 if __name__ == '__main__':
     # ASYNCIO LOOP POLICY
