@@ -6,6 +6,9 @@ from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.api.printer.commands import PrinterFullStatusQuery
 from src.db.models import States
 from bitarray import bitarray #type: ignore
+from src import config
+
+
 class FullState(ShtrihCommand, ShtrihCommandInterface):
 
     _length = bytearray((0x30,))# B[1] LEN - 1 byte
@@ -71,7 +74,7 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         states = await States.get(id=1)
         mode = states.mode
         if states.gateway == 0:
-            mode = 4
+            mode = config['emulator']['sale']['gateway_error']
             cls.set_error(11)
         else:
             cls.set_error(0)
