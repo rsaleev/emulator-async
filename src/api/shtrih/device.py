@@ -103,7 +103,6 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 await logger.info("Connecton to fiscalreg device established")
                 break
 
-
     async def reconnect(self):
         self.impl.connected = False
         await self.connect()
@@ -120,7 +119,6 @@ class Paykiosk(Device, ShtrihProtoInterface):
             except (DeviceConnectionError, DeviceIOError):
                 await self.reconnect()
                 continue
-           
 
     async def write(self, data:bytearray):
         while True:
@@ -131,7 +129,6 @@ class Paykiosk(Device, ShtrihProtoInterface):
             except (DeviceConnectionError, DeviceIOError):
                 await self.reconnect()
                 continue
-           
 
     async def poll(self):
         try:
