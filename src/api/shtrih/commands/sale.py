@@ -43,19 +43,11 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
 
 
 class OpenReceipt(ShtrihCommand, ShtrihCommandInterface):
-    # TODO: TEST
     _length = bytearray((0x03,))
     _command_code = bytearray((0x8D,))
 
     @classmethod
-    def handle(cls) -> Tuple[Coroutine, Coroutine]:
-        task_process = cls._process()
-        task_execute = cls._dispatch()
-        return task_process, task_execute
-
-
-    @classmethod
-    async def _process(cls):
+    async def handle(cls, payload) -> bytearray:
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -63,23 +55,12 @@ class OpenReceipt(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._password)
         return arr 
 
-    @classmethod
-    async def _dispatch(cls) ->None:
-        pass
-
 class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x03,))
     _command_code = bytearray((0x88,))
 
     @classmethod
-    def handle(cls, payload:bytearray) -> Tuple[Coroutine, Coroutine]:
-        task_process = cls._process()
-        task_execute = cls._dispatch()
-        return task_process, task_execute
-
-
-    @classmethod
-    async def _process(cls):
+    async def handle(cls, payload:bytearray) -> bytearray:
         try:
             await States.filter(id=1).update(gateway=1)
         except Exception as e:
@@ -93,12 +74,6 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._error_code)
         arr.extend(cls._password)
         return arr 
-
-
-    @classmethod
-    async def _dispatch(cls) ->None:
-        pass
-
 class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
     
     _length = bytearray((0x08,))# B[1] LEN - 1 byte
