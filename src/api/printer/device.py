@@ -37,7 +37,7 @@ class UsbDevice(DeviceImpl):
         [extended_summary]
 
         Raises:
-            DeviceConnectionError: [description]
+            DeviceConnectionError: includes USB errors and OS errors if device not accessable
             
         """
         cls.device = usb.core.find(
