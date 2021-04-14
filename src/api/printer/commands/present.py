@@ -19,14 +19,24 @@ class CutPresent(Printer):
         
     @classmethod
     async def _present(cls):
+        """_present 
+
+        Performs document (receipt) presentation:
+
+        Modes: eject/present with length
+
+        """
+
         try:
+            # cut ticket (left in printer presenter)
+            await Printer().write(cls.cutting)  
             if config['printer']['presenter']['eject']:
-                await Printer().write(cls.cutting)  
+                # eject
                 await Printer().write(cls.eject)  
             else:        
-                await Printer().write(cls.cutting)
+                # present ticket with length parameter
                 present_mode = cls.present.append(cls.present_length)
                 await Printer().write(present_mode) #type: ignore PyLance
         except Exception as e:
-            logger.exception(e)
-            raise e 
+            await logger.exception(e)
+             

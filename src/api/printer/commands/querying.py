@@ -87,6 +87,7 @@ class PrintingStatusQuery(Printer):
 
 
 class PrintBuffer(Printer):
+  
 
     alias = 'buffer'
     cut = bytearray((0x1B,0x69))
@@ -103,7 +104,6 @@ class PrintBuffer(Printer):
             if status:
                 # print buffered data
                 # pre-printing op: get data from deferred storage and put in buffer
-                await PrintDeferredBytes.handle()
                 await Printer().write(Printer().buffer.output)
                 # check after printing errors
                 after_printing_status = await PrintingStatusQuery.handle()

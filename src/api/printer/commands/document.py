@@ -46,12 +46,13 @@ class PrintXML(Printer):
 
         Args:
             content (Element): XML object Element
-            buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
         try:
             align = content.attrib.get('align', 'left')
             bold = True if content.attrib.get('text', False)  and content.attrib['text']== 'bold' else False
+            # tag repressented by text attr with value
             if content.tag != 'br' and content.attrib.get('text', False): 
+                # escape characters that can't be represented in chosen encoding
                 content.text = content.text.replace(u'\u201c','"')
                 content.text = content.text.replace(u'\u201d', '"')
                 content.text = content.text.replace(u'\u202f', ' ')
@@ -66,8 +67,10 @@ class PrintXML(Printer):
                     Printer().buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                     output = content.text.encode(cls.encoding_output)
                     Printer().buffer._raw(output) 
+            # tag break -> print newline
             elif content.tag == 'br':
-                Printer().buffer._raw(bytes("\n", 'ascii'))             
+                Printer().buffer._raw(bytes("\n", 'ascii'))
+            # tag QR code data           
             elif content.tag == 'qr':
                 Printer().qr(unquote(str(content.text)))
         except Exception as e:
