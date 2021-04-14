@@ -22,14 +22,14 @@ class WebkassaClientToken(WebcassaClient):
             endpoint=cls.endpoint,
             request_data=request,
             response_model=TokenGetResponse, #type:ignore
-            callback_error=cls.exc_callback)
+            exc_handler=cls.exc_handler)
         if response:
             return response.token
         else:
             return 
 
     @classmethod
-    async def exc_callback(cls, exc, payload):
+    async def exc_handler(cls, exc, payload):
         if isinstance(exc, UnrecoverableError):
             return False
         elif isinstance(exc, CredentialsError):
