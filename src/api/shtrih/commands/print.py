@@ -40,17 +40,19 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def _parse_custom_line(cls, payload:bytearray) -> None:
         line_to_print = bytes(payload[5:]).decode('cp1251')
+        # check if line consists ticket number
         ticket = re.match(pattern=config['webkassa']['receipt']['regex'],  
                         string=line_to_print, 
                         flags=re.IGNORECASE)
         if ticket:
             num = ticket.group(2)
             await Receipt.create(uid=uuid4(), ticket=num)
+        # check if line consists payment w/o change data
         for line in cls.NoChangeHeader.lines:
             data = re.match(line,line_to_print)
             if data:
-               await PrintDefferdBytes.handle(bytes(line_to_print, 'cp1251')) #type: ignore Pylance
-
+                # store 
+                await PrintDeferredBytes.append(payload) 
 class PrintOneDimensionalBarcode(ShtrihCommand, ShtrihCommandInterface):
     _length =  bytearray((0x03,))
     _command_code = bytearray((0xC5,))
@@ -81,7 +83,7 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         try:
             # wait for execution:
             # if error occured -> return 0x200
-            asyncio.wait_for(PrintBuffer.handle(), timeout=3)
+            asyncio.wait_for(asyncio.shield(PrintBuffer.handle()), timeout=1)
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
         else:
