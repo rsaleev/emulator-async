@@ -8,13 +8,6 @@ from src.db.models import States
 from src.api.printer import logger
 from src.api.printer.device import Printer
 
-
-
-
-
-
-
-
 class PrintBytes(Printer):
     alias = 'bytes'
     codepage_command = bytearray((0x1B,0x74))
@@ -36,8 +29,8 @@ class PrintBytes(Printer):
         try:
             bits = bin(payload[0])[2:].zfill(8)
             Printer().buffer.set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  
-                    height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=cls.double_width, double_height=cls.double_heigth, 
-                    custom_size=cls.custom_size)
+                    height=cls.heigth, density=9, invert=False, smooth=False, flip=False, double_width=cls.double_width, 
+                    double_height=cls.double_heigth, custom_size=cls.custom_size)
             if config['printer']['text']['send_encoding']:
                 codepage = bytearray()
                 codepage.extend(cls.codepage_command)
