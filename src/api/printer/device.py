@@ -73,7 +73,7 @@ class UsbDevice(DeviceImpl):
                 "Could not set configuration: {0}".format(str(e)))
         else:
             cls.connected = True
-            await States.filter(id=1).update(submode=1)
+            await States.filter(id=1).update(submode=0)
 
     
     @classmethod
