@@ -56,9 +56,13 @@ class UsbDevice(DeviceImpl):
                 check_driver = cls.device.is_kernel_driver_active(0)  #type: ignore
             except NotImplementedError:
                 pass
-            if check_driver is None or check_driver:
                 try:
-                    cls.device.detach_kernel_driver(0)  #type: ignore
+                    for config in cls.device:
+                        try:
+                            for i in range(config.bNumInterfaces):
+                                cls.device.detach_kernel_driver(i)
+                        except Exception as e:
+                            await logger.exception(e)  #type: ignore
                 except NotImplementedError:
                     pass
                 except usb.core.USBError as e:
