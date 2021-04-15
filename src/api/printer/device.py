@@ -43,36 +43,30 @@ class UsbDevice(DeviceImpl):
             DeviceConnectionError: includes USB errors and OS errors if device not accessable
             
         """
+   
         cls.device = usb.core.find(
             idVendor= cls.VENDOR_ID,
             idProduct=cls.PRODUCT_ID)
-        
         if cls.device is None:
             raise DeviceConnectionError(
                 "Device not found or cable not plugged in.")
-        if cls.device.backend.__module__.endswith("libusb1"):  #type: ignore
-            check_driver = None
+        usb.util.dispose_resources(cls.device)
+        cls.IN_EP = cls.device[0][(0,0)][0] #type:ignore
+        cls.OUT_EP = cls.device[0][(0,0)][1] #type:ignore
+        logger.debug(f'Endpoints {cls.IN_EP}, {cls.OUT_EP}')
+        for config in cls.device:
             try:
-                check_driver = cls.device.is_kernel_driver_active(0)  #type: ignore
+                for i in range(config.bNumInterfaces): #type: ignore
+                    cls.device.detach_kernel_driver(i) #type: ignore
+            except Exception as e:
+                await logger.exception(e)  #type: ignore
             except NotImplementedError:
                 pass
-                try:
-                    for config in cls.device:
-                        try:
-                            for i in range(config.bNumInterfaces): #type: ignore
-                                cls.device.detach_kernel_driver(i) #type: ignore
-                        except Exception as e:
-                            await logger.exception(e)  #type: ignore
-                except NotImplementedError:
-                    pass
-                except usb.core.USBError as e:
-                    if check_driver is not None:
-                        raise DeviceConnectionError(
-                            "Could not detatch kernel driver: {0}".format(
-                                str(e)))
+            except usb.core.USBError as e:
+                    raise DeviceConnectionError(f"Could not detatch kernel driver: {e}")
         try:
             cls.device.set_configuration()  #type: ignore
-            cls.device.reset()  #type: ignore
+            usb.util.claim_interface(cls.device,0)
         except usb.core.USBError as e:
             raise DeviceConnectionError(
                 "Could not set configuration: {0}".format(str(e)))
@@ -92,7 +86,7 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            output = await loop.run_in_executor(cls.EXECUTOR, cls.device.read, cls.IN_EP, size, cls.READ_TIMEOUT) #type: ignore
+            output = await loop.run_in_executor(cls.EXECUTOR, cls.device.read, cls.IN_EP, cls.IN_EP.wMaxPacketSize, cls.READ_TIMEOUT) #type: ignore
         except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
             raise DeviceIOError(e)
         else:
@@ -102,7 +96,7 @@ class UsbDevice(DeviceImpl):
     @classmethod
     async def _write(cls, data:bytes):
         """ 
-        asynchronous implementation for dev.read()
+        asynchronous implementation for dev.write()
 
         usage: run in executor to prevent blocking looop
 
