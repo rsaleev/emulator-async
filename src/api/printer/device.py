@@ -222,6 +222,7 @@ class Printer(PrinterProto, Device):
             asyncio.ensure_future(logger.error('Implementation not found'))
 
     async def reconnect(self):
+        asyncio.ensure_future(States.filter(id=1).update(submode=1))
         if self._impl:
             self._impl.connected = False
             await self.connect()
@@ -239,7 +240,7 @@ class Printer(PrinterProto, Device):
             try:
                 output = await self._impl._read(size)
             except (DeviceConnectionError, DeviceIOError):
-                task = asyncio.create_task(self.reconnect())
+                task = asyncio.ensure_future(self.reconnect())
                 while not task.done():
                     await asyncio.sleep(1)
                 else:
@@ -252,7 +253,7 @@ class Printer(PrinterProto, Device):
             try:
                 await self._impl._write(data)
             except (DeviceConnectionError, DeviceIOError):
-                task = asyncio.create_task(self.reconnect())
+                task = asyncio.ensure_future(self.reconnect())
                 while not task.done():
                     await asyncio.sleep(1)
                 else:
