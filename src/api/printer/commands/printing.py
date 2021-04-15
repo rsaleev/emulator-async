@@ -62,7 +62,6 @@ class PrintXML(Printer):
     custom_size = config['printer']['doc']['custom_size']
     double_width = config['printer']['doc']['double_width']
     double_heigth = config['printer']['doc']['double_height']
-    buffer = config['printer']['doc']['buffer']
 
     @classmethod
     async def handle(cls, payload:Element):
