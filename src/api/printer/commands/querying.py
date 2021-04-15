@@ -11,7 +11,7 @@ from src.api.printer import logger
 class PrinterFullStatusQuery(Printer):
 
     alias = 'status'
-    command = bytearray((0x10,0x04,0x20))
+    command = bytearray((0x10,0x04,0x20,))
 
     @classmethod
     async def handle(cls, payload=None): 
