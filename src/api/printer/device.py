@@ -158,7 +158,7 @@ class SerialDevice(DeviceImpl):
     async def _read(cls, size):
         try:
             output = await cls.device.read_async(size)
-            asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(output, sep=":")}'))
+            asyncio.ensure_future(logger.debug(f'INPUT: {hexlify(output, sep=":")}'))
         except (SerialException, SerialTimeoutException, IOError) as e:
             raise DeviceIOError(e)
         else:
