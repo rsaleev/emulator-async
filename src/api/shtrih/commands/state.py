@@ -74,7 +74,7 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         states = await States.get(id=1)
         mode = states.mode
         if states.gateway == 0:
-            mode = config['emulator']['sale']['gateway_error']
+            mode = config['emulator']['sale']['gateway_error_state']
             cls.set_error(11)
         else:
             cls.set_error(0)
