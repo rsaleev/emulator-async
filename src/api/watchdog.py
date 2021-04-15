@@ -6,17 +6,19 @@ import asyncio
 from tortoise import timezone
 class Watchdog:
 
-    @classmethod
-    async def _check_shift(cls):
+    def __init__(self, event:asyncio.Event):
+        self.event = event
+
+    async def _check_shift(self):
         shift, states = await asyncio.gather(Shift.filter(id=1).first(), States.filter(id=1).first())
         if config['emulator']['shift']['close_by'] == 1: #close by counter
-            await cls._check_shift_by_counter(shift, states)
+            await self._check_shift_by_counter(shift, states)
         elif config['emulator']['shift']['close_by'] ==2:
-            await cls._check_shift_by_time(shift, states)
+            await self._check_shift_by_time(shift)
         await asyncio.sleep(1)
 
-    @classmethod
-    async def _check_shift_by_counter(cls, shift, states):
+    
+    async def _check_shift_by_counter(self, shift, states):
         if config['emulator']['shift']['close_by'] == 'counter':
             period = timezone.now() - shift.open_date
             hours= int(period.total_seconds() // 3600)
@@ -39,16 +41,18 @@ class Watchdog:
                         asyncio.ensure_future(logger.warning('Close shift manually. 24H elapsed'))
                         await States.filter(id=1).update(mode=3)
 
-    @classmethod
-    async def _check_shift_by_time(cls, shift, states):
+    async def _check_shift_by_time(self, shift):
         close_at = shift.open_date.time()+timedelta(hours=24)
         if timezone.now().time() >= close_at and shift.mode !=3:
-            asyncio.ensure_future(logger.warning('Autoclosing shift by timer'))
-            await WebkassaClientCloseShift.handle()        
+            logger.warning('Autoclosing shift by timer')
+            try:
+                await WebkassaClientCloseShift.handle() 
+            except:
+                logger.warning('Autoclosing shift by timer: unsuccess')
+            else:
+                logger.warning('Autoclosing shift by timer: success')
 
-
-    @classmethod
-    async def _token_check(cls):
+    async def _token_check(self):
         token_in_db = await Token.filter(id=1).get()
         if token_in_db.token =='' or (token_in_db.ts-timezone.now()).total_seconds()//3600 > 23:
             try:
@@ -60,11 +64,10 @@ class Watchdog:
                 pass
         await asyncio.sleep(1)
 
-    @classmethod
-    async def poll(cls):
+    async def poll(self):
         if config['emulator']['shift']['watchdog']:
-            asyncio.create_task(cls._check_shift())
-        asyncio.create_task(cls._token_check())
+            asyncio.create_task(self._check_shift())
+        asyncio.create_task(self._token_check())
         
         
     

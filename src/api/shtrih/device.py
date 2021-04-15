@@ -73,11 +73,12 @@ class SerialDevice(DeviceImpl):
 
 class Paykiosk(Device, ShtrihProtoInterface):
 
-    def __init__(self):
+    def __init__(self, event:asyncio.Event=None):
         Device.__init__(self)
         ShtrihProtoInterface.__init__(self)
         self.impl = None
         self.discover()
+        self.event = event
 
     @property
     def in_waiting(self):
@@ -92,7 +93,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
 
     async def connect(self):
         await logger.info("Connecting to fiscalreg device...")
-        while not self.impl.connected:
+        while not self.impl.connected and not self.event.is_set():
             try:
                 await self.impl._open()
             except DeviceConnectionError as e:
@@ -111,7 +112,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
         await self.impl._close()
 
     async def read(self, size:int):
-       while True:
+       while not self.event.is_set():
             try:
                 data = await self.impl._read(size)
                 asyncio.ensure_future(logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}'))
@@ -121,7 +122,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 continue
 
     async def write(self, data:bytearray):
-        while True:
+        while not self.event.is_set():
             try:
                 await self.impl._write(data)
                 asyncio.ensure_future(logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}'))
@@ -131,13 +132,14 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 continue
 
     async def poll(self):
-        try:
-            if self.in_waiting >0:
-                await self.consume()
-            else:
-                await asyncio.sleep(0.1)
-        except (OSError, DeviceConnectionError, DeviceIOError):
-            await self.reconnect()
+        if not self.event.is_set():
+            try:
+                if self.in_waiting >0:
+                    await self.consume()
+                else:
+                    await asyncio.sleep(0.1)
+            except (OSError, DeviceConnectionError, DeviceIOError):
+                await self.reconnect()
     
           
         

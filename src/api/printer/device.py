@@ -113,7 +113,7 @@ class UsbDevice(DeviceImpl):
     async def _close(cls):
         loop = asyncio.get_running_loop()
         try:
-            await loop.run_in_executor(None, partial(usb.util.dispose_resources, cls.device))
+            asyncio.wait_for(loop.run_in_executor(None, partial(usb.util.dispose_resources, cls.device)),0.5)
         except:
             pass
 
@@ -184,13 +184,14 @@ class SerialDevice(DeviceImpl):
     
 
 class Printer(PrinterProto, Device):
-    
+
     buffer = Dummy()
 
-    def __init__(self):
+    def __init__(self, event:asyncio.Event=None):
         PrinterProto.__init__(self)
         self._impl = None
         self.discover()
+        self.event = event
 
     def discover(self):
         if os.environ['PRINTER_TYPE'] == 'USB':
@@ -238,7 +239,7 @@ class Printer(PrinterProto, Device):
         return msg
 
     async def read(self, size:int):
-        while 1:
+        while not self.event.is_set():
             try:
                 output = await self._impl._read(size)
                 asyncio.ensure_future(logger.debug(f'INPUT: {hexlify(output, sep=":")}'))

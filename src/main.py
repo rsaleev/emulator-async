@@ -17,14 +17,13 @@ from src.api.webkassa.commands import WebkassaClientToken
 
 
 class Application:
-
     #asyncio 
     event = asyncio.Event()
     #instances
-    printer = Printer()
-    fiscalreg = Paykiosk()
     db = DBConnector()
-    watchdog = Watchdog()
+    printer = Printer(event)
+    fiscalreg = Paykiosk()
+    watchdog = Watchdog(event)
 
 
     @classmethod
