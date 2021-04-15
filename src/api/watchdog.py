@@ -32,7 +32,7 @@ class Watchdog:
                                         shift.update_from_dict.update({'open_date':timezone.now()}))
                 else:
                     # if autclose enabled shift will be closed without printing report
-                    if config['webkassa']['shift']['autoclose']:
+                    if config['emulator']['shift']['autoclose']:
                         asyncio.ensure_future(logger.warning('Autoclosing shift by timer'))
                         await WebkassaClientCloseShift.handle()
                     else:
