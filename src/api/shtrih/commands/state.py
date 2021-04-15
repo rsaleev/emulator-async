@@ -72,7 +72,7 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
     async def handle(cls, payload):
         printer_online = True
         try:
-            asyncio.wait_for(PrinterFullStatusQuery.handle(),timeout=1)
+            asyncio.wait_for(asyncio.shield(PrinterFullStatusQuery.handle()),timeout=1)
         except:
             printer_online = False
         states = await States.get(id=1)
