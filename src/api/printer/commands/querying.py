@@ -20,8 +20,8 @@ class PrinterFullStatusQuery(Printer):
 
     @classmethod
     async def _fetch_full_status(cls):
-        await Printer().write(b'\x10\x04\x04') 
-        status = await Printer().read(1)
+        await Printer().write(b'\x10\x04\x20') 
+        status = await Printer().read(16)
         logger.debug(f'STATUS:{status}')
         # paper= cls._set_paper_status(status[2])
         # roll = cls._set_roll_status(status[2])
