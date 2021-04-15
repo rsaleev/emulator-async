@@ -63,11 +63,10 @@ class SerialDevice(DeviceImpl):
             raise DeviceIOError(e)
 
     @classmethod
-    def _close(cls):
+    async def _close(cls):
         try:
-            cls.device.cancel_read()
-            cls.device.cancel_write()
-            cls.device.close()
+            asyncio.wait_for(cls.device._cancel_read_async(),0.2)
+            asyncio.wait_for(cls.device._cancel_write_async(),0.2)
         except:
             pass
 
@@ -108,8 +107,8 @@ class Paykiosk(Device, ShtrihProtoInterface):
         self.impl.connected = False
         await self.connect()
             
-    def disconnect(self):
-        self.impl._close()
+    async def disconnect(self):
+        await self.impl._close()
 
     async def read(self, size:int):
        while not self.event.is_set():

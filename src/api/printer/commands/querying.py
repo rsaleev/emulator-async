@@ -21,7 +21,7 @@ class PrinterFullStatusQuery(Printer):
     @classmethod
     async def _fetch_full_status(cls):
         await Printer().write(cls.command) 
-        status = await Printer().read(1)
+        status = await Printer().read(2)
         logger.debug(f'STATUS:{status}')
         paper= cls._set_paper_status(status[2])
         roll = cls._set_roll_status(status[2])

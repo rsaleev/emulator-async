@@ -28,7 +28,7 @@ class UsbDevice(DeviceImpl):
     PRODUCT_ID =int(os.environ.get('PRINTER_PRODUCT_ID'),16) #type: ignore
     IN_EP = int(os.environ.get('PRINTER_IN_EP'),16) #type: ignore
     OUT_EP = int(os.environ.get('PRINTER_OUT_EP'),16) #type: ignore
-    WRITE_TIMEOUT = int(os.environ.get('PRINTER_WRITE_TIMEOUT')) #type: ignore
+    WRITE_TIMEOUT = int(os.environ.get('PRINTE#type: ignoreR_WRITE_TIMEOUT')) #type: ignore
     READ_TIMEOUT = int(os.environ.get('PRINTER_READ_TIMEOUT')) #type: ignore
 
 
@@ -59,8 +59,8 @@ class UsbDevice(DeviceImpl):
                 try:
                     for config in cls.device:
                         try:
-                            for i in range(config.bNumInterfaces):
-                                cls.device.detach_kernel_driver(i)
+                            for i in range(config.bNumInterfaces): #type: ignore
+                                cls.device.detach_kernel_driver(i) #type: ignore
                         except Exception as e:
                             await logger.exception(e)  #type: ignore
                 except NotImplementedError:
@@ -92,7 +92,7 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            output = await loop.run_in_executor(None, partial(cls.device.read, cls.IN_EP, 16, cls.READ_TIMEOUT)) #type: ignore
+            output = await loop.run_in_executor(cls.EXECUTOR, cls.device.read, cls.IN_EP, size, cls.READ_TIMEOUT) #type: ignore
         except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
             raise DeviceIOError(e)
         else:
@@ -111,13 +111,14 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            await loop.run_in_executor(None, partial(cls.device.write, cls.OUT_EP, data, cls.WRITE_TIMEOUT)) #type:ignore
+            await loop.run_in_executor(cls.EXECUTOR, cls.device.write, cls.OUT_EP, data, cls.WRITE_TIMEOUT) #type:ignore
         except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
             raise DeviceIOError(e)
 
     @classmethod
     def _close(cls):
         try:
+            cls.EXECUTOR.shutdown(wait=True)
             usb.util.dispose_resources(cls.device)
         except:
             pass
@@ -128,7 +129,7 @@ class SerialDevice(DeviceImpl):
 
     @classmethod
     async def _open(cls):
-        port = os.environ.get("PRINTER_SERIAL_PORT", "/dev/ttyUSB0")
+        port = os.environ.get("PRINTER_SERIAL_PORT", "/dev/ttyUSB1")
         ports = list(list_ports.comports())
         if len(ports) > 1:
             hwids = [str(p[2]).split(" ") for p in ports] 
@@ -146,9 +147,10 @@ class SerialDevice(DeviceImpl):
             cls.device = aioserial.AioSerial(
                 port=str(port), 
                 baudrate=int(os.environ.get("PRINTER_BAUDRATE")), #type: ignore
-                dsrdtr=bool(int(os.environ.get("PRINTER_FLOW_CONTROL","0"))), 
-                rtscts=bool(int(os.environ.get("PPRINTER_FLOW_CONTROL","0"))),
-                write_timeout=float(int(os.environ.get("PRINTER_WRITE_TIMEOUT",1000))/1000), #type: ignore
+                dsrdtr=bool(int(os.environ.get("PRINTER_FLOW_CONTROL","1"))), 
+                rtscts=bool(int(os.environ.get("PPRINTER_FLOW_CONTROL","1"))),
+                write_timeout=float(int(os.environ.get("PRINTER_WRITE_TIMEOUT",5000))/1000), #type: ignore
+                timeout=float(int(os.environ.get("PRINTER_READ_TIMEOUT",5000))/1000),
                 loop=asyncio.get_running_loop())
             try:
                 cls.device.flushInput()
