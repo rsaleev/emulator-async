@@ -70,8 +70,16 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
 
     @classmethod
     async def handle(cls, payload):
-        await PrinterFullStatusQuery.handle()
+        printer_online = True
+        try:
+            asyncio.wait_for(PrinterFullStatusQuery.handle(),timeout=1)
+        except:
+            printer_online = False
         states = await States.get(id=1)
+        submode = states.submode
+        if not printer_online:
+            submode=1
+            cls.set_error(200)
         mode = states.mode
         if states.gateway == 0:
             mode = config['emulator']['sale']['gateway_error_state']
@@ -91,7 +99,7 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls.set_doc_num())
         arr.extend(cls.set_flags(states)) #type:ignore
         arr.extend(cls.set_mode(mode)) #type:ignore
-        arr.extend(cls.set_submode(states.submode)) #type:ignore
+        arr.extend(cls.set_submode(submode)) #type:ignore
         arr.extend(cls._port)
         arr.extend(cls._printer_fw_version)
         arr.extend(cls._printer_fw_build)
