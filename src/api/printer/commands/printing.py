@@ -76,11 +76,10 @@ class PrintXML(Printer):
             payload (Element): XML object - document
             buffer (bool, optional): perform printing in buffer or bypass. Defaults to True.
         """
-        loop = asyncio.get_running_loop()
         await States.filter(id=1).update(submode=5)
         await asyncio.sleep(0.1)
-        for child in payload:
-            await loop.run_in_executor(None, cls._print_element, child)
+        for elem in payload:
+            await cls._print_element(elem)
 
     @classmethod
     async def _print_element(cls, content:Element):
