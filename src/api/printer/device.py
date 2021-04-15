@@ -252,7 +252,7 @@ class Printer(PrinterProto, Device):
     async def write(self, data:Union[bytes, bytearray]):
         while 1:
             try:
-                await self._impl._write(data)
+                await self._impl._write(bytes(data))
                 asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(data, sep=":")}'))
             except (DeviceConnectionError, DeviceIOError) as e:
                 asyncio.ensure_future(logger.exception(e))
