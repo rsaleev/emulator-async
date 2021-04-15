@@ -41,7 +41,6 @@ class UsbDevice(DeviceImpl):
             DeviceConnectionError: includes USB errors and OS errors if device not accessable
             
         """
-        await States.filter(id=1).update(submode=1)
         cls.device = usb.core.find(
             idVendor= cls.VENDOR_ID,
             idProduct=cls.PRODUCT_ID)
@@ -73,7 +72,6 @@ class UsbDevice(DeviceImpl):
                 "Could not set configuration: {0}".format(str(e)))
         else:
             cls.connected = True
-            await States.filter(id=1).update(submode=0)
 
     
     @classmethod
@@ -202,14 +200,15 @@ class Printer(PrinterProto, Device):
         return self._impl
 
     async def connect(self):
+        await States.filter(id=1).update(submode=1)
         await  logger.info(f'Connecting to printer device...')
         if self._impl:
             while not self._impl.connected:
                 try:
                     await self._impl._open()
                 except DeviceConnectionError as e:
-                    await logger.error(e)
-                    time.sleep(1)
+                    asyncio.ensure_future(logger.error(e))
+                    await asyncio.sleep(1)
                     continue
                 else:
                     await logger.info('Connection to printer established')
@@ -217,6 +216,7 @@ class Printer(PrinterProto, Device):
                         os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
                     if config['printer']['presenter']['continuous']:
                         await self.write(bytearray((0x1D, 0x65, 0x14)))
+                    await States.filter(id=1).update(submode=0)
                     return self.device
         else:
             asyncio.ensure_future(logger.error('Implementation not found'))
