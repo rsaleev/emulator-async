@@ -46,6 +46,7 @@ class UsbDevice(DeviceImpl):
         cls.device = usb.core.find(
             idVendor= cls.VENDOR_ID,
             idProduct=cls.PRODUCT_ID)
+        
         if cls.device is None:
             raise DeviceConnectionError(
                 "Device not found or cable not plugged in.")
@@ -69,7 +70,6 @@ class UsbDevice(DeviceImpl):
             cls.device.set_configuration()  #type: ignore
             cls.device.reset()  #type: ignore
         except usb.core.USBError as e:
-
             raise DeviceConnectionError(
                 "Could not set configuration: {0}".format(str(e)))
         else:
