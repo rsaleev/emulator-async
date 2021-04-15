@@ -237,7 +237,7 @@ class Printer(PrinterProto, Device):
         await self._impl._close()
 
     async def read(self, size:int):
-        while not Printer.event.is_set():
+        while not self.event.is_set():
             try:
                 output = await self._impl._read(size)
                 asyncio.ensure_future(logger.debug(f'INPUT: {hexlify(output, sep=":")}'))
