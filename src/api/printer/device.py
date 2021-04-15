@@ -240,11 +240,7 @@ class Printer(PrinterProto, Device):
             try:
                 output = await self._impl._read(size)
             except (DeviceConnectionError, DeviceIOError):
-                task = asyncio.ensure_future(self.reconnect())
-                while not task.done():
-                    await asyncio.sleep(1)
-                else:
-                    continue
+                asyncio.ensure_future(self.reconnect())
             else:
                 return output
 
@@ -253,10 +249,7 @@ class Printer(PrinterProto, Device):
             try:
                 await self._impl._write(data)
             except (DeviceConnectionError, DeviceIOError):
-                task = asyncio.ensure_future(self.reconnect())
-                while not task.done():
-                    await asyncio.sleep(1)
-                else:
-                    continue
+                asyncio.ensure_future(self.reconnect())
+                continue
             else:
                 break
