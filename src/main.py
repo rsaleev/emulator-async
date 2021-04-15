@@ -14,7 +14,7 @@ from src.api.watchdog import Watchdog
 from src.api.printer.commands import PrinterFullStatusQuery, PrintBuffer, CutPresent, PrintQR, PrintBytes
 from src.api.webkassa.commands import WebkassaClientToken
 
-
+from escpos.printer import Usb
 
 class Application:
     #asyncio 

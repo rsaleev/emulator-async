@@ -86,7 +86,7 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            output =await loop.run_in_executor(None, partial(cls.device.read,cls.IN_EP, size, cls.TIMEOUT)) #type: ignore
+            output =await loop.run_in_executor(None, cls.device.read(cls.IN_EP, size)) #type: ignore
         except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
             raise DeviceIOError(e)
         else:
@@ -105,7 +105,7 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            await loop.run_in_executor(None, partial(cls.device.write,cls.OUT_EP,data,cls.TIMEOUT)) #type:ignore
+            await loop.run_in_executor(None, cls.device.write(cls.OUT_EP, data)) #type:ignore
         except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
             raise DeviceIOError(e)
 
