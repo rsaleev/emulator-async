@@ -9,6 +9,7 @@ from functools import partial
 from typing import Union
 from serial.serialutil import SerialException, SerialTimeoutException
 from src.api.shtrih import logger
+from src.db.models import States
 from serial.tools import list_ports
 from src import config
 from src.api.device import *
@@ -40,6 +41,7 @@ class UsbDevice(DeviceImpl):
             DeviceConnectionError: includes USB errors and OS errors if device not accessable
             
         """
+        await States.filter(id=1).update(submode=1)
         cls.device = usb.core.find(
             idVendor= cls.VENDOR_ID,
             idProduct=cls.PRODUCT_ID)
@@ -66,10 +68,13 @@ class UsbDevice(DeviceImpl):
             cls.device.set_configuration()  #type: ignore
             cls.device.reset()  #type: ignore
         except usb.core.USBError as e:
+
             raise DeviceConnectionError(
                 "Could not set configuration: {0}".format(str(e)))
         else:
             cls.connected = True
+            await States.filter(id=1).update(submode=1)
+
     
     @classmethod
     async def _read(cls, size):
