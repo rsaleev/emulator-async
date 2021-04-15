@@ -33,20 +33,16 @@ class Application:
         cls.event.set()
         await logger.warning('Shutting down application')
         try:
-            await asyncio.gather(
-                            asyncio.wait_for(cls.db.disconnect(),0.5),
-                            asyncio.wait_for(cls.printer.disconnect(), 0.5),
-                            asyncio.wait_for(cls.fiscalreg.disconnect(), 0.5),
-                        return_exceptions=True)
+            await asyncio.wait_for(cls.db.disconnect(),0.5),
+            await asyncio.wait_for(cls.printer.disconnect(), 0.5),
+            await asyncio.wait_for(cls.fiscalreg.disconnect(), 0.5)
+        except:
             await loop.shutdown_default_executor()
             [task.cancel() for task in asyncio.all_tasks(loop)]
             await loop.shutdown_default_executor
             # perform eventloop shutdown
-            loop.stop()
-        except:
-            pass
-        finally:
             try:
+                loop.stop()
                 loop.close()
             except:
                 pass
