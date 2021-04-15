@@ -28,7 +28,9 @@ class UsbDevice(DeviceImpl):
     PRODUCT_ID =int(os.environ.get('PRINTER_PRODUCT_ID'),16) #type: ignore
     IN_EP = int(os.environ.get('PRINTER_IN_EP'),16) #type: ignore
     OUT_EP = int(os.environ.get('PRINTER_OUT_EP'),16) #type: ignore
-    TIMEOUT = int(os.environ.get('PRINTER_TIMEOUT')) #type: ignore
+    WRITE_TIMEOUT = int(os.environ.get('PRINTER_WRITE_TIMEOUT')) #type: ignore
+    READ_TIMEOUT = int(os.environ.get('PRINTER_READ_TIMEOUT')) #type: ignore
+
 
     @classmethod
     async def _open(cls):
@@ -86,7 +88,7 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            output = await loop.run_in_executor(None, partial(cls.device.read, cls.IN_EP, size, cls.TIMEOUT)) #type: ignore
+            output = await loop.run_in_executor(None, partial(cls.device.read, cls.IN_EP, 16, cls.READ_TIMEOUT)) #type: ignore
         except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
             raise DeviceIOError(e)
         else:
@@ -94,7 +96,7 @@ class UsbDevice(DeviceImpl):
             return output
 
     @classmethod
-    async def _write(cls, data):
+    async def _write(cls, data:bytes):
         """ 
         asynchronous implementation for dev.read()
 
@@ -105,7 +107,7 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            await loop.run_in_executor(None, partial(cls.device.write, cls.OUT_EP, data, cls.TIMEOUT)) #type:ignore
+            await loop.run_in_executor(None, partial(cls.device.write, cls.OUT_EP, data, cls.WRITE_TIMEOUT)) #type:ignore
         except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
             raise DeviceIOError(e)
 
@@ -249,10 +251,10 @@ class Printer(PrinterProto, Device):
             else:
                 return output
 
-    async def write(self, data:Union[bytes, bytearray]):
+    async def write(self, data:Union[bytearray, bytes]):
         while 1:
             try:
-                await self._impl._write(data)
+                await self._impl._write(bytes(data))
                 asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(data, sep=":")}'))
             except (DeviceConnectionError, DeviceIOError) as e:
                 asyncio.ensure_future(logger.exception(e))
