@@ -28,7 +28,7 @@ class UsbDevice(DeviceImpl):
     PRODUCT_ID =int(os.environ.get('PRINTER_PRODUCT_ID'),16) #type: ignore
     IN_EP = int(os.environ.get('PRINTER_IN_EP'),16) #type: ignore
     OUT_EP = int(os.environ.get('PRINTER_OUT_EP'),16) #type: ignore
-    WRITE_TIMEOUT = int(os.environ.get('PRINTE#type: ignoreR_WRITE_TIMEOUT')) #type: ignore
+    WRITE_TIMEOUT = int(os.environ.get('PRINTER_WRITE_TIMEOUT')) #type: ignore
     READ_TIMEOUT = int(os.environ.get('PRINTER_READ_TIMEOUT')) #type: ignore
 
 
