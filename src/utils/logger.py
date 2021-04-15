@@ -75,7 +75,11 @@ class SynchronousLogger(logging.Logger):
 
 class AsynchronousLogger(aiologger.Logger):
     def __init__(self,  filename:str,name:str = __name__):
-        super().__init__(name=name, level= getattr(logging, os.environ.get('LOG_LEVEL', 'INFO')))
+        level = os.environ.get('LOG_LEVEL', 'INFO')
+        if level == 'DEBUG':
+            super().__init__(name=name, level=logging.DEBUG)
+        else:
+            super().__init__(name=name, level=logging.INFO)
         temp_file = NamedTemporaryFile()
         temp_file.name = filename #type: ignore
         handler = AsyncTimedRotatingFileHandler(filename=temp_file.name,
