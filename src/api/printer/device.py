@@ -241,6 +241,7 @@ class Printer(PrinterProto, Device):
                 output = await self._impl._read(size)
             except (DeviceConnectionError, DeviceIOError):
                 asyncio.ensure_future(self.reconnect())
+                continue
             else:
                 return output
 
