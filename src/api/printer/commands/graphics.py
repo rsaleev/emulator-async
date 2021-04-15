@@ -12,6 +12,7 @@ class PrintQR(Printer):
     @classmethod
     async def handle(cls, payload:str):
         Printer().buffer.qr(content=payload, center=True, native=False, size=cls.size)
+        Printer().hw('INIT')
 
 
 class PrintGraphicLines(Printer):
@@ -44,5 +45,7 @@ class PrintGraphicLines(Printer):
         # invert colors black/white
         bc_inverted = ImageOps.invert(bc.convert('L'))
         Printer().buffer.image(bc_inverted, impl=cls.impl, center=cls.center)
+        Printer().hw('INIT')
+
 
      
