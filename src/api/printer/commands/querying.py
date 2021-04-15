@@ -68,7 +68,7 @@ class PrinterFullStatusQuery(Printer):
 class PrintingStatusQuery(Printer):
 
     alias = 'online'
-    command = bytearray((0x10,0x04,0x02))
+    command = bytearray((0x10,0x04,0x02,))
 
     @classmethod
     async def handle(cls):

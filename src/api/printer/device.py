@@ -1,8 +1,8 @@
 import os
-import time
 import usb
 import aioserial
 import asyncio
+from binascii import hexlify
 from concurrent.futures import ThreadPoolExecutor
 from itertools import groupby
 from functools import partial
@@ -106,7 +106,6 @@ class UsbDevice(DeviceImpl):
         loop = asyncio.get_running_loop()
         try:
             await loop.run_in_executor(None, partial(cls.device.write,cls.OUT_EP,data,cls.TIMEOUT)) #type:ignore
-            asyncio.ensure_future(logger.debug(f'OUTPUT: {data}'))
         except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
             raise DeviceIOError(e)
 
@@ -159,6 +158,7 @@ class SerialDevice(DeviceImpl):
     async def _read(cls, size):
         try:
             output = await cls.device.read_async(size)
+            asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(output, sep=":")}'))
         except (SerialException, SerialTimeoutException, IOError) as e:
             raise DeviceIOError(e)
         else:
@@ -169,6 +169,7 @@ class SerialDevice(DeviceImpl):
     async def _write(cls, data):
         try:
             await cls.device.write_async(data)
+            asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(data, sep=":")}'))
         except (SerialException, SerialTimeoutException, IOError) as e:
             raise DeviceIOError(e)
 
