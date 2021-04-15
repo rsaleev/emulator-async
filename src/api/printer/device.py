@@ -158,7 +158,7 @@ class SerialDevice(DeviceImpl):
     async def _read(cls, size):
         try:
             output = await cls.device.read_async(size)
-            asyncio.ensure_future(logger.debug(f'INPUT: {hexlify(output, sep=":")}'))
+
         except (SerialException, SerialTimeoutException, IOError) as e:
             raise DeviceIOError(e)
         else:
@@ -169,7 +169,6 @@ class SerialDevice(DeviceImpl):
     async def _write(cls, data):
         try:
             await cls.device.write_async(data)
-            asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(data, sep=":")}'))
         except (SerialException, SerialTimeoutException, IOError) as e:
             raise DeviceIOError(e)
 
@@ -241,6 +240,7 @@ class Printer(PrinterProto, Device):
         while 1:
             try:
                 output = await self._impl._read(size)
+                asyncio.ensure_future(logger.debug(f'INPUT: {hexlify(output, sep=":")}'))
             except (DeviceConnectionError, DeviceIOError) as e:
                 asyncio.ensure_future(logger.exception(e))
                 fut = asyncio.ensure_future(self.reconnect())
@@ -253,6 +253,7 @@ class Printer(PrinterProto, Device):
         while 1:
             try:
                 await self._impl._write(data)
+                asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(data, sep=":")}'))
             except (DeviceConnectionError, DeviceIOError) as e:
                 asyncio.ensure_future(logger.exception(e))
                 fut = asyncio.ensure_future(self.reconnect())
