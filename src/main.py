@@ -32,21 +32,26 @@ class Application:
         cls.watchdog.event.set()
         cls.event.set()
         await logger.warning('Shutting down application')
-        closing_tasks = []
-        closing_tasks.append(cls.db.disconnect())
-        closing_tasks.append(cls.printer.disconnect)
-        closing_tasks.append(cls.fiscalreg.disconnect())
         try:
-            await asyncio.gather(*closing_tasks, return_exceptions=True)     
+            await asyncio.gather(
+                            asyncio.wait_for(cls.db.disconnect(),0.5),
+                            asyncio.wait_for(cls.printer.disconnect(), 0.5),
+                            asyncio.wait_for(cls.fiscalreg.disconnect(), 0.5),
+                        return_exceptions=True)
             await loop.shutdown_default_executor()
-            await logger.warning('Finalizing...')
-            await logger.shutdown()
             [task.cancel() for task in asyncio.all_tasks(loop)]
+            await loop.shutdown_default_executor
             # perform eventloop shutdown
             loop.stop()
-            loop.close()
         except:
             pass
+        finally:
+            try:
+                loop.close()
+            except:
+                pass
+            os._exit(0)
+
 
     @classmethod
     async def init(cls):
