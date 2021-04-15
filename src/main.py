@@ -1,9 +1,9 @@
 import asyncio
 import signal
 import asyncio
-from src.api.printer.commands.querying import ClearBuffer
-import sys
+import os
 import uvloop
+from functools import partial
 from src import logger
 from concurrent.futures import ThreadPoolExecutor
 from src.db.connector import DBConnector
@@ -11,10 +11,9 @@ from src.db.models import Shift, States, Token
 from src.api.printer.device import Printer
 from src.api.shtrih.device import Paykiosk
 from src.api.watchdog import Watchdog
-from src.api.printer.commands import PrinterFullStatusQuery, PrintBuffer, CutPresent, PrintQR, PrintBytes
+from src.api.printer.commands import PrinterFullStatusQuery
 from src.api.webkassa.commands import WebkassaClientToken
 
-from escpos.printer import Usb
 
 class Application:
     #asyncio 
@@ -27,7 +26,7 @@ class Application:
 
 
     @classmethod
-    async def _signal_handler(cls, signal, loop):
+    async def signal_handler(cls, signal, loop):
         cls.printer.event.set()
         cls.fiscalreg.event.set()
         cls.watchdog.event.set()
@@ -48,9 +47,6 @@ class Application:
             loop.close()
         except:
             pass
-        # close process
-        sys.exit(0)
-
 
     @classmethod
     async def init(cls):
@@ -78,7 +74,7 @@ class Application:
             await logger.warning('Application initialized.Serving')
 
     @classmethod
-    async def run(cls):
+    async def serve(cls):
         while not cls.event.is_set():
             try:
                 await cls.fiscalreg.poll()
@@ -88,16 +84,20 @@ class Application:
                 await logger.exception(e)
                 raise SystemExit(f'Emergency shutdown')
 
+    @classmethod
+    def run(cls):
+        # ASYNCIO LOOP POLICY
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        loop = asyncio.new_event_loop()
+        signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
+        for s in signals:
+            loop.add_signal_handler(s, lambda:asyncio.ensure_future(cls.signal_handler(s, loop)))
+        loop.run_until_complete(cls.init())
+        loop.run_until_complete(cls.serve())
+        loop.run_forever()
+
 if __name__ == '__main__':
-    # ASYNCIO LOOP POLICY
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    loop = asyncio.new_event_loop()
-    app = Application()
-    signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
-    # add signal handler to loop
-    for s in signals:
-        loop.add_signal_handler(s, lambda: asyncio.ensure_future(app._signal_handler(s, loop)))
-    loop.run_until_complete(app.init())
-    loop.run_until_complete(app.run())
-    loop.run_forever()
+    Application.run()
+   
+   
    
