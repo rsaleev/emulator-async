@@ -73,12 +73,12 @@ class SerialDevice(DeviceImpl):
 
 class Paykiosk(Device, ShtrihProtoInterface):
 
-    def __init__(self, event:asyncio.Event=None):
+    def __init__(self):
         Device.__init__(self)
         ShtrihProtoInterface.__init__(self)
         self.impl = None
         self.discover()
-        self.event = event
+        self.event = asyncio.Event()
 
     @property
     def in_waiting(self):

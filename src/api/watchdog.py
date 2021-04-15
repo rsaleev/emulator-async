@@ -6,8 +6,8 @@ import asyncio
 from tortoise import timezone
 class Watchdog:
 
-    def __init__(self, event:asyncio.Event):
-        self.event = event
+    def __init__(self):
+        self.event = asyncio.Event()
 
     async def _check_shift(self):
         shift, states = await asyncio.gather(Shift.filter(id=1).first(), States.filter(id=1).first())

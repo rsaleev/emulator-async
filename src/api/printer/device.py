@@ -186,12 +186,14 @@ class SerialDevice(DeviceImpl):
 class Printer(PrinterProto, Device):
 
     buffer = Dummy()
+    event:asyncio.Event
 
-    def __init__(self, event:asyncio.Event=None):
+    def __init__(self):
         PrinterProto.__init__(self)
         self._impl = None
         self.discover()
-        self.event = event
+        self.event = asyncio.Event()
+        
 
     def discover(self):
         if os.environ['PRINTER_TYPE'] == 'USB':
@@ -234,12 +236,8 @@ class Printer(PrinterProto, Device):
         self.hw('INIT')
         await self._impl._close()
 
-
-    def _raw(self, msg) ->bytes:
-        return msg
-
     async def read(self, size:int):
-        while not self.event.is_set():
+        while not Printer.event.is_set():
             try:
                 output = await self._impl._read(size)
                 asyncio.ensure_future(logger.debug(f'INPUT: {hexlify(output, sep=":")}'))

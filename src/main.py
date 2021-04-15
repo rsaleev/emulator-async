@@ -21,13 +21,16 @@ class Application:
     event = asyncio.Event()
     #instances
     db = DBConnector()
-    printer = Printer(event)
+    printer = Printer()
     fiscalreg = Paykiosk()
-    watchdog = Watchdog(event)
+    watchdog = Watchdog()
 
 
     @classmethod
     async def _signal_handler(cls, signal, loop):
+        cls.printer.event.set()
+        cls.fiscalreg.event.set()
+        cls.watchdog.event.set()
         cls.event.set()
         await logger.warning('Shutting down application')
         closing_tasks = []
