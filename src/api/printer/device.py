@@ -112,10 +112,9 @@ class UsbDevice(DeviceImpl):
             raise DeviceIOError(e)
 
     @classmethod
-    async def _close(cls):
-        loop = asyncio.get_running_loop()
+    def _close(cls):
         try:
-            asyncio.wait_for(loop.run_in_executor(None, partial(usb.util.dispose_resources, cls.device)),0.5)
+            usb.util.dispose_resources(cls.device)
         except:
             pass
 
@@ -175,7 +174,7 @@ class SerialDevice(DeviceImpl):
             raise DeviceIOError(e)
 
     @classmethod
-    async def _close(cls):
+    def _close(cls):
         try:
             cls.device.cancel_read()
             cls.device.cancel_write()
@@ -234,9 +233,8 @@ class Printer(PrinterProto, Device):
             self._impl.connected = False
             await self.connect()
 
-    async def disconnect(self):
-        self.hw('INIT')
-        await self._impl._close()
+    def disconnect(self):
+        self._impl._close()
 
     async def read(self, size:int):
         while not self.event.is_set():
