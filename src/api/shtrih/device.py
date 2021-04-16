@@ -36,7 +36,7 @@ class SerialDevice(DeviceImpl):
                 baudrate=int(os.environ.get("PAYKIOSK_BAUDRATE")), #type: ignore
                 dsrdtr=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))), 
                 rtscts=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))),
-                read_timeout=float(int(os.environ.get("PAYKIOSK_READ_TIMEOUT",5000))/1000), #type_ignore
+                timeout=float(int(os.environ.get("PAYKIOSK_READ_TIMEOUT",5000))/1000), #type_ignore
                 write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000), #type: ignore
                 loop=asyncio.get_running_loop())
             try:
