@@ -16,23 +16,9 @@ class SerialDevice(DeviceImpl):
 
     @classmethod
     async def _open(cls):
-        port = os.environ.get("SHTRIH_SERIAL_PORT", "/dev/ttyUSB0")
-        ports = list(list_ports.comports())
-        if len(ports) > 1:
-            hwids = [str(p[2]).split(" ") for p in ports] 
-            counter, group = [(len(list(group)), key)
-                              for key, group in groupby(hwids)][0]
-            if counter > 1:
-               await logger.error(f"Found multiple devices {counter} with same group {group}")
-            else:
-                port = ports[0][0]
-        elif len(ports) == 0:
-            await logger.error(f"Device not found with autodiscover connecting with default params")
-        elif len(ports) == 1:
-            port = ports[0][0]
         try:
             cls.device = aioserial.AioSerial(
-                port=str(port), 
+                port=os.environ.get("PAYKIOSK_PORT"), 
                 baudrate=int(os.environ.get("PAYKIOSK_BAUDRATE")), #type: ignore
                 dsrdtr=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))), 
                 rtscts=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))),
