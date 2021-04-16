@@ -89,5 +89,4 @@ class AsynchronousLogger(aiologger.Logger):
         self.add_handler(handler)
 
 
-from dotenv import load_dotenv
 
