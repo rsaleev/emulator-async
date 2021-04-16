@@ -97,35 +97,24 @@ class PrintBuffer(Printer):
     async def handle(cls, payload=None):
         # enter loop for 
         while not Printer().event.is_set():
-            # check current printer status: if ready -> True
-            status = await PrinterFullStatusQuery.handle()
-            if status:
-                # print buffered data
-                # pre-printing op: get data from deferred storage and put in buffer
-                await Printer().write(Printer().buffer.output)
-                # check after printing errors
-                after_printing_status = await PrintingStatusQuery.handle()
-                # no errors: True
-                if after_printing_status:
-                    # change submode=3: ready for next command 
-                    asyncio.ensure_future(States.filter(id=1).update(submode=5))
-                    await ClearBuffer.handle()
-                    break
-                # errors: False
-                else:
-                    # set error status and clear dispenser/presenter
-                    await asyncio.gather(States.filter(id=1).update(submode=1),
-                                    CutPresent.handle())
-                    await asyncio.sleep(0.1)
-                    continue
+            # pre-printing op: get data from deferred storage and put in buffer
+            await Printer().write(Printer().buffer.output)
+            # check after printing errors
+            after_printing_status = await PrintingStatusQuery.handle()
+            # no errors: True
+            if after_printing_status:
+                # change submode=3: ready for next command 
+                asyncio.ensure_future(States.filter(id=1).update(submode=5))
+                await ClearBuffer.handle()
+                break
             else:
-                # wait until next iteration, possibly wait for a long time
-                await asyncio.sleep(1)
+                # set error status and clear dispenser/presenter
+                await asyncio.gather(States.filter(id=1).update(submode=1),
+                                CutPresent.handle())
+                await asyncio.sleep(0.1)
                 continue
         
-                    
-
-                
+                     
 class ClearBuffer(Printer):
 
     alias = 'clear'
