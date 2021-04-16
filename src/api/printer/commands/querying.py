@@ -4,7 +4,7 @@ from src.api.printer.commands.printing import PrintDeferredBytes
 from src.api.printer.device import Printer
 from src.db.models.state import States
 from src.api.printer import logger
-from src.api.printer.commands.querying import CutPresent
+from src.api.printer.commands.present import CutPresent
 
 
 class PrinterFullStatusQuery(Printer):
