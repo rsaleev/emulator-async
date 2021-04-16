@@ -6,6 +6,7 @@ from functools import partial
 from src.api.printer.device import Printer
 from src.db.models.state import States
 from src.api.printer import logger
+from src.api.printer.commands import CutPresent
 
 
 class PrinterFullStatusQuery(Printer):
@@ -29,8 +30,8 @@ class PrinterFullStatusQuery(Printer):
         cover = cls._set_cover_status(status[3])
         rec_err = cls._set_rec_status(status[4]) 
         unrec_err = cls._set_unrec_status(status[5])
-        logger.debug(
-            f'PAPER:{int(paper)}|ROLL:{int(roll)}|COVER:{int(cover)}|RECOVERABLE:{int(rec_err)}|UNRECOVERABLE:{int(unrec_err)}')
+        asyncio.ensure_future(logger.debug(
+            f'PAPER:{int(paper)}|ROLL:{int(roll)}|COVER:{int(cover)}|RECOVERABLE:{int(rec_err)}|UNRECOVERABLE:{int(unrec_err)}'))
         # if paper not presented or cover is opened or unrecoverable/recoverable error exist -> submode=1
         if not paper or cover or rec_err and not unrec_err:
             asyncio.ensure_future(States.filter(id=1).update(submode=1, paper=int(paper), cover=int(cover), roll=int(roll), jam=int(rec_err)))
@@ -96,10 +97,9 @@ class PrintBuffer(Printer):
 
     @classmethod
     async def handle(cls, payload=None):
-        # loop = asyncio.get_running_loop()
         # # clear buffer to prevent conflict 
         # # enter loop for 
-        # while 1:
+        # while not Printer().event.is_set():
         #     # check current printer status: if ready -> True
         #     status = await PrinterFullStatusQuery.handle()
         #     if status:
@@ -117,16 +117,14 @@ class PrintBuffer(Printer):
         #         else:
         #             # set error status and clear dispenser/presenter
         #             await asyncio.gather(States.filter(id=1).update(submode=1),
-        #                             loop.run_in_executor(None, partial(Printer().cut, True)))
+        #                             CutPresent.handle())
         #             await asyncio.sleep(0.1)
         #             continue
         #     else:
         #         # wait until next iteration, possibly wait for a long time
         #         await asyncio.sleep(1)
         #         continue
-        buffered = Printer().buffer.output
-        print(f'BUFFERED {buffered}')
-        await Printer().write(buffered)
+        await Printer().write(Printer().buffer.output)
 
                     
 

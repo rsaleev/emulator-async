@@ -83,7 +83,7 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         try:
             # wait for execution:
             # if error occured -> return 0x200
-            asyncio.wait_for(asyncio.shield(PrintBuffer.handle()), timeout=1)
+            await PrintBuffer.handle()
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
         else:
