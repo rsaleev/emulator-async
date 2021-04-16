@@ -104,7 +104,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
        while not self.event.is_set():
             try:
                 data = await self.impl._read(size)
-                logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}')
+                asyncio.ensure_future(logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}'))
                 return data
             except (DeviceConnectionError, DeviceIOError):
                 await self.reconnect()
@@ -114,7 +114,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
         while not self.event.is_set():
             try:
                 await self.impl._write(data)
-                logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}')
+                asyncio.ensure_future(logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}'))
                 break
             except (DeviceConnectionError, DeviceIOError):
                 await self.reconnect()
