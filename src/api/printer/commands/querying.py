@@ -31,12 +31,12 @@ class PrinterFullStatusQuery(Printer):
         asyncio.ensure_future(logger.debug(
             f'PAPER:{int(paper)}|ROLL:{int(roll)}|COVER:{int(cover)}|RECOVERABLE:{int(rec_err)}|UNRECOVERABLE:{int(unrec_err)}'))
         # if paper not presented or cover is opened or unrecoverable/recoverable error exist -> submode=1
-        if not paper or cover or rec_err and not unrec_err:
-            asyncio.ensure_future(States.filter(id=1).update(submode=1, paper=int(paper), cover=int(cover), roll=int(roll), jam=int(rec_err)))
+        if not paper and not cover and not rec_err and not unrec_err:
+            asyncio.ensure_future(States.filter(id=1).update(paper=int(paper), cover=int(cover), roll=int(roll), jam=int(rec_err)))
             return False
         # otherwise do not update submode value, assert that some operation in progress
         else:
-            asyncio.ensure_future(States.filter(id=1).update(paper=int(paper), cover=int(cover), roll=int(roll), jam=int(rec_err)))
+            asyncio.ensure_future(States.filter(id=1).update(submode=1, paper=int(paper), cover=int(cover), roll=int(roll), jam=int(rec_err)))
             return True
 
     @classmethod
