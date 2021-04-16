@@ -25,7 +25,7 @@ class PrintBytes(Printer):
 
     @classmethod
     async def handle(cls, payload:Union[bytes,bytearray]) -> None:
-        await States.filter(id=1).update(submode=2)
+        asyncio.ensure_future(States.filter(id=1).update(submode=2))
         try:
             bits = bin(payload[0])[2:].zfill(8)
             Printer().buffer.set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  
@@ -47,6 +47,9 @@ class PrintBytes(Printer):
         except Exception as e:
             logger.exception(e)
             raise e
+        else:
+            asyncio.ensure_future(States.filter(id=1).update(submode=3))
+
 
 class PrintXML(Printer):
     alias = 'xml'
