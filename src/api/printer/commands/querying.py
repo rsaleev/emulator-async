@@ -11,7 +11,7 @@ from src.api.printer import logger
 class PrinterFullStatusQuery(Printer):
 
     alias = 'status'
-    command = bytearray((0x10,0x04,0x04))
+    command = bytearray((0x10,0x04,0x14))
 
     @classmethod
     async def handle(cls, payload=None): 
@@ -20,9 +20,9 @@ class PrinterFullStatusQuery(Printer):
 
     @classmethod
     async def _fetch_full_status(cls):
-        await Printer().write(b'\x10\x04\x20')
-        status_raw = await Printer().read(6)
-        status = bytearray(status_raw) #type:ignore
+        await Printer().write(cls.command)
+        raw = await Printer().read(6)
+        status=bytearray(raw) #type: ignore
         logger.debug(f'STATUS:{status}')
         paper= cls._set_paper_status(status[2])
         roll = cls._set_roll_status(status[2])
