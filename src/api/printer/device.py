@@ -85,13 +85,14 @@ class UsbDevice(DeviceImpl):
             DeviceIOError: incapsulates exceptions: USBError, USBTimeoutError, IOError
         """
         loop = asyncio.get_running_loop()
-        try:
-            output = await loop.run_in_executor(cls.EXECUTOR, cls.device.read, cls.IN_EP, cls.IN_EP.wMaxPacketSize, cls.READ_TIMEOUT) #type: ignore
-        except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
-            raise DeviceIOError(e)
-        else:
-            asyncio.ensure_future(logger.debug(f'INPUT: {output}'))
-            return output
+        with cls.EXECUTOR as executor:
+            try:
+                output = await loop.run_in_executor(executor, cls.device.read, cls.IN_EP, cls.IN_EP.wMaxPacketSize, cls.READ_TIMEOUT) #type: ignore
+            except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
+                raise DeviceIOError(e)
+            else:
+                asyncio.ensure_future(logger.debug(f'INPUT: {output}'))
+                return output
 
     @classmethod
     async def _write(cls, data:bytes):
@@ -104,10 +105,12 @@ class UsbDevice(DeviceImpl):
             DeviceIOError: incapsulates exceptions: USBError, USBTimeoutError, IOError
         """
         loop = asyncio.get_running_loop()
-        try:
-            await loop.run_in_executor(cls.EXECUTOR, cls.device.write, cls.OUT_EP, data, cls.WRITE_TIMEOUT) #type:ignore
-        except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
-            raise DeviceIOError(e)
+        with cls.EXECUTOR as executor:
+            try:
+                with 
+                await loop.run_in_executor(executor, cls.device.write, cls.OUT_EP, data, cls.WRITE_TIMEOUT) #type:ignore
+            except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
+                raise DeviceIOError(e)
 
     @classmethod
     def _close(cls):

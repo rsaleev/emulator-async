@@ -3,9 +3,7 @@ import signal
 import asyncio
 import os
 import uvloop
-from functools import partial
 from src import logger
-from concurrent.futures import ThreadPoolExecutor
 from src.db.connector import DBConnector
 from src.db.models import Shift, States, Token
 from src.api.printer.device import Printer
@@ -35,7 +33,7 @@ class Application:
         try:
             await asyncio.wait_for(cls.db.disconnect(),0.5)
             cls.printer.disconnect()
-            await cls.fiscalreg.disconnect()
+            #await cls.fiscalreg.disconnect()
         except:
             await loop.shutdown_default_executor()
             [task.cancel() for task in asyncio.all_tasks(loop)]
@@ -52,9 +50,6 @@ class Application:
     @classmethod
     async def init(cls):
         await logger.warning('Initializing application...')
-        executor = ThreadPoolExecutor(max_workers=1)
-        loop = asyncio.get_running_loop()
-        loop.set_default_executor(executor)
         try:
             # blocking step by step operations
             await logger.warning('Initializing DB')
@@ -62,12 +57,8 @@ class Application:
             await Shift.get_or_create(id=1) 
             await States.get_or_create(id=1)            
             await logger.warning('Initializing gateway')
-            token = await WebkassaClientToken.handle()
-            await Token.get_or_create(id=1, token=token)
-            await logger.warning('Initializing devices')
             await cls.printer.connect()
             await PrinterFullStatusQuery.handle()
-            await cls.fiscalreg.connect()
         except Exception as e:
             await logger.exception(e)
             raise SystemExit('Emergency shutdown')
@@ -94,7 +85,6 @@ class Application:
         for s in signals:
             loop.add_signal_handler(s, lambda:asyncio.ensure_future(cls.signal_handler(s, loop)))
         loop.run_until_complete(cls.init())
-        loop.run_until_complete(cls.serve())
         loop.run_forever()
 
 if __name__ == '__main__':
