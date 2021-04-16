@@ -130,10 +130,10 @@ class Printer(PrinterProto, Device):
             try:
                 asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(data, sep=":")}'))
                 await self._impl._write(data)
-                await asyncio.sleep(0.5)
-                break
             except (DeviceConnectionError, DeviceIOError) as e:
                 asyncio.ensure_future(logger.exception(e))
                 fut = asyncio.ensure_future(self.reconnect())
                 if fut.done():
                     continue
+            else:
+                break
