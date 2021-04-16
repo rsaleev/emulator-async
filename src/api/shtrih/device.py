@@ -135,6 +135,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
     async def poll(self):
         while not self.event.is_set():
             try:
+                logger.debug('Polling...')
                 if self.in_waiting >0:
                     await self.consume()
                 else:
