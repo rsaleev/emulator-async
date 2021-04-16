@@ -65,7 +65,7 @@ class Watchdog:
         await asyncio.sleep(1)
 
     async def poll(self):
-        if not self.event.is_set():
+        while not self.event.is_set():
             if config['emulator']['shift']['watchdog']:
                 asyncio.create_task(self._check_shift())
             asyncio.create_task(self._token_check())

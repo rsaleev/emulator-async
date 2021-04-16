@@ -133,7 +133,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 continue
 
     async def poll(self):
-        if not self.event.is_set():
+        while not self.event.is_set():
             try:
                 if self.in_waiting >0:
                     await self.consume()
@@ -141,6 +141,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
                     await asyncio.sleep(0.1)
             except (OSError, DeviceConnectionError, DeviceIOError):
                 await self.reconnect()
+                continue
     
           
         

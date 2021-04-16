@@ -16,8 +16,6 @@ from src.api.webkassa.commands import WebkassaClientToken
 
 
 class Application:
-    #asyncio 
-    event = asyncio.Event()
     #instances
     db = DBConnector()
     printer = Printer()
@@ -30,16 +28,13 @@ class Application:
         cls.printer.event.set()
         cls.fiscalreg.event.set()
         cls.watchdog.event.set()
-        cls.event.set()
         await logger.warning('Shutting down application')
         try:
             await asyncio.wait_for(cls.db.disconnect(),0.5)
             cls.printer.disconnect()
             await cls.fiscalreg.disconnect()
         except:
-            await loop.shutdown_default_executor()
             [task.cancel() for task in asyncio.all_tasks(loop)]
-            await loop.shutdown_default_executor
             # perform eventloop shutdown
             try:
                 loop.stop()
@@ -76,14 +71,13 @@ class Application:
 
     @classmethod
     async def serve(cls):
-        while not cls.event.is_set():
-            try:
-                await cls.fiscalreg.poll()
-                #background task: watchdog poller
-                asyncio.create_task(cls.watchdog.poll())
-            except Exception as e:
-                await logger.exception(e)
-                raise SystemExit(f'Emergency shutdown')
+        try:
+            await cls.fiscalreg.poll()
+            #background task: watchdog poller
+            asyncio.create_task(cls.watchdog.poll())
+        except Exception as e:
+            logger.exception(e)
+            raise SystemExit(f'Emergency shutdown')
 
     @classmethod
     def run(cls):
