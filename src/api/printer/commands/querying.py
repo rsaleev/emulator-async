@@ -1,12 +1,10 @@
 
 import asyncio
 from src.api.printer.commands.printing import PrintDeferredBytes
-import time
-from functools import partial
 from src.api.printer.device import Printer
 from src.db.models.state import States
 from src.api.printer import logger
-from src.api.printer.commands import CutPresent
+from src.api.printer.commands.querying import CutPresent
 
 
 class PrinterFullStatusQuery(Printer):
