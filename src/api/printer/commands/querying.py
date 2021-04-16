@@ -73,8 +73,9 @@ class PrintingStatusQuery(Printer):
     @classmethod
     async def handle(cls):
         await Printer().write(cls.command)
-        status = await Printer().read(6) 
-        output = cls._get_printing_status(status[0])
+        status = await Printer().read(1) 
+        raw= cls._get_printing_status(status[0])
+        output = bytearray(raw)
         return output
 
     @classmethod
