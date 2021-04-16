@@ -51,10 +51,11 @@ class SerialDevice(DeviceImpl):
             raise DeviceIOError(e)
 
     @classmethod
-    async def _close(cls):
+    def _close(cls):
         try:
-            asyncio.wait_for(cls.device._cancel_read_async(),0.2)
-            asyncio.wait_for(cls.device._cancel_write_async(),0.2)
+            cls.device.cancel_write()
+            cls.device.cancel_write()
+            cls.device.close()
         except:
             pass
 
@@ -96,14 +97,14 @@ class Paykiosk(Device, ShtrihProtoInterface):
         self.impl.connected = False
         await self.connect()
             
-    async def disconnect(self):
-        await self.impl._close()
+    def disconnect(self):
+        self.impl._close()
 
     async def read(self, size:int):
        while not self.event.is_set():
             try:
                 data = await self.impl._read(size)
-                asyncio.ensure_future(logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}'))
+                logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}')
                 return data
             except (DeviceConnectionError, DeviceIOError):
                 await self.reconnect()
@@ -113,7 +114,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
         while not self.event.is_set():
             try:
                 await self.impl._write(data)
-                asyncio.ensure_future(logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}'))
+                logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}')
                 break
             except (DeviceConnectionError, DeviceIOError):
                 await self.reconnect()

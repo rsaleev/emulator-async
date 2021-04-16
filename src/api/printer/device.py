@@ -64,6 +64,7 @@ class SerialDevice(DeviceImpl):
             cls.device.close()
         except:
             pass
+       
 
 class Printer(PrinterProto, Device):
 

@@ -32,7 +32,7 @@ class Application:
         try:
             await asyncio.wait_for(cls.db.disconnect(),0.5)
             cls.printer.disconnect()
-            await cls.fiscalreg.disconnect()
+            cls.fiscalreg.disconnect()
         except:
             [task.cancel() for task in asyncio.all_tasks(loop)]
             # perform eventloop shutdown
