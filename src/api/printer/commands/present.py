@@ -35,7 +35,9 @@ class CutPresent(Printer):
                 await Printer().write(cls.eject)  
             else:        
                 # present ticket with length parameter
-                present_mode = cls.present.append(cls.present_length)
+                present_mode = bytearray()
+                present_mode.extend(cls.present)
+                present_mode.append(cls.present_length)
                 await Printer().write(present_mode) #type: ignore PyLance
         except Exception as e:
             await logger.exception(e)

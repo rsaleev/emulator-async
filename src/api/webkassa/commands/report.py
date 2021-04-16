@@ -11,7 +11,7 @@ from src.api.webkassa.client import WebcassaClient
 from src.api.webkassa.models import ZXReportRequest, ZXReportResponse
 from src.api.webkassa.commands.authorization import WebkassaClientToken
 from src.api.webkassa import logger
-from src.api.printer.commands import PrintXML, CutPresent
+from src.api.printer.commands import PrintXML, CutPresent, PrintBuffer
 
 class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
 
@@ -32,14 +32,17 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
                                             request_data=request,
                                             response_model=ZXReportResponse,#type: ignore
                                             exc_handler=cls.exc_handler)
-    
-            asyncio.create_task(cls._render_report(request, response))
+        except Exception as e:
+            raise UnresolvedCommand(f'{cls.alias}:{repr(e)}')
+        else:
+            if config['webkassa']['report']['printable']:
+                asyncio.create_task(cls._render_report(request, response))
+            asyncio.create_task(cls._flush_receipts(response.shift_number))
             task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
                                             total_docs=0)
             task_states_modify =  States.filter(id=1).update(mode=2)
             await asyncio.gather(task_shift_modify, task_states_modify)
-        except Exception as e:
-            raise UnresolvedCommand(f'{cls.alias}:{repr(e)}')
+
             
     @classmethod
     async def _render_report(cls, request, response):
@@ -57,12 +60,35 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
                                 tab=' ')
             await asyncio.sleep(0.1)
             doc = fromstring(render)
-            
-            await PrintXML.handle(doc)
-            await asyncio.sleep(0.1)
-            await CutPresent.handle()
         except Exception as e:
-            await logger.exception(e)
+            logger.exception(e)
+        else:
+            asyncio.create_task(cls._print_report(doc))
+
+    
+    @classmethod
+    async def _print_report(cls, doc):
+        await PrintXML.handle(doc)
+        await PrintBuffer.handle()
+        await CutPresent.handle()
+
+    @classmethod
+    async def _flush_receipts(cls, shift_number):
+        receipts = await Receipt.all()
+        bulk = []
+        for receipt in receipts:
+            bulk.append(ReceiptArchived(uid=receipt.uid, 
+                                        ticket=receipt.ticket, 
+                                        count=receipt.count, 
+                                        price=receipt.price,
+                                        payment=receipt.payment,
+                                        payment_ts=receipt.payment_ts,
+                                        tax = receipt.tax,
+                                        tax_percent=receipt.tax_percent,
+                                        ack=receipt.ack,
+                                        sent=receipt.sent,
+                                        shift_number=shift_number))
+        await asyncio.gather(Receipt.all().delete(), ReceiptArchived.bulk_create(bulk))
 
     @classmethod
     async def exc_handler(cls, exc, payload):
@@ -101,17 +127,32 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
                                           request_data=request,
                                           response_model=ZXReportResponse, #type: ignore
                                           exc_handler=cls.exc_callback)
-            if response:
-                shift_task = Shift.filter(id=1).update(
-                    open_date=timezone.now(), total_docs=0)
-                states_task = States.filter(id=1).update(mode=2)
-                await asyncio.gather(shift_task, states_task)
-            else:
-                await logger.error("Couldn't close shift")
-                 
         except Exception as e:
-            await logger.exception(e)
-            raise e
+            raise UnresolvedCommand(f'{cls.alias}:{repr(e)}')
+        else:
+            shift_task = Shift.filter(id=1).update(
+                    open_date=timezone.now(), total_docs=0)
+            states_task = States.filter(id=1).update(mode=2)
+            await asyncio.gather(shift_task, states_task)
+            asyncio.create_task(cls._flush_receipts(response.shift_number))
+
+    @classmethod
+    async def _flush_receipts(cls, shift_number):
+        receipts = await Receipt.all()
+        bulk = []
+        for receipt in receipts:
+            bulk.append(ReceiptArchived(uid=receipt.uid, 
+                                        ticket=receipt.ticket, 
+                                        count=receipt.count, 
+                                        price=receipt.price,
+                                        payment=receipt.payment,
+                                        payment_ts=receipt.payment_ts,
+                                        tax = receipt.tax,
+                                        tax_percent=receipt.tax_percent,
+                                        ack=receipt.ack,
+                                        sent=receipt.sent,
+                                        shift_number=shift_number))
+        await asyncio.gather(Receipt.all().delete(), ReceiptArchived.bulk_create(bulk))
 
     @classmethod
     async def exc_callback(cls, exc, payload):
@@ -131,7 +172,6 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
         elif isinstance(exc, UnrecoverableError):
             return False
 
-
 class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
 
     endpoint = 'XReport'
@@ -150,45 +190,40 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
             response = await cls.dispatch(endpoint=cls.endpoint,
                                       request_data=request,
                                       response_model=ZXReportResponse, #type: ignore
-                                      exc_handler=cls.exc_callback)
-            if config['webkassa']['report']['printable']:
-                template = TEMPLATE_ENVIRONMENT.get_or_select_template(
-                    'report.xml')
-                name = response.TaxPayerName  #type: ignore
-                name.replace(u'\u201c', '"')
-                name.replace(u'\u201d', '"')
-                render = await template.render_async(report_type='СМЕННЫЙ Х-ОТЧЕТ',
-                                    horizontal_delimiter='-',
-                                    response=response,
-                                    company_name=name,
-                                    tab=' ')
-                doc = fromstring(render)
-                asyncio.create_task(PrintXML.handle(doc)).add_done_callback(CutPresent.handle)
-                asyncio.create_task(cls.flush_receipts(response.ShiftNumber))
+                                      exc_handler=cls.exc_handler)
         except Exception as e:
-            asyncio.create_task(logger.exception(e))
+            logger.exception(e)
             raise e
+        else:
+            asyncio.create_task(cls._render_report(request, response))
+        
+    @classmethod
+    async def _render_report(cls, request, response):
+        template = TEMPLATE_ENVIRONMENT.get_or_select_template(
+                    'report.xml')
+        name = response.TaxPayerName  #type: ignore
+        name.replace(u'\u201c', '"')
+        name.replace(u'\u201d', '"')
+        try:
+            render = await template.render_async(report_type='СМЕННЫЙ Х-ОТЧЕТ',
+                                horizontal_delimiter='-',
+                                response=response,
+                                company_name=name,
+                                tab=' ')
+            doc = fromstring(render)
+        except Exception as e:
+            logger.exception(e)
+        else:
+            asyncio.create_task(cls._print_report(doc))
 
     @classmethod
-    async def flush_receipts(cls, shift_number):
-        receipts = await Receipt.all()
-        bulk = []
-        for receipt in receipts:
-            bulk.append(ReceiptArchived(uid=receipt.uid, 
-                                        ticket=receipt.ticket, 
-                                        count=receipt.count, 
-                                        price=receipt.price,
-                                        payment=receipt.payment,
-                                        payment_ts=receipt.payment_ts,
-                                        tax = receipt.tax,
-                                        tax_percent=receipt.tax_percent,
-                                        ack=receipt.ack,
-                                        sent=receipt.sent,
-                                        shift_number=shift_number))
-        await asyncio.gather(Receipt.all().delete(), ReceiptArchived.bulk_create(bulk))
+    async def _print_report(cls, doc):
+        await PrintXML.handle(doc)
+        await PrintBuffer.handle()
+        await CutPresent.handle()
 
     @classmethod
-    async def exc_callback(cls, exc, payload):
+    async def exc_handler(cls, exc, payload):
         if isinstance(exc, CredentialsError):
             return False
         elif isinstance(exc, UnrecoverableError):
