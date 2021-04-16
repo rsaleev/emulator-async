@@ -80,16 +80,17 @@ class Paykiosk(Device, ShtrihProtoInterface):
 
     async def connect(self):
         await logger.info("Connecting to fiscalreg device...")
-        while not self.impl.connected and not self.event.is_set():
-            try:
-                await self.impl._open()
-            except DeviceConnectionError as e:
-                await logger.error(e)
-                await asyncio.sleep(3)
-                continue
-            else:
-                await logger.info("Connecton to fiscalreg device established")
-                break
+        while not self.impl.connected:
+            if not self.event.is_set():
+                try:
+                    await self.impl._open()
+                except DeviceConnectionError as e:
+                    await logger.error(e)
+                    await asyncio.sleep(3)
+                    continue
+                else:
+                    await logger.info("Connecton to fiscalreg device established")
+                    break
 
     async def reconnect(self):
         self.impl.connected = False
@@ -121,7 +122,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
     async def poll(self):
         while not self.event.is_set():
             try:
-                logger.debug('Polling...')
+                #logger.debug('Polling...')
                 if self.in_waiting >0:
                     await self.consume()
                 else:
