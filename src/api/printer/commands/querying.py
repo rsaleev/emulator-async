@@ -1,7 +1,6 @@
 
 import asyncio
 
-from aiologger.handlers.files import ONE_HOUR_IN_SECONDS
 from src.api.printer.commands.printing import PrintDeferredBytes
 from src.api.printer.device import Printer
 from src.db.models.state import States
@@ -50,7 +49,6 @@ class PrinterFullStatusQuery(Printer):
     @classmethod
     def _set_paper_status(cls, v:int) ->int:
         st = [int(elem) for elem in list(bin(v)[2:].zfill(8))]
-        print(not st[7])
         return not st[7]
 
     @classmethod
