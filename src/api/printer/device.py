@@ -44,7 +44,6 @@ class UsbDevice(DeviceImpl):
         cls.device = usb.core.find(
             idVendor= cls.VENDOR_ID,
             idProduct=cls.PRODUCT_ID)
-        print(cls.device)
         if cls.device is None:
             raise DeviceConnectionError(
                 "Device not found or cable not plugged in.")
