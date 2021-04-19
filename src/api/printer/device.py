@@ -109,8 +109,10 @@ class UsbDevice(DeviceImpl):
         loop = asyncio.get_running_loop()
         try:
             await loop.run_in_executor(cls.EXECUTOR, cls.device.write, cls.OUT_EP, data, cls.WRITE_TIMEOUT) #type:ignore
-        except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
+        except (usb.core.USBError, IOError) as e:
             raise DeviceIOError(e)
+        except usb.core.USBTimeoutError as e:
+            raise DeviceTimeoutError(e)
 
     @classmethod
     def _close(cls):
@@ -125,6 +127,7 @@ class UsbDevice(DeviceImpl):
         cls.connected = False
         while not cls.connected:
             await cls._open()
+
 class SerialDevice(DeviceImpl):
     device = None 
     connected = False
@@ -151,8 +154,10 @@ class SerialDevice(DeviceImpl):
     async def _read(cls, size):
         try:
             output = await cls.device.read_async(size)
-        except (SerialException, SerialTimeoutException, IOError) as e:
+        except (SerialException, IOError) as e:
             raise DeviceIOError(e)
+        except SerialTimeoutException as e:
+            raise DeviceTimeoutError(e)
         else:
             return output
 
@@ -161,8 +166,10 @@ class SerialDevice(DeviceImpl):
     async def _write(cls, data):
         try:
             await cls.device.write_async(data)
-        except (SerialException, SerialTimeoutException, IOError) as e:
+        except (SerialException, IOError) as e:
             raise DeviceIOError(e)
+        except  SerialTimeoutException as e:
+            raise DeviceTimeoutError(e)
 
     @classmethod
     async def _reconnect(cls):
@@ -218,13 +225,7 @@ class Printer(PrinterProto, Device):
                     await asyncio.sleep(1)
                     continue                   
         else:
-            logger.error('Implementation not found')
-
-    async def reconnect(self):
-        await States.filter(id=1).update(submode=1)
-        await asyncio.sleep(1)
-        while not self._impl.connected:
-            await self._impl._reconnect()
+            logger.error('Implementation not found')       
 
     def disconnect(self):
         self._impl._close()
@@ -232,50 +233,55 @@ class Printer(PrinterProto, Device):
     async def read(self, size:int):
         # 5 attempts to read requested bytes
         attempts = 5
-        # basic output if no data can be read
-        output = b''
         # counter
         count = 0
         # while not send an event flag
-        while not self.event.is_set():
+        while not self.event.is_set() and count<=attempts:
             try:
-                while len(output)<size and count<= attempts:
-                    try:
-                        output = await self._impl._read(6)
-                    except:
-                        count+=1
-                        continue
-                    else:
-                        break
-                else:
-                    raise DeviceIOError(f'{count} attempts were used to read data from port')
+                output = await self._impl._read(6)
             except (DeviceConnectionError, DeviceIOError) as e:
-                logger.exception(e)
-                raise e
-                # fut = asyncio.ensure_future(self.reconnect())
-                # while not fut.done():
-                #     await asyncio.sleep(0.5)
-                # else:
-                #     if not fut.exception():
-                #         break
-            else:
-                asyncio.ensure_future(logger.debug(f'INPUT: {hexlify(output, sep=":")}'))
-                return output
-
-    async def write(self, data:Union[bytearray, bytes]):
-        while not self.event.is_set():
-            try:
-                await self._impl._write(data)
-            except (DeviceConnectionError, DeviceIOError) as e:
-                asyncio.ensure_future(logger.exception(e))
-                fut = asyncio.ensure_future(self.reconnect())
+                self._impl.connected = False
+                logger.error(e)            
+                fut = asyncio.ensure_future(self.connect())
                 while not fut.done():
                     await asyncio.sleep(0.5)
                 else:
                     if not fut.exception():
-                        break
+                        continue
+            except DeviceTimeoutError as e:
+                logger.error(e)
+                await asyncio.sleep(0.5)
+                count+=1
+                continue          
             else:
-                asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(data, sep=":")}'))
+                logger.debug(f'INPUT: {hexlify(output, sep=":")}')
+                return output
+
+    async def write(self, data:Union[bytearray, bytes]):
+        # 5 attempts to read requested bytes
+        attempts = 5
+        # counter
+        count = 0
+        while not self.event.is_set() and count<=attempts:
+            try:
+                await self._impl._write(data)
+            except (DeviceConnectionError, DeviceIOError) as e:
+                logger.error(e)
+                self._impl.connected = False
+                logger.error(e)            
+                fut = asyncio.ensure_future(self.connect())
+                while not fut.done():
+                    await asyncio.sleep(0.5)
+                else:
+                    if not fut.exception():
+                        continue
+            except DeviceTimeoutError as e:
+                logger.error(e)
+                await asyncio.sleep(0.5)
+                count+=1
+                continue
+            else:
+                logger.debug(f'OUTPUT: {hexlify(data, sep=":")}')
                 break
                 
                
