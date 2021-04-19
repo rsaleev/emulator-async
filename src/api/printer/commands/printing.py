@@ -79,8 +79,7 @@ class PrintXML(Printer):
             payload (Element): XML object - document
             buffer (bool, optional): perform printing in buffer or bypass. Defaults to True.
         """
-        await States.filter(id=1).update(submode=5)
-        await asyncio.sleep(0.1)
+        await States.filter(id=1).update(submode=2)
         for elem in payload:
             await cls._print_element(elem)
 
@@ -111,6 +110,7 @@ class PrintXML(Printer):
                     Printer().buffer._raw(cmd)
                 Printer().buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                 output = content.text.encode(cls.encoding_output)
+                print(output)
                 Printer().buffer._raw(output)
             elif content.tag == 'br':
                 Printer().buffer._raw(bytes("\n", 'ascii'))
