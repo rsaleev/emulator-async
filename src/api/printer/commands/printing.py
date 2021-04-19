@@ -95,8 +95,8 @@ class PrintXML(Printer):
 
         try:
             align = content.attrib.get('align', 'left')
-            if content.tag != 'qr' or content.tag !='br':
-                bold = True if  content.attrib.get('text', False) and content.attrib['text']== 'bold' else False
+            if not content.tag in ['qr', 'br'] and content.text:
+                bold = True if content.attrib['text']=='bold' else False
                 content.text = content.text.replace(u'\u201c','"')
                 content.text = content.text.replace(u'\u201d', '"')
                 content.text = content.text.replace(u'\u202f', ' ')

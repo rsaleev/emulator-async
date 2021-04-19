@@ -230,28 +230,52 @@ class Printer(PrinterProto, Device):
         self._impl._close()
 
     async def read(self, size:int):
+        # 5 attempts to read requested bytes
+        attempts = 5
+        # basic output if no data can be read
+        output = b''
+        # counter
+        count = 0
+        # while not send an event flag
         while not self.event.is_set():
             try:
-                output = await self._impl._read(6)
-                asyncio.ensure_future(logger.debug(f'INPUT: {hexlify(output, sep=":")}'))
+                while len(output)<size and count<= attempts:
+                    try:
+                        output = await self._impl._read(6)
+                    except:
+                        count+=1
+                        continue
+                    else:
+                        break
+                else:
+                    raise DeviceIOError(f'{count} attempts were used to read data from port')
             except (DeviceConnectionError, DeviceIOError) as e:
                 logger.exception(e)
-                fut = asyncio.ensure_future(self.reconnect())
-                if fut.done():
-                    continue
+                raise e
+                # fut = asyncio.ensure_future(self.reconnect())
+                # while not fut.done():
+                #     await asyncio.sleep(0.5)
+                # else:
+                #     if not fut.exception():
+                #         break
             else:
+                asyncio.ensure_future(logger.debug(f'INPUT: {hexlify(output, sep=":")}'))
                 return output
 
     async def write(self, data:Union[bytearray, bytes]):
         while not self.event.is_set():
             try:
                 await self._impl._write(data)
-                asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(data, sep=":")}'))
-                return
             except (DeviceConnectionError, DeviceIOError) as e:
                 asyncio.ensure_future(logger.exception(e))
                 fut = asyncio.ensure_future(self.reconnect())
-                if fut.done():
-                    continue
-            # else:
-            #     break
+                while not fut.done():
+                    await asyncio.sleep(0.5)
+                else:
+                    if not fut.exception():
+                        break
+            else:
+                asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(data, sep=":")}'))
+                break
+                
+               
