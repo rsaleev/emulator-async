@@ -114,8 +114,8 @@ class PrintXML(Printer):
                 Printer().buffer._raw(output)
             elif content.tag == 'br':
                 Printer().buffer._raw(bytes("\n", 'ascii'))
-            elif content.tag == 'qr':
-                Printer().buffer.qr(unquote(str(content.text)))
+            # elif content.tag == 'qr':
+            #     Printer().buffer.qr(unquote(str(content.text)))
         except Exception as e:
             logger.exception(e)
             raise e
