@@ -14,7 +14,7 @@ class CutPresent(Printer):
     present_length = int(config['printer']['presenter']['present_length_mm']/7.3)
 
     @classmethod
-    async def handle(cls, payload=None):
+    async def handle(cls):
         await asyncio.gather(cls._present(),States.filter(id=1).update(submode=0))
         
     @classmethod
