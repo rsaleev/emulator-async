@@ -63,9 +63,10 @@ class PrintXML(Printer):
                     elif cls.encoding_output == 'cp866':
                         cmd.extend(cls.CP866)
                     Printer().buffer._raw(cmd)
-                    Printer().buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
-                    output = content.text.encode(cls.encoding_output)
-                    Printer().buffer._raw(output) 
+                Printer().buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
+                output = content.text.encode(cls.encoding_output)
+                print(output)
+                Printer().buffer._raw(output) 
             # tag break -> print newline
             elif content.tag == 'br':
                 Printer().buffer._raw(bytes("\n", 'ascii'))
