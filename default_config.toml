@@ -65,13 +65,12 @@ send_encoding = false
 font='b'
 height = 1
 width=1
-custom_size=false
+custom_size=true
 double_width=false
 double_height=false
 input = 'utf8'
 output ='cp866'
 send_encoding = false
-buffer = false
 
 [webkassa]
 # Авторизационные данные для идентификации кассы при запросах в WebkassaLocal

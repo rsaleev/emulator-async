@@ -11,8 +11,7 @@ class PrintQR(Printer):
 
     @classmethod
     async def handle(cls, payload:str):
-        Printer().buffer.qr(content=payload, center=True, native=False, size=cls.size)
-        Printer().hw('INIT')
+        Printer().buffer.qr(content=payload, center=True, size=5)
 
 
 class PrintGraphicLines(Printer):

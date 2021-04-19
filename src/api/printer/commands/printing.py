@@ -1,18 +1,17 @@
 import asyncio 
-from urllib.parse import unquote
 from xml.etree.ElementTree import Element
+from xml.sax.saxutils import unescape, escape
 from collections import deque
 from typing import Union
 from src import config
 from src.db.models import States
 from src.api.printer import logger
 from src.api.printer.device import Printer
-
 class PrintBytes(Printer):
     alias = 'bytes'
     codepage_command = bytearray((0x1B,0x74))
-    CP866 = bytearray((0x17,))
-    CP1251 = bytearray((0x46,))
+    CP866 = bytearray((0x11,))
+    CP1251 = bytearray((0x2E,))
     encoding_input = config['printer']['text']['input']
     encoding_output = config['printer']['text']['output']
     align = 'left'
@@ -53,8 +52,8 @@ class PrintBytes(Printer):
 
 class PrintXML(Printer):
     alias = 'xml'
-    CP866 = bytearray((0x17,))
-    CP1251 = bytearray((0x46,))
+    CP866 = bytearray((0x11,))
+    CP1251 = bytearray((0x2E,))
     codepage_command = bytearray((0x1B,0x74))
     encoding_input = config['printer']['doc']['input']
     encoding_output = config['printer']['doc']['output']
@@ -79,7 +78,7 @@ class PrintXML(Printer):
             payload (Element): XML object - document
             buffer (bool, optional): perform printing in buffer or bypass. Defaults to True.
         """
-        await States.filter(id=1).update(submode=2)
+        asyncio.ensure_future(States.filter(id=1).update(submode=2))
         for elem in payload:
             await cls._print_element(elem)
 
@@ -93,10 +92,11 @@ class PrintXML(Printer):
             content (Element): XML object Element
             buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
+
         try:
             align = content.attrib.get('align', 'left')
-            bold = True if content.attrib.get('text', False)  and content.attrib['text']== 'bold' else False
-            if content.tag != 'br' and content.attrib.get('text', False): 
+            if content.tag == 'text':
+                bold = True if content.attrib['text']== 'bold' else False
                 content.text = content.text.replace(u'\u201c','"')
                 content.text = content.text.replace(u'\u201d', '"')
                 content.text = content.text.replace(u'\u202f', ' ')
@@ -110,12 +110,11 @@ class PrintXML(Printer):
                     Printer().buffer._raw(codepage)
                 Printer().buffer.set(align=align, font=cls.font, bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                 output = content.text.encode(cls.encoding_output)
-                print(output.decode('cp866'))
                 Printer().buffer._raw(output)
             elif content.tag == 'br':
                 Printer().buffer._raw(bytes("\n", 'ascii'))
-            # elif content.tag == 'qr':
-            #     Printer().buffer.qr(unquote(str(content.text)))
+            elif content.tag == 'qr':
+                Printer().buffer.qr(content=unescape(content.text), center=True, size=config['printer']['qr']['size']) #type: ignore
         except Exception as e:
             logger.exception(e)
             raise e

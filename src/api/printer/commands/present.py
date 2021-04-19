@@ -29,6 +29,7 @@ class CutPresent(Printer):
 
         try:
             # cut ticket (left in printer presenter)
+            await Printer().write(bytes('\n\n\n', 'ascii'))
             await Printer().write(cls.cutting)  
             if config['printer']['presenter']['eject']:
                 # eject
@@ -41,4 +42,3 @@ class CutPresent(Printer):
                 await Printer().write(present_mode) #type: ignore PyLance
         except Exception as e:
             await logger.exception(e)
-             

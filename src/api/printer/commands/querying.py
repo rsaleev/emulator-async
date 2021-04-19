@@ -1,12 +1,12 @@
 
 import asyncio
-
+import os
+from src import config
 from src.api.printer.commands.printing import PrintDeferredBytes
 from src.api.printer.device import Printer
 from src.db.models.state import States
 from src.api.printer import logger
 from src.api.printer.commands.present import CutPresent
-import os
 
 class PrinterFullStatusQuery(Printer):
 
@@ -88,7 +88,6 @@ class PrintingStatusQuery(Printer):
             status = bytearray(status) #type: ignore
         elif cls.device_type == 'USB':
             pass
-        print(status)
         output = cls._get_printing_status(status[0])
         return output
 
@@ -106,17 +105,24 @@ class PrintBuffer(Printer):
   
 
     alias = 'buffer'
-    cut = bytearray((0x1B,0x69))
-    eject = bytearray((0x1D,0x65,0x05))
+
+    CP866 = bytearray((0x17,))
+    CP1251 = bytearray((0x46,))
+    codepage_command = bytearray((0x1B,0x74))
+    encoding_input = config['printer']['doc']['input']
+    encoding_output = config['printer']['doc']['output']
 
     @classmethod
-    async def handle(cls, payload=None):
-        # enter loop for 
-        if not Printer().event.is_set():
-            # pre-printing op: get data from deferred storage and put in buffer
-            asyncio.ensure_future(States.filter(id=1).update(submode=2))
-            await Printer().write(Printer().buffer.output)
-            asyncio.ensure_future(States.filter(id=1).update(submode=3))
+    async def handle(cls, payload=None):    
+        if config['printer']['doc']['send_encoding']:
+            codepage = bytearray()
+            codepage.extend(cls.codepage_command)
+            if cls.encoding_output == 'CP1251':
+                codepage.extend(cls.CP1251)
+            elif cls.encoding_output == 'CP866':
+                codepage.extend(cls.CP866)
+            Printer().buffer._raw(codepage) 
+        await Printer().write(Printer().buffer.output)
 
 
 
@@ -147,7 +153,6 @@ class CheckPrinting(Printer):
         # check after printing errors
         while not Printer().event.is_set():
             after_printing_status = await PrintingStatusQuery.handle()
-            print('Checking printed status', after_printing_status)
             # no errors: True
             if after_printing_status:
                 # change submode=3: ready for next command 
@@ -161,23 +166,21 @@ class CheckPrinting(Printer):
                     asyncio.create_task(cls._afterprint())
                     break
                 else:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.5)
                     n+=1
                     continue
 
     
     @classmethod
     async def _afterprint(cls):
-        status = False
-        while not status and not Printer().event.is_set():
-        #and not Printer().event.is_set():
+        while not Printer().event.is_set():
             status = await PrinterFullStatusQuery.handle()
-            print('Checking full status', status)
-            await asyncio.sleep(0.5)
-        else:
-            if not Printer().event.is_set():
+            if status:
                 asyncio.ensure_future(States.filter(id=1).update(submode=2))
                 await Printer().write(Printer().buffer.output)
                 Printer().buffer.clear()
                 await asyncio.gather(States.filter(id=1).update(submode=3),
                     CutPresent.handle())
+                break
+            else:
+                await asyncio.sleep(0.5)

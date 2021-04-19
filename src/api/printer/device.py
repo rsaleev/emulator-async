@@ -127,23 +127,25 @@ class UsbDevice(DeviceImpl):
             await cls._open()
 class SerialDevice(DeviceImpl):
     device = None 
+    connected = False
 
     @classmethod
     async def _open(cls):
-        cls.device = aioserial.AioSerial(
-            port=os.environ.get("PRINTER_PORT"), 
-            baudrate=int(os.environ.get("PRINTER_BAUDRATE")), #type: ignore
-            dsrdtr=bool(int(os.environ.get("PRINTER_FLOW_CONTROL","1"))), 
-            rtscts=bool(int(os.environ.get("PPRINTER_FLOW_CONTROL","1"))),
-            write_timeout=float(int(os.environ.get("PRINTER_WRITE_TIMEOUT",5000))/1000), #type: ignore
-            timeout=float(int(os.environ.get("PRINTER_READ_TIMEOUT",5000))/1000),
-            loop=asyncio.get_running_loop())
         try:
+            cls.device = aioserial.AioSerial(
+                port=os.environ.get("PRINTER_PORT"), 
+                baudrate=int(os.environ.get("PRINTER_BAUDRATE")), #type: ignore
+                dsrdtr=bool(int(os.environ.get("PRINTER_FLOW_CONTROL"))), #type: ignore
+                rtscts=bool(int(os.environ.get("PRINTER_FLOW_CONTROL"))), #type: ignore
+                write_timeout=float(int(os.environ.get("PRINTER_WRITE_TIMEOUT"))/1000), #type: ignore
+                timeout=float(int(os.environ.get("PRINTER_READ_TIMEOUT"))/1000), #type: ignore
+                loop=asyncio.get_running_loop())
+            cls.device.flushOutput()
             cls.device.flushInput()
         except Exception as e:
-            raise e 
+            logger.exception(e)
         else:
-            return True
+            cls.connected = True
 
     @classmethod
     async def _read(cls, size):
@@ -201,9 +203,9 @@ class Printer(PrinterProto, Device):
         await States.filter(id=1).update(submode=1)
         logger.info(f'Connecting to printer device...')
         if self._impl:
-            while not self.connected:
+            while not self._impl.connected:
                 try:
-                    self.connected = await self._impl._open()
+                    await self._impl._open()
                     logger.info('Connection to printer established')
                     self.profile.profile_data['media']['width']['pixels'] = int(
                         os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
@@ -221,7 +223,7 @@ class Printer(PrinterProto, Device):
     async def reconnect(self):
         await States.filter(id=1).update(submode=1)
         await asyncio.sleep(1)
-        while not self.connected:
+        while not self._impl.connected:
             await self._impl._reconnect()
 
     def disconnect(self):
@@ -245,10 +247,11 @@ class Printer(PrinterProto, Device):
             try:
                 await self._impl._write(data)
                 asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(data, sep=":")}'))
+                return
             except (DeviceConnectionError, DeviceIOError) as e:
                 asyncio.ensure_future(logger.exception(e))
                 fut = asyncio.ensure_future(self.reconnect())
                 if fut.done():
                     continue
-            else:
-                break
+            # else:
+            #     break
