@@ -101,16 +101,16 @@ class PrintXML(Printer):
                 content.text = content.text.replace(u'\u201d', '"')
                 content.text = content.text.replace(u'\u202f', ' ')
                 if config['printer']['doc']['send_encoding']:
-                    cmd = bytearray()
-                    cmd.extend(cls.codepage_command)
+                    codepage = bytearray()
+                    codepage.extend(cls.codepage_command)
                     if cls.encoding_output == 'CP1251':
-                        cmd.extend(cls.CP1251)
+                        codepage.extend(cls.CP1251)
                     elif cls.encoding_output == 'CP866':
-                        cmd.extend(cls.CP866)
-                    Printer().buffer._raw(cmd)
-                Printer().buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
+                        codepage.extend(cls.CP866)
+                    Printer().buffer._raw(codepage)
+                Printer().buffer.set(align=align, font=cls.font, bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                 output = content.text.encode(cls.encoding_output)
-                print(output)
+                print(output.decode('cp866'))
                 Printer().buffer._raw(output)
             elif content.tag == 'br':
                 Printer().buffer._raw(bytes("\n", 'ascii'))
