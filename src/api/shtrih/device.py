@@ -5,7 +5,7 @@ from serial.serialutil import SerialException, SerialTimeoutException
 from src.api.shtrih import logger
 from serial.tools import list_ports
 from itertools import groupby
-from src.api.device import Device, DeviceImpl, DeviceIOError, DeviceConnectionError
+from src.api.device import Device, DeviceImpl, DeviceIOError, DeviceConnectionError, DeviceTimeoutError
 from src.api.shtrih.protocol import ShtrihProtoInterface
 from binascii import hexlify
 
@@ -39,16 +39,22 @@ class SerialDevice(DeviceImpl):
     async def _read(cls, size):
         try:
             output = await cls.device.read_async(size)
-            return output
-        except (SerialException, SerialTimeoutException, IOError) as e:
+        except (SerialException, IOError) as e:
             raise DeviceIOError(e)
+        except SerialTimeoutException as e:
+            raise DeviceTimeoutError(e)
+        else:
+            return output
+
 
     @classmethod
     async def _write(cls, data):
         try:
             await cls.device.write_async(data)
-        except (SerialException, SerialTimeoutException, IOError) as e:
+        except (SerialException, IOError) as e:
             raise DeviceIOError(e)
+        except SerialTimeoutException as e:
+            raise DeviceTimeoutError(e)
 
     @classmethod
     def _close(cls):
@@ -64,66 +70,80 @@ class Paykiosk(Device, ShtrihProtoInterface):
     def __init__(self):
         Device.__init__(self)
         ShtrihProtoInterface.__init__(self)
-        self.impl = None
+        self._impl = None
         self.discover()
         self.event = asyncio.Event()
 
     @property
     def in_waiting(self):
-        return self.impl.device.in_waiting
+        return self._impl.device.in_waiting
 
     def discover(self):
         if os.environ['PAYKIOSK_TYPE'] == 'SERIAL':
-            self.impl = SerialDevice()
+            self._impl = SerialDevice()
         elif os.environ['PAYKIOSK_TYPE'] != 'SERIAL':
             raise NotImplementedError
-        return self.impl
+        return self._impl
 
     async def connect(self):
-        await logger.info("Connecting to fiscalreg device...")
-        while not self.impl.connected:
-            if not self.event.is_set():
-                try:
-                    await self.impl._open()
-                except DeviceConnectionError as e:
-                    await logger.error(e)
-                    await asyncio.sleep(3)
-                    continue
-                else:
-                    await logger.info("Connecton to fiscalreg device established")
-                    break
-
-    async def reconnect(self):
-        self.impl.connected = False
-        await self.connect()
+        logger.info("Connecting to fiscalreg device...")
+        while not self.event and not self._impl.connected:
+            try:
+                await self._impl._open()
+            except DeviceConnectionError as e:
+                logger.error(e)
+                await asyncio.sleep(3)
+                continue
+            else:
+                logger.info("Connecton to fiscalreg device established")
+                break
             
     def disconnect(self):
-        self.impl._close()
+        self._impl._close()
 
     async def read(self, size:int):
-       while not self.event.is_set():
+        attempts = 5
+        count =0
+        while not self.event.is_set() and count <=attempts:
             try:
-                data = await self.impl._read(size)
-                asyncio.ensure_future(logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}'))
-                return data
-            except (DeviceConnectionError, DeviceIOError):
-                await self.reconnect()
+                data = await self._impl._read(size)
+            except (DeviceConnectionError, DeviceIOError) as e:
+                logger.error(e)
+                self._impl.connected = False
+                await self.connect()
                 continue
+            except DeviceTimeoutError as e:
+                logger.error(e)
+                await asyncio.sleep(0.5)
+                count +=1
+                continue
+            else:
+                logger.info(f'INPUT:{hexlify(bytes(data), sep=":")}')
+                return data
 
     async def write(self, data:bytearray):
-        while not self.event.is_set():
+        attempts = 5
+        count =0
+        while not self.event.is_set() and count <=attempts:
             try:
-                await self.impl._write(data)
-                asyncio.ensure_future(logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}'))
-                break
-            except (DeviceConnectionError, DeviceIOError):
-                await self.reconnect()
+                await self._impl._write(data)
+            except (DeviceConnectionError, DeviceIOError) as e:
+                logger.error(e)
+                self._impl.connected = False
+                await self.connect()
                 continue
+            except DeviceTimeoutError as e:
+                logger.error(e)
+                await asyncio.sleep(0.2)
+                count+=1
+                continue
+            else:
+                logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}')
+                break
 
     async def poll(self):
         while not self.event.is_set():
             try:
-                #logger.debug('Polling...')
                 if self.in_waiting >0:
                     await self.consume()
                 else:

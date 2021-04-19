@@ -23,44 +23,39 @@ class PrinterFullStatusQuery(Printer):
     async def _fetch_full_status(cls):
         status = bytearray() # expected 6 bytes
         output = False
-        while len(status)==0:
-            await Printer().write(cls.command)
-            try:
-                status = await Printer().read(6)
-                if cls.device_type == 'SERIAL':
-                    status = bytearray(status) #type: ignore
-                elif cls.device_type == 'USB':
-                    pass
-            except:
-               break
+        await Printer().write(cls.command)
+        status = await Printer().read(6)
+        if cls.device_type == 'SERIAL':
+            status = bytearray(status) #type: ignore
+        elif cls.device_type == 'USB':
+            pass
+        try:
+            logger.debug(f'STATUS:{status}')
+            paper= cls._set_paper_status(status[2])
+            roll = cls._set_roll_status(status[2])
+            cover = cls._set_cover_status(status[3])
+            rec_err = cls._set_rec_status(status[4]) 
+            unrec_err = cls._set_unrec_status(status[5])
+            asyncio.ensure_future(logger.debug(
+                f'PAPER:{int(paper)}|ROLL:{int(roll)}|COVER:{int(cover)}|RECOVERABLE:{int(rec_err)}|UNRECOVERABLE:{int(unrec_err)}'))
+            # if paper not presented or cover is opened or unrecoverable/recoverable error exist -> submode=1
+            if paper and not cover and not rec_err and not unrec_err:
+                asyncio.ensure_future(States.filter(id=1).update(submode=0, 
+                                                                    paper=int(paper), 
+                                                                    cover=int(cover), 
+                                                                    roll=int(roll), 
+                                                                    jam=int(rec_err)))
+                output = True
+            # otherwise do not update submode value, assert that some operation in progress
             else:
-                try:
-                    logger.debug(f'STATUS:{status}')
-                    paper= cls._set_paper_status(status[2])
-                    roll = cls._set_roll_status(status[2])
-                    cover = cls._set_cover_status(status[3])
-                    rec_err = cls._set_rec_status(status[4]) 
-                    unrec_err = cls._set_unrec_status(status[5])
-                    asyncio.ensure_future(logger.debug(
-                        f'PAPER:{int(paper)}|ROLL:{int(roll)}|COVER:{int(cover)}|RECOVERABLE:{int(rec_err)}|UNRECOVERABLE:{int(unrec_err)}'))
-                    # if paper not presented or cover is opened or unrecoverable/recoverable error exist -> submode=1
-                    if paper and not cover and not rec_err and not unrec_err:
-                        asyncio.ensure_future(States.filter(id=1).update(submode=0, 
-                                                                            paper=int(paper), 
-                                                                            cover=int(cover), 
-                                                                            roll=int(roll), 
-                                                                            jam=int(rec_err)))
-                        output = True
-                    # otherwise do not update submode value, assert that some operation in progress
-                    else:
-                        asyncio.ensure_future(States.filter(id=1).update(submode=1, 
-                                                                            paper=int(paper), 
-                                                                            cover=int(cover), 
-                                                                            roll=int(roll), 
-                                                                            jam=int(rec_err)))
-                except:
-                    pass
-                return output
+                asyncio.ensure_future(States.filter(id=1).update(submode=1, 
+                                                                    paper=int(paper), 
+                                                                    cover=int(cover), 
+                                                                    roll=int(roll), 
+                                                                    jam=int(rec_err)))
+        except:
+            pass
+        return output
 
     @classmethod
     def _set_paper_status(cls, v:int) ->int:
@@ -98,20 +93,14 @@ class PrintingStatusQuery(Printer):
     @classmethod
     async def handle(cls):
         output = False
-        status = bytearray() # expected 1 byte
-        while len(status) ==0:
-            await Printer().write(cls.command)
-            try:
-                status = await Printer().read(1)
-            except:
-                break
-            else:
-                if cls.device_type == 'SERIAL':
-                    status = bytearray(status) #type: ignore
-                elif cls.device_type == 'USB':
-                    pass
-                output = cls._get_printing_status(status[0])
-                return output
+        await Printer().write(cls.command)
+        status = await Printer().read(1)
+        if cls.device_type == 'SERIAL':
+            status = bytearray(status) #type: ignore
+        elif cls.device_type == 'USB':
+            pass
+        output = cls._get_printing_status(status[0])
+        return output
 
     @classmethod
     def _get_printing_status(cls, v:int):
