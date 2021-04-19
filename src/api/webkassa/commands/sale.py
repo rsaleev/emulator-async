@@ -1,14 +1,10 @@
 
-from src.api.printer.commands.querying import PrintBuffer
 import aiofiles
 import os
 import asyncio
-import functools
 from xml.etree.ElementTree import fromstring
 from tortoise.expressions import F
-from tortoise.functions import Max
 from tortoise import timezone
-
 from src import config
 from src.api.webkassa.client import WebcassaClient
 from src.api.webkassa.exceptions import *
@@ -18,7 +14,7 @@ from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa import logger
 from src.api.webkassa.commands import WebkassaClientToken,WebkassaClientCloseShift
 from src.api.webkassa.models import SaleRequest, SaleResponse, Position, Payments, CompanyData
-from src.api.printer.commands import PrintXML, CutPresent, PrintQR
+from src.api.printer.commands import PrintXML, CutPresent, PrintQR, PrintBuffer, CheckPrinting
 
 class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     endpoint = 'Check'
@@ -96,10 +92,12 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
 
     @classmethod
     async def _render_print(cls,doc):
+        print(doc)
         try:
             await PrintXML.handle(doc)
             await PrintBuffer.handle()            
             await CutPresent.handle()
+            await CheckPrinting.handle()
         except Exception as e:
             await logger.exception(e)
 
