@@ -147,7 +147,7 @@ class CheckPrinting(Printer):
 
     @classmethod
     async def handle(cls):
-        attempts = 10
+        attempts = 15
         counter = 0 
         # check after printing errors
         while not Printer().event.is_set():
