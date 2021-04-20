@@ -98,7 +98,9 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
             await receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
             asyncio.ensure_future(receipt.save())
+            asyncio.ensure_future(States.filter(id=1).update(mode=8))
             try:
+                
                 await WebkassaClientSale.handle(receipt)
             except:
                 cls.set_error(0x03)
@@ -107,8 +109,6 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         else:
             asyncio.ensure_future(logger.error('No payment data'))
             cls.set_error(0x03)
-        asyncio.ensure_future(States.filter(id=1).update(mode=8))
-        asyncio.ensure_future(PrintDeferredBytes.handle())
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
