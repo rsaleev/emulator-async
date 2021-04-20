@@ -214,15 +214,15 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
         name.replace(u'\u201c', '"')
         name.replace(u'\u201d', '"')
         try:
-            render = await template.render_async(report_type='СМЕННЫЙ Х-ОТЧЕТ',
+            render = template.render(report_type='СМЕННЫЙ Х-ОТЧЕТ',
                                 horizontal_delimiter='-',
                                 response=response,
                                 company_name=name,
                                 tab=' ')
-            doc = fromstring(render)
         except Exception as e:
             logger.exception(e)
         else:
+            doc = fromstring(render)
             asyncio.create_task(cls._print_report(doc))
 
     @classmethod
