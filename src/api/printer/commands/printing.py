@@ -118,6 +118,7 @@ class PrintXML(Printer):
                 Printer().buffer.qr(content=unescape(content.text), center=True, size=config['printer']['qr']['size']) #type: ignore
         except Exception as e:
             logger.exception(e)
+            print(e)
             raise e
 
 
