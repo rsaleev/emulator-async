@@ -108,9 +108,9 @@ class PrintXML(Printer):
                         codepage.extend(cls.CP1251)
                     elif cls.encoding_output == 'CP866':
                         codepage.extend(cls.CP866)
-                    Printer()._raw(codepage)
+                    Printer().buffer._raw(codepage)
                 Printer().buffer.set(align=align, font=cls.font, bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
-                output = content.text.encode(cls.encoding_output)
+                output = bytes(content.text, cls.encoding_output)
                 Printer().buffer._raw(output)
             elif content.tag == 'br':
                 Printer().buffer._raw(bytes("\n", 'ascii'))
