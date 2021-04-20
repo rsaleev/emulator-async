@@ -1,6 +1,5 @@
 from src.api.printer.device import Printer
 from src import config
-from src.db.models.state import States
 import asyncio
 from src.api.printer import logger
 
@@ -15,7 +14,9 @@ class CutPresent(Printer):
 
     @classmethod
     async def handle(cls):
-        await asyncio.gather(cls._present(),States.filter(id=1).update(submode=0))
+        await asyncio.gather(cls._present())
+        logger.debug('Cutting document')
+
         
     @classmethod
     async def _present(cls):
@@ -26,7 +27,7 @@ class CutPresent(Printer):
         Modes: eject/present with length
 
         """
-
+        logger.debug('Presenting document')
         try:
             # cut ticket (left in printer presenter)
             await Printer().write(bytes('\n\n\n', 'ascii'))
@@ -41,4 +42,4 @@ class CutPresent(Printer):
                 present_mode.append(cls.present_length)
                 await Printer().write(present_mode) #type: ignore PyLance
         except Exception as e:
-            await logger.exception(e)
+            logger.exception(e)
