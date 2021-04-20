@@ -76,30 +76,29 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                             inn=config['webkassa']['company']['inn'])
         template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
         try:
-            render = asyncio.ensure_future(template.render_async(horizontal_delimiter='-',
+            render = template.render(
+                horizontal_delimiter='-',
                 dot_delimiter='.',
                 whitespace=' ',
                 company=company,
                 request=request,
-                response=response))
-            while not render.done():
-                await asyncio.sleep(0.1)
+                response=response)
         except Exception as e:
-            await logger.exception(e)
+            logger.exception(e)
         else:
-            doc = fromstring(render.result())
+            doc = fromstring(render)
             asyncio.create_task(cls._render_print(doc))
 
     @classmethod
     async def _render_print(cls,doc):
-        print(doc)
         try:
             await PrintXML.handle(doc)
-            await PrintBuffer.handle()            
-            await CutPresent.handle()
-            await CheckPrinting.handle()
+            await PrintBuffer.handle()           
         except Exception as e:
             await logger.exception(e)
+        else:
+            await CutPresent.handle()
+            await CheckPrinting.handle()
 
     @classmethod
     async def exc_callback(cls, exc, payload):
