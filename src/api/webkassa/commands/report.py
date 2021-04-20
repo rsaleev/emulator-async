@@ -87,6 +87,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
                                             price=receipt.price,
                                             payment=receipt.payment,
                                             payment_ts=receipt.payment_ts,
+                                            payment_type=receipt.payment_type,
                                             tax = receipt.tax,
                                             tax_percent=receipt.tax_percent,
                                             ack=receipt.ack,
