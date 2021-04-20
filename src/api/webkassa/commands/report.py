@@ -38,7 +38,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
         else:
             await asyncio.gather(Shift.filter(id=1).update(open_date=timezone.now(),total_docs=0),
                                     States.filter(id=1).update(mode=2))
-            asyncio.create_task(cls._flush_receipts(response.shift_number))
+            asyncio.create_task(cls._flush_receipts(response.ShiftNumber))
             if config['webkassa']['report']['printable']:
                 asyncio.create_task(cls._render_report(request, response))
 
@@ -80,6 +80,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
             receipts = await Receipt.all()
             bulk = []
             for receipt in receipts:
+                print(receipt)
                 bulk.append(ReceiptArchived(uid=receipt.uid, 
                                             ticket=receipt.ticket, 
                                             count=receipt.count, 
@@ -139,7 +140,7 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
                     open_date=timezone.now(), total_docs=0)
             states_task = States.filter(id=1).update(mode=2)
             await asyncio.gather(shift_task, states_task)
-            asyncio.create_task(cls._flush_receipts(response.shift_number))
+            asyncio.ensure_future(cls._flush_receipts(response.shift_number))
 
     @classmethod
     async def _flush_receipts(cls, shift_number):
