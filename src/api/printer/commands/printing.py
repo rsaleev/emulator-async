@@ -80,6 +80,7 @@ class PrintXML(Printer):
         """
         asyncio.ensure_future(States.filter(id=1).update(submode=2))
         for elem in payload:
+            print(elem.attrib, elem.text)
             await cls._print_element(elem)
 
     @classmethod
@@ -94,8 +95,8 @@ class PrintXML(Printer):
         """
 
         try:
-            align = content.attrib.get('align', 'left')
             if not content.tag in ['qr', 'br'] and content.text:
+                align = content.attrib.get('align', 'left')
                 bold = True if content.attrib['text']=='bold' else False
                 content.text = content.text.replace(u'\u201c','"')
                 content.text = content.text.replace(u'\u201d', '"')
@@ -108,13 +109,13 @@ class PrintXML(Printer):
                     elif cls.encoding_output == 'CP866':
                         codepage.extend(cls.CP866)
                     Printer()._raw(codepage)
-                Printer().set(align=align, font=cls.font, bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
+                Printer().buffer.set(align=align, font=cls.font, bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                 output = content.text.encode(cls.encoding_output)
-                Printer()._raw(output)
+                Printer().buffer._raw(output)
             elif content.tag == 'br':
-                Printer()._raw(bytes("\n", 'ascii'))
+                Printer().buffer._raw(bytes("\n", 'ascii'))
             elif content.tag == 'qr':
-                Printer().qr(content=unescape(content.text), center=True, size=config['printer']['qr']['size']) #type: ignore
+                Printer().buffer.qr(content=unescape(content.text), center=True, size=config['printer']['qr']['size']) #type: ignore
         except Exception as e:
             logger.exception(e)
             raise e

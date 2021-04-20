@@ -83,7 +83,6 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 company=company,
                 request=request,
                 response=response)
-            print(render)
         except Exception as e:
             logger.exception(e)
         else:
