@@ -44,7 +44,7 @@
         {% endif %}
     {% endfor %}
     <saleTotalTaken align='left' text='normal'> Получено{{ f_sp(9, f_cur(response.Sell.Taken))*tab }}{{ f_cur(response.Sell.Taken) }} </saleTotalTaken>
-    <br></br>
+    <!--<br></br>-->
     <saleChange align='left' text='normal'> Сдачи{{ f_sp(6, f_cur(response.Sell.Change))*tab }}{{ f_cur(response.Sell.Change) }}</saleChange>
     <br></br>
     <saleVAT align='left' text='normal'> НДС{{ f_sp(4, f_cur(response.Sell.VAT))*tab }}{{ f_cur(response.Sell.VAT) }}</saleVAT>
