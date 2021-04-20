@@ -55,7 +55,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 raise e
             else:
                 await asyncio.gather(receipt.update_from_dict({'ack':True}),
-                                    States.filter(id=1).update(gateway=1),
+                                    States.filter(id=1).update(mode=2, gateway=1),
                                     Shift.filter(id=1).update(total_docs=F('total_docs')+1))
                 asyncio.create_task(cls._render_receipt(request, response))
                 asyncio.ensure_future(receipt.save())
