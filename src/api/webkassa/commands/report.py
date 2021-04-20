@@ -80,7 +80,6 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
             receipts = await Receipt.all()
             bulk = []
             for receipt in receipts:
-                print(receipt)
                 bulk.append(ReceiptArchived(uid=receipt.uid, 
                                             ticket=receipt.ticket, 
                                             count=receipt.count, 
@@ -93,7 +92,9 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
                                             ack=receipt.ack,
                                             sent=receipt.sent,
                                             shift_number=shift_number))
-            await asyncio.gather(Receipt.all().delete(), ReceiptArchived.bulk_create(bulk))
+            for elem in bulk:
+                print(elem)
+            await asyncio.gather(Receipt.all().delete(), ReceiptArchived.bulk_create(bulk, 10))
         except Exception as e:
             logger.exception(e)
 
