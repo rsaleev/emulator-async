@@ -21,23 +21,23 @@ class PrinterFullStatusQuery(Printer):
 
     @classmethod
     async def _fetch_full_status(cls):
-        status = bytearray() # expected 6 bytes
         output = False
         await Printer().write(cls.command)
-        status = await Printer().read(6)
         if cls.device_type == 'SERIAL':
-            status = bytearray(status) #type: ignore
+            raw = await Printer().read(6)
+            status = bytearray(raw) #type: ignore
         elif cls.device_type == 'USB':
-            pass
+            await asyncio.sleep(0.5)
+            status = await Printer().read(40)
         try:
-            logger.debug(f'STATUS:{status}')
-            paper= cls._set_paper_status(status[2])
-            roll = cls._set_roll_status(status[2])
-            cover = cls._set_cover_status(status[3])
-            rec_err = cls._set_rec_status(status[4]) 
-            unrec_err = cls._set_unrec_status(status[5])
-            asyncio.ensure_future(logger.debug(
-                f'PAPER:{int(paper)}|ROLL:{int(roll)}|COVER:{int(cover)}|RECOVERABLE:{int(rec_err)}|UNRECOVERABLE:{int(unrec_err)}'))
+            logger.debug(f'STATUS:{status}') #type: ignore
+            paper= cls._set_paper_status(status[2])#type: ignore
+            roll = cls._set_roll_status(status[2]) #type: ignore
+            cover = cls._set_cover_status(status[3]) #type: ignore
+            rec_err = cls._set_rec_status(status[4]) #type: ignore
+            unrec_err = cls._set_unrec_status(status[5]) #type: ignore
+            logger.debug(
+                f'PAPER:{int(paper)}|ROLL:{int(roll)}|COVER:{int(cover)}|RECOVERABLE:{int(rec_err)}|UNRECOVERABLE:{int(unrec_err)}')
             # if paper not presented or cover is opened or unrecoverable/recoverable error exist -> submode=1
             if paper and not cover and not rec_err and not unrec_err:
                 asyncio.ensure_future(States.filter(id=1).update(submode=0, 
@@ -46,7 +46,6 @@ class PrinterFullStatusQuery(Printer):
                                                                     roll=int(roll), 
                                                                     jam=int(rec_err)))
                 output = True
-            # otherwise do not update submode value, assert that some operation in progress
             else:
                 asyncio.ensure_future(States.filter(id=1).update(submode=1, 
                                                                     paper=int(paper), 
@@ -94,12 +93,15 @@ class PrintingStatusQuery(Printer):
     async def handle(cls):
         output = False
         await Printer().write(cls.command)
-        status = await Printer().read(1)
         if cls.device_type == 'SERIAL':
-            status = bytearray(status) #type: ignore
+            raw = await Printer().read(6)
+            status = bytearray(raw) #type: ignore
         elif cls.device_type == 'USB':
-            pass
-        output = cls._get_printing_status(status[0])
+            await asyncio.sleep(0.5)
+            status = await Printer().read(40)
+        logger.debug(
+                f'AFTERPRINT:{status}') #type: ignore
+        output = cls._get_printing_status(status[0]) #type: ignore
         return output
 
     @classmethod
