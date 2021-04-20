@@ -12,8 +12,8 @@ class PrintBytes(Printer):
     codepage_command = bytearray((0x1B,0x74))
     CP866 = bytearray((0x11,))
     CP1251 = bytearray((0x2E,))
-    encoding_input = config['printer']['text']['input']
-    encoding_output = config['printer']['text']['output']
+    encoding_input = config['printer']['text']['input'].upper()
+    encoding_output = config['printer']['text']['output'].upper()
     align = 'left'
     font = config['printer']['text']['font']
     heigth = config['printer']['text']['height']
@@ -55,8 +55,8 @@ class PrintXML(Printer):
     CP866 = bytearray((0x11,))
     CP1251 = bytearray((0x2E,))
     codepage_command = bytearray((0x1B,0x74))
-    encoding_input = config['printer']['doc']['input']
-    encoding_output = config['printer']['doc']['output']
+    encoding_input = config['printer']['doc']['input'].upper()
+    encoding_output = config['printer']['doc']['output'].upper()
     align = 'left'
     font = config['printer']['doc']['font']
     height = config['printer']['doc']['height']
