@@ -46,14 +46,13 @@ class Application:
         await logger.warning('Initializing application...')
         try:
             # blocking step by step operations
-            await logger.warning('Initializing DB')
+            logger.warning('Initializing DB')
             await cls.db.connect()
-            await Shift.get_or_create(id=1) 
-            await States.get_or_create(id=1)            
-            await logger.warning('Initializing gateway')
+            await asyncio.gather(Shift.get_or_create(id=1), States.get_or_create(id=1))      
+            logger.warning('Initializing gateway')
             token = await WebkassaClientToken.handle()
-            await Token.get_or_create(id=1, token=token)
-            await logger.warning('Initializing devices')
+            asyncio.ensure_future(Token.get_or_create(id=1, token=token))
+            logger.warning('Initializing devices')
             await cls.printer.connect()
             await cls.fiscalreg.connect()
         except Exception as e:
