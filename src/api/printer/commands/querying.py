@@ -153,19 +153,20 @@ class CheckPrinting(Printer):
             # no errors: True
             if after_printing_status:
                 # change submode=3: ready for next command 
-                asyncio.ensure_future(States.filter(id=1).update(submode=3))
+                asyncio.ensure_future(States.filter(id=1).update(submode=0))
                 Printer().buffer.clear()
                 break
             else:
-                if counter == attempts:
+                if counter <= attempts:
+                    await asyncio.sleep(0.5)
+                    counter+=1
+                    continue
+                else:
                     # set error status and clear dispenser/presenter
                     await asyncio.gather(States.filter(id=1).update(submode=1))
                     asyncio.create_task(cls._afterprint())
                     break
-                else:
-                    await asyncio.sleep(0.5)
-                    counter+=1
-                    continue
+                  
 
     
     @classmethod
