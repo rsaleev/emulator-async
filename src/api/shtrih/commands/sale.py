@@ -100,7 +100,6 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
             asyncio.ensure_future(receipt.save())
             asyncio.ensure_future(States.filter(id=1).update(mode=8))
             try:
-                
                 await WebkassaClientSale.handle(receipt)
             except:
                 cls.set_error(0x03)
