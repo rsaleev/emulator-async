@@ -120,7 +120,6 @@ class PrintBuffer(Printer):
 
     @classmethod
     async def handle(cls, payload=None):    
-        await PrintDeferredBytes.handle()
         await Printer().write(Printer().buffer.output)
 
 

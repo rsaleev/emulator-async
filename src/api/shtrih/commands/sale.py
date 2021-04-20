@@ -99,6 +99,7 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
             await receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
             asyncio.ensure_future(receipt.save())
             asyncio.ensure_future(States.filter(id=1).update(mode=8))
+            asyncio.create_task(PrintDeferredBytes.handle())
             try:
                 await WebkassaClientSale.handle(receipt)
             except:
