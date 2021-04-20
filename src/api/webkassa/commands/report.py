@@ -36,13 +36,11 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
         except Exception as e:
             raise UnresolvedCommand(f'{cls.alias}:{repr(e)}')
         else:
+            await asyncio.gather(Shift.filter(id=1).update(open_date=timezone.now(),total_docs=0),
+                                    States.filter(id=1).update(mode=2))
+            asyncio.create_task(cls._flush_receipts(response.shift_number))
             if config['webkassa']['report']['printable']:
                 asyncio.create_task(cls._render_report(request, response))
-            asyncio.create_task(cls._flush_receipts(response.shift_number))
-            task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
-                                            total_docs=0)
-            task_states_modify =  States.filter(id=1).update(mode=2)
-            await asyncio.gather(task_shift_modify, task_states_modify)
 
             
     @classmethod
