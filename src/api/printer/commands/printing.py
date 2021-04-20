@@ -107,14 +107,14 @@ class PrintXML(Printer):
                         codepage.extend(cls.CP1251)
                     elif cls.encoding_output == 'CP866':
                         codepage.extend(cls.CP866)
-                    Printer().buffer._raw(codepage)
-                Printer().buffer.set(align=align, font=cls.font, bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
+                    Printer()._raw(codepage)
+                Printer().set(align=align, font=cls.font, bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                 output = content.text.encode(cls.encoding_output)
-                Printer().buffer._raw(output)
+                Printer()._raw(output)
             elif content.tag == 'br':
-                Printer().buffer._raw(bytes("\n", 'ascii'))
+                Printer()._raw(bytes("\n", 'ascii'))
             elif content.tag == 'qr':
-                Printer().buffer.qr(content=unescape(content.text), center=True, size=config['printer']['qr']['size']) #type: ignore
+                Printer().qr(content=unescape(content.text), center=True, size=config['printer']['qr']['size']) #type: ignore
         except Exception as e:
             logger.exception(e)
             raise e
