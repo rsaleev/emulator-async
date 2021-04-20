@@ -1,6 +1,6 @@
 import asyncio 
 from xml.etree.ElementTree import Element
-from xml.sax.saxutils import unescape, escape
+from xml.sax.saxutils import unescape
 from collections import deque
 from typing import Union
 from src import config
@@ -24,6 +24,7 @@ class PrintBytes(Printer):
 
     @classmethod
     async def handle(cls, payload:Union[bytes,bytearray]) -> None:
+        logger.debug('Printing (buffering) text (raw bytes)')
         asyncio.ensure_future(States.filter(id=1).update(submode=2))
         try:
             bits = bin(payload[0])[2:].zfill(8)
@@ -92,7 +93,7 @@ class PrintXML(Printer):
             content (Element): XML object Element
             buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
-
+        logger.debug('Printing (buffering) XML elements')
         try:
             if not content.tag in ['qr', 'br'] and content.text:
                 align = content.attrib.get('align', 'left')
@@ -137,4 +138,4 @@ class PrintDeferredBytes(Printer):
               
     @classmethod 
     async def append(cls, data:bytes):
-        cls.storage.append(bytes)
+        cls.storage.append(data)
