@@ -80,7 +80,6 @@ class PrintXML(Printer):
         """
         asyncio.ensure_future(States.filter(id=1).update(submode=2))
         for elem in payload:
-            print(elem.attrib, elem.text)
             await cls._print_element(elem)
 
     @classmethod
@@ -110,7 +109,7 @@ class PrintXML(Printer):
                         codepage.extend(cls.CP866)
                     Printer().buffer._raw(codepage)
                 Printer().buffer.set(align=align, font=cls.font, bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
-                output = content.text.encode(cls.encoding_input)
+                output = content.text.encode(cls.encoding_output)
                 Printer().buffer._raw(output)
             elif content.tag == 'br':
                 Printer().buffer._raw(bytes("\n", 'ascii'))
@@ -118,7 +117,6 @@ class PrintXML(Printer):
                 Printer().buffer.qr(content=unescape(content.text), center=True, size=config['printer']['qr']['size']) #type: ignore
         except Exception as e:
             logger.exception(e)
-            print(e)
             raise e
 
 
