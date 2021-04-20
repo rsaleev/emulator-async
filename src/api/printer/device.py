@@ -230,6 +230,9 @@ class Printer(PrinterProto, Device):
     def disconnect(self):
         self._impl._close()
 
+    def reconnect(self):
+        pass
+
     async def read(self, size:int):
         # 5 attempts to read requested bytes
         attempts = 5

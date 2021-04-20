@@ -101,6 +101,9 @@ class Paykiosk(Device, ShtrihProtoInterface):
     def disconnect(self):
         self._impl._close()
 
+    def reconnect(self):
+        pass
+
     async def read(self, size:int):
         attempts = 5
         count =0
