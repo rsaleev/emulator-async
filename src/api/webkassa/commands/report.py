@@ -223,6 +223,7 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
             logger.exception(e)
         else:
             doc = fromstring(render)
+            print(doc)
             asyncio.create_task(cls._print_report(doc))
 
     @classmethod
