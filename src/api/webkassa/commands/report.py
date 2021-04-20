@@ -91,7 +91,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
                                             tax_percent=receipt.tax_percent,
                                             ack=receipt.ack,
                                             sent=receipt.sent,
-                                            shift_number=response.shift_number))
+                                            shift_num=response.shift_number))
             await asyncio.gather(Receipt.all().delete(), ReceiptArchived.bulk_create(bulk, 10))
         except Exception as e:
             logger.exception(e)
