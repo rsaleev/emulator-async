@@ -110,7 +110,7 @@ class PrintXML(Printer):
                         codepage.extend(cls.CP866)
                     Printer().buffer._raw(codepage)
                 Printer().buffer.set(align=align, font=cls.font, bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
-                output = content.text.encode(cls.encoding_input).decode(cls.encoding_output).encode(cls.encoding_output)
+                output = content.text.encode(cls.encoding_input)
                 Printer().buffer._raw(output)
             elif content.tag == 'br':
                 Printer().buffer._raw(bytes("\n", 'ascii'))
