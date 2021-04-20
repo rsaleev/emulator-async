@@ -25,11 +25,6 @@ class SerialDevice(DeviceImpl):
                 timeout=float(int(os.environ.get("PAYKIOSK_READ_TIMEOUT",5000))/1000), #type_ignore
                 write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000), #type: ignore
                 loop=asyncio.get_running_loop())
-            try:
-                cls.device.flushInput()
-                cls.device.flushOutput()
-            except:
-                pass
         except Exception as e:
             raise e 
         else:
@@ -95,6 +90,12 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 await asyncio.sleep(3)
                 continue
             else:
+                if self._impl.connected:
+                    try:
+                        self._impl.device.flushInput()
+                        self._impl.device.flushOutput()
+                    except:
+                        pass
                 logger.info("Connecton to fiscalreg device established")
                 break
             
