@@ -97,6 +97,7 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
             await receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
+            asyncio.ensure_future(receipt.save())
             try:
                 await WebkassaClientSale.handle(receipt)
             except:

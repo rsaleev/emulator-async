@@ -60,6 +60,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                                     States.filter(id=1).update(gateway=1),
                                     Shift.filter(id=1).update(total_docs=F('total_docs')+1))
                 asyncio.create_task(cls._render_receipt(request, response))
+                asyncio.ensure_future(receipt.save())
 
 
     @classmethod
