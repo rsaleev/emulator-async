@@ -16,7 +16,11 @@
     <br></br>
     <reportShift align='center' text='normal'> Смена N{{ response.ShiftNumber }}</reportShift>
     <br></br>
-    <reportShiftPeriod align='center' text='normal'>{{ response.StartOn }} - {{ response.CloseOn }}</reportShiftPeriod>
+    {% if response.CloseOn %}
+        <reportShiftPeriod align='center' text='normal'>{{ response.StartOn }} - {{ response.CloseOn }}</reportShiftPeriod>
+    {% else %}
+        <reportShiftPeriod align='center' text='normal'>{{ response.StartOn }} - {{ response.ReportOn }}</reportShiftPeriod>
+    {% endif %}
     <br></br>
     <reportNonNullableStart align='left' text='normal'>НЕОБНУЛЯЕМАЯ СУММА НА НАЧАЛО СМЕНЫ</reportNonNullableStart>
     <br></br>
