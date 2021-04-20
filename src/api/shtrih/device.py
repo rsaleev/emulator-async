@@ -69,10 +69,6 @@ class Paykiosk(Device, ShtrihProtoInterface):
         self.discover()
         self.event = asyncio.Event()
 
-    @property
-    def in_waiting(self):
-        return self._impl.device.in_waiting
-
     def discover(self):
         if os.environ['PAYKIOSK_TYPE'] == 'SERIAL':
             self._impl = SerialDevice()
@@ -82,7 +78,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
 
     async def connect(self):
         logger.info("Connecting to fiscalreg device...")
-        while not self.event and not self._impl.connected:
+        while not self.event.is_set() and not self._impl.connected:
             try:
                 await self._impl._open()
             except DeviceConnectionError as e:
@@ -96,8 +92,9 @@ class Paykiosk(Device, ShtrihProtoInterface):
                         self._impl.device.flushOutput()
                     except:
                         pass
-                logger.info("Connecton to fiscalreg device established")
-                break
+                    finally:
+                        logger.info("Connecton to fiscalreg device established")
+                        break
             
     def disconnect(self):
         self._impl._close()
@@ -148,7 +145,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
     async def poll(self):
         while not self.event.is_set():
             try:
-                if self.in_waiting >0:
+                if self._impl.device.in_waiting >0:
                     await self.consume()
                 else:
                     await asyncio.sleep(0.1)
