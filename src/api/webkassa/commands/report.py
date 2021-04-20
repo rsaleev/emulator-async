@@ -1,4 +1,5 @@
 import asyncio
+from src.api.printer.commands.querying import CheckPrinting
 from tortoise import timezone
 from xml.etree.ElementTree import fromstring
 
@@ -71,6 +72,8 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
         await PrintXML.handle(doc)
         await PrintBuffer.handle()
         await CutPresent.handle()
+        await CheckPrinting.handle()
+
 
     @classmethod
     async def _flush_receipts(cls, shift_number):
@@ -232,6 +235,7 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
         await PrintXML.handle(doc)
         await PrintBuffer.handle()
         await CutPresent.handle()
+        await CheckPrinting.handle()
 
     @classmethod
     async def exc_handler(cls, exc, payload):
