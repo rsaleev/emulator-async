@@ -143,11 +143,11 @@ class SerialDevice(DeviceImpl):
                 write_timeout=float(int(os.environ.get("PRINTER_WRITE_TIMEOUT"))/1000), #type: ignore
                 timeout=float(int(os.environ.get("PRINTER_READ_TIMEOUT"))/1000), #type: ignore
                 loop=asyncio.get_running_loop())
-            cls.device.flushOutput()
-            cls.device.flushInput()
         except Exception as e:
             logger.exception(e)
         else:
+            cls.device.flushOutput()
+            cls.device.flushInput()
             cls.connected = True
 
     @classmethod
@@ -217,14 +217,13 @@ class Printer(PrinterProto, Device):
                     logger.error(e)
                     await asyncio.sleep(1)
                     continue 
-                else:
-                    logger.info('Connection to printer established')
-                    self.profile.profile_data['media']['width']['pixels'] = int(
-                        os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
-                    if config['printer']['presenter']['continuous']:
-                        await self.write(bytearray((0x1D, 0x65, 0x14)))
-                    await States.filter(id=1).update(submode=0)
-                    return self.connected                  
+            logger.info('Connection to printer established')
+            self.profile.profile_data['media']['width']['pixels'] = int(
+                os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
+            if config['printer']['presenter']['continuous']:
+                await self.write(bytearray((0x1D, 0x65, 0x14)))
+            await States.filter(id=1).update(submode=0)
+            return self.connected                  
         else:
             logger.error('Implementation not found')       
 
