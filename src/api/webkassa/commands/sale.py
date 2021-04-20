@@ -25,8 +25,6 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         token = await Token.get(id=1)
         if receipt.price ==0 or receipt.payment ==0: #type: ignore
             asyncio.ensure_future(logger.error(f'Receipt {receipt.uid} has broken data'))#type: ignore 
-            # if config['emulator']['flush_receipt']:
-            #     await cls._flush(receipt) # flush receipt
             raise UnresolvedCommand(f'{cls.alias}: Receipt {receipt.uid} has broken data')
         else:
             request  = SaleRequest( 
