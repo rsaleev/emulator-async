@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding='utf-8'?>
 <report>
-    <companyData>
-        <name align='center' text='normal'>{{ company_name }}</name>
-        <br></br>
-        <inn align='center' text='normal'>{{ response.TaxPayerIN }}</inn>
-        <br></br>
-    </companyData>
+    <name align='center' text='normal'>{{ company_name }}</name>
+    <br></br>
+    <inn align='center' text='normal'>{{ response.TaxPayerIN }}</inn>
+    <br></br>
     <hLineDelimiter align='left' text='normal'>{{ horizontal_delimiter*54 }}</hLineDelimiter>
     <br></br>
     <reportType align='center' text='normal'> {{ report_type }} </reportType>
