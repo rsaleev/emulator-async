@@ -1,7 +1,0 @@
-#!/bin/bash
-
-sqlite3 ~/emulator/webcassa.db <<EOF
-.timeout 2000
-SELECT * FROM receipts;
-.quit
-EOF
