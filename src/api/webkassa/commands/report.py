@@ -91,6 +91,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
                                             sent=receipt.sent,
                                             shift_num=response.ShiftNumber))
             await asyncio.gather(Receipt.all().delete(), ReceiptArchived.bulk_create(bulk, 10))
+
         except Exception as e:
             logger.exception(e)
 
