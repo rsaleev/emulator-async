@@ -1,8 +1,9 @@
+import asyncio
+from tortoise import timezone
 from src.api.webkassa.client import WebcassaClient
 from src.api.webkassa.models import TokenGetRequest, TokenGetResponse
 from src import config
 from src.db.models import Token
-from datetime import datetime
 from src.api.webkassa.exceptions import CredentialsError, UnrecoverableError
 
 class WebkassaClientToken(WebcassaClient):
@@ -24,6 +25,7 @@ class WebkassaClientToken(WebcassaClient):
             response_model=TokenGetResponse, #type:ignore
             exc_handler=cls.exc_handler)
         if response:
+            asyncio.create_task(Token.filter(id=1).update(token=response.token, ts=timezone.now()))
             return response.token
         else:
             return 
