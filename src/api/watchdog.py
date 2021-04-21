@@ -10,6 +10,7 @@ class Watchdog:
         self.event = asyncio.Event()
 
     async def _check_shift(self):
+        asyncio.ensure_future(logger.debug('Checking shift'))
         shift, states = await asyncio.gather(Shift.filter(id=1).first(), States.filter(id=1).first())
         if config['emulator']['shift']['close_by'] == 1: #close by counter
             await self._check_shift_by_counter(shift, states)
@@ -53,6 +54,7 @@ class Watchdog:
                 logger.warning('Autoclosing shift by timer: success')
 
     async def _token_check(self):
+        asyncio.ensure_future(logger.debug('Checking token'))
         token_in_db = await Token.filter(id=1).get()
         if token_in_db.token =='' or (token_in_db.ts-timezone.now()).total_seconds()//3600 > 23:
             try:
@@ -65,10 +67,10 @@ class Watchdog:
         await asyncio.sleep(1)
 
     async def poll(self):
-        if not self.event.is_set():
+        while not self.event.is_set():
             if config['emulator']['shift']['watchdog']:
-                asyncio.create_task(self._check_shift())
-            asyncio.create_task(self._token_check())
+                await self._check_shift()
+            await self._token_check()
         
         
     

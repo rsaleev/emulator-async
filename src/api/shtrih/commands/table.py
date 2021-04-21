@@ -20,6 +20,18 @@ class SerialNumber(ShtrihCommand, ShtrihCommandInterface):
 
 
 
+class TableModify(ShtrihCommand, ShtrihCommandInterface):
+
+    _length = bytearray((0x02,))
+    _command_code = bytearray((0x1E,))
+
+    @classmethod
+    async def handle(cls, payload):
+        arr = bytearray()
+        arr.extend(cls._length)
+        arr.extend(cls._command_code)
+        arr.extend(cls._error_code)
+        return arr
 
         
 

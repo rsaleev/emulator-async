@@ -1,21 +1,19 @@
 import os
-import usb
 import aioserial
 import asyncio
-from binascii import hexlify
+import usb
 from concurrent.futures import ThreadPoolExecutor
-from itertools import groupby
-from functools import partial
+from src import config
+from binascii import hexlify
 from typing import Union
 from serial.serialutil import SerialException, SerialTimeoutException
 from src.api.shtrih import logger
 from src.db.models import States
-from serial.tools import list_ports
-from src import config
 from src.api.device import *
 from escpos.printer import Dummy
 from src.api.printer.protocol import PrinterProto
 from src.api.printer import logger
+
 
 class UsbDevice(DeviceImpl):
 
@@ -23,13 +21,12 @@ class UsbDevice(DeviceImpl):
     connected = False
 
     EXECUTOR = ThreadPoolExecutor(max_workers=1)
-
-    VENDOR_ID = int(os.environ.get('PRINTER_VENDOR_ID'),16) #type: ignore
-    PRODUCT_ID =int(os.environ.get('PRINTER_PRODUCT_ID'),16) #type: ignore
-    IN_EP = int(os.environ.get('PRINTER_IN_EP'),16) #type: ignore
-    OUT_EP = int(os.environ.get('PRINTER_OUT_EP'),16) #type: ignore
-    WRITE_TIMEOUT = int(os.environ.get('PRINTER_WRITE_TIMEOUT')) #type: ignore
-    READ_TIMEOUT = int(os.environ.get('PRINTER_READ_TIMEOUT')) #type: ignore
+    vendor_id = int(os.environ.get('PRINTER_VENDOR_ID'),16) #type: ignore
+    product_id =int(os.environ.get('PRINTER_PRODUCT_ID'),16) #type: ignore
+    write_timeout = int(os.environ.get('PRINTER_WRITE_TIMEOUT')) #type: ignore
+    read_timeout = int(os.environ.get('PRINTER_READ_TIMEOUT')) #type: ignore
+    endpoint_in = None 
+    endpoint_out = None
 
 
     @classmethod
@@ -43,39 +40,56 @@ class UsbDevice(DeviceImpl):
             DeviceConnectionError: includes USB errors and OS errors if device not accessable
             
         """
-   
         cls.device = usb.core.find(
-            idVendor= cls.VENDOR_ID,
-            idProduct=cls.PRODUCT_ID)
+            idVendor= cls.vendor_id,
+            idProduct=cls.product_id)
         if cls.device is None:
-            raise DeviceConnectionError(
-                "Device not found or cable not plugged in.")
-        usb.util.dispose_resources(cls.device)
-        cls.IN_EP = cls.device[0][(0,0)][0] #type:ignore
-        cls.OUT_EP = cls.device[0][(0,0)][1] #type:ignore
-        logger.debug(f'Endpoints {cls.IN_EP}, {cls.OUT_EP}')
-        for config in cls.device:
-            try:
-                for i in range(config.bNumInterfaces): #type: ignore
-                    cls.device.detach_kernel_driver(i) #type: ignore
-            except Exception as e:
-                await logger.exception(e)  #type: ignore
-            except NotImplementedError:
-                pass
-            except usb.core.USBError as e:
-                    raise DeviceConnectionError(f"Could not detatch kernel driver: {e}")
+            raise DeviceConnectionError("Device not found or cable not plugged in.")
+        # if cls.device.backend.__module__.endswith("libusb1"):  #type: ignore
+        if cls.device.is_kernel_driver_active(0):#type: ignore
+            cls.device.detach_kernel_driver(0)#type: ignore
+            usb.util.claim_interface(cls.device, 0)#type: ignore
+        if cls.device.is_kernel_driver_active(1):#type: ignore
+            cls.device.detach_kernel_driver(1)#type: ignore
+            usb.util.claim_interface(cls.device, 1)
         try:
-            cls.device.set_configuration()  #type: ignore
-            usb.util.claim_interface(cls.device,0)
+            cls.device.set_configuration() #type: ignore
+            #type: ignore
+            usb.util.claim_interface(cls.device, 0)
         except usb.core.USBError as e:
-            raise DeviceConnectionError(
-                "Could not set configuration: {0}".format(str(e)))
+            raise DeviceConnectionError(f"Could not set configuration: {e}")
         else:
+            cls.endpoint_in = cls.device[0][(0,0)][0] #type: ignore
+            cls.endpoint_out = cls.device[0][(0,0)][1] #type: ignore
             cls.connected = True
+
 
     
     @classmethod
-    async def _read(cls, size):
+    async def _read(cls, size=None): 
+        """ 
+        asynchronous implementation for dev.read()
+
+        usage: run in executor to prevent blocking looop
+
+        size = None: overrided with wMaxPacketSize value of endpoint
+
+        Raises:
+            DeviceIOError: incapsulates exceptions: USBError, IOError
+            DeviceTimeoutError:  USBTimeoutError
+        """
+        loop = asyncio.get_running_loop()
+        try:
+            output = await loop.run_in_executor(cls.EXECUTOR, cls.device.read, cls.endpoint_in.bEndpointAddress, cls.endpoint_in.wMaxPacketSize, cls.read_timeout) #type: ignore
+        except (usb.core.USBError, IOError) as e:
+            raise DeviceIOError(e)
+        except  usb.core.USBTimeoutError as e:
+            raise DeviceTimeoutError(e)
+        else:
+            return output
+
+    @classmethod
+    async def _write(cls, data:bytes):
         """ 
         asynchronous implementation for dev.read()
 
@@ -85,31 +99,12 @@ class UsbDevice(DeviceImpl):
             DeviceIOError: incapsulates exceptions: USBError, USBTimeoutError, IOError
         """
         loop = asyncio.get_running_loop()
-        with cls.EXECUTOR as executor:
-            try:
-                output = await loop.run_in_executor(executor, cls.device.read, cls.IN_EP, cls.IN_EP.wMaxPacketSize, cls.READ_TIMEOUT) #type: ignore
-            except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
-                raise DeviceIOError(e)
-            else:
-                asyncio.ensure_future(logger.debug(f'INPUT: {output}'))
-                return output
-
-    @classmethod
-    async def _write(cls, data:bytes):
-        """ 
-        asynchronous implementation for dev.write()
-
-        usage: run in executor to prevent blocking looop
-
-        Raises:
-            DeviceIOError: incapsulates exceptions: USBError, USBTimeoutError, IOError
-        """
-        loop = asyncio.get_running_loop()
-        with cls.EXECUTOR as executor:
-            try:
-                await loop.run_in_executor(executor, cls.device.write, cls.OUT_EP, data, cls.WRITE_TIMEOUT) #type:ignore
-            except (usb.core.USBError, usb.core.USBTimeoutError, IOError) as e:
-                raise DeviceIOError(e)
+        try:
+            await loop.run_in_executor(cls.EXECUTOR, cls.device.write, cls.endpoint_out.bEndpointAddress, data) #type:ignore
+        except (usb.core.USBError, IOError) as e:
+            raise DeviceIOError(e)
+        except usb.core.USBTimeoutError as e:
+            raise DeviceTimeoutError(e)
 
     @classmethod
     def _close(cls):
@@ -119,51 +114,43 @@ class UsbDevice(DeviceImpl):
         except:
             pass
 
+    @classmethod
+    async def _reconnect(cls):
+        cls.connected = False
+        while not cls.connected:
+            await cls._open()
+
 class SerialDevice(DeviceImpl):
+
     device = None 
     connected = False
 
     @classmethod
     async def _open(cls):
-        port = os.environ.get("PRINTER_SERIAL_PORT", "/dev/ttyUSB1")
-        ports = list(list_ports.comports())
-        if len(ports) > 1:
-            hwids = [str(p[2]).split(" ") for p in ports] 
-            counter, group = [(len(list(group)), key)
-                              for key, group in groupby(hwids)][0]
-            if counter > 1:
-                await logger.error(f"Found multiple devices {counter} with same group {group}")
-            else:
-                port = ports[0][0]
-        elif len(ports) == 0:
-            await logger.error(f"Device not found with autodiscover connecting with default params")
-        elif len(ports) == 1:
-            port = ports[0][0]
         try:
             cls.device = aioserial.AioSerial(
-                port=str(port), 
+                port=os.environ.get("PRINTER_PORT"), 
                 baudrate=int(os.environ.get("PRINTER_BAUDRATE")), #type: ignore
-                dsrdtr=bool(int(os.environ.get("PRINTER_FLOW_CONTROL","1"))), 
-                rtscts=bool(int(os.environ.get("PPRINTER_FLOW_CONTROL","1"))),
-                write_timeout=float(int(os.environ.get("PRINTER_WRITE_TIMEOUT",5000))/1000), #type: ignore
-                timeout=float(int(os.environ.get("PRINTER_READ_TIMEOUT",5000))/1000),
+                dsrdtr=bool(int(os.environ.get("PRINTER_FLOW_CONTROL"))), #type: ignore
+                rtscts=bool(int(os.environ.get("PRINTER_FLOW_CONTROL"))), #type: ignore
+                write_timeout=float(int(os.environ.get("PRINTER_write_timeout"))/1000), #type: ignore
+                timeout=float(int(os.environ.get("PRINTER_read_timeout"))/1000), #type: ignore
                 loop=asyncio.get_running_loop())
-            try:
-                cls.device.flushInput()
-            except:
-                pass
         except Exception as e:
-            raise e 
+            logger.exception(e)
         else:
+            cls.device.flushOutput()
+            cls.device.flushInput()
             cls.connected = True
 
     @classmethod
     async def _read(cls, size):
         try:
             output = await cls.device.read_async(size)
-
-        except (SerialException, SerialTimeoutException, IOError) as e:
+        except (SerialException, IOError) as e:
             raise DeviceIOError(e)
+        except SerialTimeoutException as e:
+            raise DeviceTimeoutError(e)
         else:
             return output
 
@@ -172,8 +159,16 @@ class SerialDevice(DeviceImpl):
     async def _write(cls, data):
         try:
             await cls.device.write_async(data)
-        except (SerialException, SerialTimeoutException, IOError) as e:
+        except (SerialException, IOError) as e:
             raise DeviceIOError(e)
+        except  SerialTimeoutException as e:
+            raise DeviceTimeoutError(e)
+
+    @classmethod
+    async def _reconnect(cls):
+        cls.connected = False
+        while not cls.connected:
+            await cls._open()
 
     @classmethod
     def _close(cls):
@@ -183,8 +178,7 @@ class SerialDevice(DeviceImpl):
             cls.device.close()
         except:
             pass
-
-    
+       
 
 class Printer(PrinterProto, Device):
 
@@ -199,67 +193,96 @@ class Printer(PrinterProto, Device):
         
 
     def discover(self):
-        if os.environ['PRINTER_TYPE'] == 'USB':
+        if os.environ.get('PRINTER_TYPE') == 'USB':
             self._impl = UsbDevice()
-        elif os.environ['PRINTER_TYPE'] == 'SERIAL':
+        elif os.environ.get('PRINTER_TYPE') == 'SERIAL':
             self._impl = SerialDevice()
-        return self._impl
 
     async def connect(self):
         await States.filter(id=1).update(submode=1)
-        await  logger.info(f'Connecting to printer device...')
+        logger.info(f'Connecting to printer device...')
         if self._impl:
             while not self._impl.connected:
-                try:
-                    await self._impl._open()
-                except DeviceConnectionError as e:
-                    asyncio.ensure_future(logger.error(e))
-                    await asyncio.sleep(1)
-                    continue
+                if not self.event.is_set():
+                    try:
+                        await self._impl._open()
+                    except DeviceConnectionError as e:
+                        logger.error(e)
+                        await asyncio.sleep(1)
+                        continue 
+                    else:
+                        logger.info('Connection to printer established')
+                        self.profile.profile_data['media']['width']['pixels'] = int(
+                            os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
+                        if config['printer']['presenter']['continuous']:
+                            await self.write(bytearray((0x1D, 0x65, 0x14)))
+                        await States.filter(id=1).update(submode=0)
+                        return self._impl   
                 else:
-                    await logger.info('Connection to printer established')
-                    self.profile.profile_data['media']['width']['pixels'] = int(
-                        os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
-                    if config['printer']['presenter']['continuous']:
-                        await self.write(bytearray((0x1D, 0x65, 0x14)))
-                    await States.filter(id=1).update(submode=0)
-                    return self.device
+                    break             
         else:
-            asyncio.ensure_future(logger.error('Implementation not found'))
-
-    async def reconnect(self):
-        await States.filter(id=1).update(submode=1)
-        await asyncio.sleep(1)
-        if self._impl:
-            await asyncio.sleep(1)
-            self._impl.connected = False
-            await self.connect()
+            logger.error('Implementation not found')       
 
     def disconnect(self):
         self._impl._close()
 
+    def reconnect(self):
+        pass
+
     async def read(self, size:int):
-        while not self.event.is_set():
+        # 5 attempts to read requested bytes
+        attempts = 5
+        # counter
+        count = 0
+        # while not send an event flag
+        while not self.event.is_set() and count<=attempts:
+            logger.debug(f'Counts {count}')
             try:
                 output = await self._impl._read(size)
-                asyncio.ensure_future(logger.debug(f'INPUT: {hexlify(output, sep=":")}'))
             except (DeviceConnectionError, DeviceIOError) as e:
-                asyncio.ensure_future(logger.exception(e))
-                fut = asyncio.ensure_future(self.reconnect())
-                if fut.done():
-                    continue
+                self._impl.connected = False
+                logger.error(e)            
+                fut = asyncio.ensure_future(self.connect())
+                while not fut.done():
+                    await asyncio.sleep(0.5)
+                else:
+                    if not fut.exception():
+                        continue
+            except DeviceTimeoutError as e:
+                logger.error(e)
+                await asyncio.sleep(0.5)
+                count+=1
+                continue          
             else:
+                logger.debug(f'INPUT: {hexlify(output, sep=":")}')
                 return output
 
     async def write(self, data:Union[bytearray, bytes]):
-        while 1:
+        # 5 attempts to read requested bytes
+        attempts = 5
+        # counter
+        count = 0
+        while not self.event.is_set() and count<=attempts:
+            logger.debug(f'Counts {count}')
             try:
-                await self._impl._write(bytes(data))
-                asyncio.ensure_future(logger.debug(f'OUTPUT: {hexlify(data, sep=":")}'))
+                await self._impl._write(data)
             except (DeviceConnectionError, DeviceIOError) as e:
-                asyncio.ensure_future(logger.exception(e))
-                fut = asyncio.ensure_future(self.reconnect())
-                if fut.done():
-                    continue
+                self._impl.connected = False
+                logger.error(e)
+                fut = asyncio.ensure_future(self.connect())
+                while not fut.done():
+                    await asyncio.sleep(0.5)
+                else:
+                    if not fut.exception():
+                        continue
+            except DeviceTimeoutError as e:
+                print('TIMEOUT!')
+                logger.error(e)
+                await asyncio.sleep(0.5)
+                count+=1
+                continue
             else:
+                logger.debug(f'OUTPUT: {hexlify(data, sep=":")}')
                 break
+                
+               

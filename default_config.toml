@@ -1,12 +1,14 @@
 [emulator]
+watchdog=true # включить -tru, выключить - false. Проверка состояния смены и токена
 
-[sale]
+[emulator.sale]
 # Статус Mode(Режим) в случае наличия нефискализированных данных
 gateway_error_state = 8 #ИЗМЕНИТЬ
 # Алгоритм проведения операции "Закрытие чека"
 # Сброс нефискализированных данных в текстовом формате 
 flush_receipt = false #ИЗМЕНИТЬ
-[shift]
+
+[emulator.shift]
 watchdog = true # true - контроль смены включен/false - выключен.
 #ВНИМАНИЕ! При отключенном контроле закрытие смены происходит только при поступлении команды с кассы.
 autoclose = true # включает и отключает автозакрытие true- включено/false - выключено
@@ -63,7 +65,7 @@ send_encoding = false
 font='b'
 height = 1
 width=1
-custom_size=false
+custom_size=true
 double_width=false
 double_height=false
 input = 'utf8'

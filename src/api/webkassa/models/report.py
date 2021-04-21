@@ -86,7 +86,7 @@ class ZXReportResponse(BaseModel):
     CashboxRN:str
     StartOn:str
     ReportOn:str
-    CloseOn:str 
+    CloseOn:Optional[str] 
     CashierCode:int
     ShiftNumber:int
     DocumentCount:int

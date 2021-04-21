@@ -1,20 +1,19 @@
 import asyncio 
-from urllib.parse import unquote
 from xml.etree.ElementTree import Element
+from xml.sax.saxutils import unescape
 from collections import deque
 from typing import Union
 from src import config
 from src.db.models import States
 from src.api.printer import logger
 from src.api.printer.device import Printer
-
 class PrintBytes(Printer):
     alias = 'bytes'
     codepage_command = bytearray((0x1B,0x74))
-    CP866 = bytearray((0x17,))
-    CP1251 = bytearray((0x46,))
-    encoding_input = config['printer']['text']['input']
-    encoding_output = config['printer']['text']['output']
+    CP866 = bytearray((0x11,))
+    CP1251 = bytearray((0x2E,))
+    encoding_input = config['printer']['text']['input'].upper()
+    encoding_output = config['printer']['text']['output'].upper()
     align = 'left'
     font = config['printer']['text']['font']
     heigth = config['printer']['text']['height']
@@ -25,7 +24,8 @@ class PrintBytes(Printer):
 
     @classmethod
     async def handle(cls, payload:Union[bytes,bytearray]) -> None:
-        await States.filter(id=1).update(submode=2)
+        logger.debug('Printing (buffering) text (raw bytes)')
+        asyncio.ensure_future(States.filter(id=1).update(submode=2))
         try:
             bits = bin(payload[0])[2:].zfill(8)
             Printer().buffer.set(align=cls.align, font=cls.font, bold=False, underline=0, width=cls.width,  
@@ -47,14 +47,17 @@ class PrintBytes(Printer):
         except Exception as e:
             logger.exception(e)
             raise e
+        else:
+            asyncio.ensure_future(States.filter(id=1).update(submode=3))
+
 
 class PrintXML(Printer):
     alias = 'xml'
-    CP866 = bytearray((0x17,))
-    CP1251 = bytearray((0x46,))
+    CP866 = bytearray((0x11,))
+    CP1251 = bytearray((0x2E,))
     codepage_command = bytearray((0x1B,0x74))
-    encoding_input = config['printer']['doc']['input']
-    encoding_output = config['printer']['doc']['output']
+    encoding_input = config['printer']['doc']['input'].upper()
+    encoding_output = config['printer']['doc']['output'].upper()
     align = 'left'
     font = config['printer']['doc']['font']
     height = config['printer']['doc']['height']
@@ -76,8 +79,7 @@ class PrintXML(Printer):
             payload (Element): XML object - document
             buffer (bool, optional): perform printing in buffer or bypass. Defaults to True.
         """
-        await States.filter(id=1).update(submode=5)
-        await asyncio.sleep(0.1)
+        asyncio.ensure_future(States.filter(id=1).update(submode=2))
         for elem in payload:
             await cls._print_element(elem)
 
@@ -91,28 +93,29 @@ class PrintXML(Printer):
             content (Element): XML object Element
             buffer (bool): perform printing in buffer or bypass. From argument of higher level method
         """
+        logger.debug('Printing (buffering) XML elements')
         try:
-            align = content.attrib.get('align', 'left')
-            bold = True if content.attrib.get('text', False)  and content.attrib['text']== 'bold' else False
-            if content.tag != 'br' and content.attrib.get('text', False): 
+            if not content.tag in ['qr', 'br'] and content.text:
+                align = content.attrib.get('align', 'left')
+                bold = True if content.attrib['text']=='bold' else False
                 content.text = content.text.replace(u'\u201c','"')
                 content.text = content.text.replace(u'\u201d', '"')
                 content.text = content.text.replace(u'\u202f', ' ')
                 if config['printer']['doc']['send_encoding']:
-                    cmd = bytearray()
-                    cmd.extend(cls.codepage_command)
+                    codepage = bytearray()
+                    codepage.extend(cls.codepage_command)
                     if cls.encoding_output == 'CP1251':
-                        cmd.extend(cls.CP1251)
+                        codepage.extend(cls.CP1251)
                     elif cls.encoding_output == 'CP866':
-                        cmd.extend(cls.CP866)
-                    Printer().buffer._raw(cmd)
-                Printer().buffer.set(align=align, font=cls.font,bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
+                        codepage.extend(cls.CP866)
+                    Printer().buffer._raw(codepage)
+                Printer().buffer.set(align=align, font=cls.font, bold=bold, width=cls.width, height=cls.height, custom_size=cls.custom_size) #type: ignore          
                 output = content.text.encode(cls.encoding_output)
                 Printer().buffer._raw(output)
             elif content.tag == 'br':
                 Printer().buffer._raw(bytes("\n", 'ascii'))
             elif content.tag == 'qr':
-                Printer().buffer.qr(unquote(str(content.text)))
+                Printer().buffer.qr(content=unescape(content.text), center=True, size=config['printer']['qr']['size']) #type: ignore
         except Exception as e:
             logger.exception(e)
             raise e
@@ -135,4 +138,4 @@ class PrintDeferredBytes(Printer):
               
     @classmethod 
     async def append(cls, data:bytes):
-        cls.storage.append(bytes)
+        cls.storage.append(data)

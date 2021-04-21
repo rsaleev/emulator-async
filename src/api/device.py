@@ -48,3 +48,6 @@ class DeviceConnectionError(Exception):
 
 class DeviceIOError(Exception):
     pass
+
+class DeviceTimeoutError(Exception):
+    pass

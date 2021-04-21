@@ -1,14 +1,10 @@
 
-from src.api.printer.commands.querying import PrintBuffer
 import aiofiles
 import os
 import asyncio
-import functools
 from xml.etree.ElementTree import fromstring
 from tortoise.expressions import F
-from tortoise.functions import Max
 from tortoise import timezone
-
 from src import config
 from src.api.webkassa.client import WebcassaClient
 from src.api.webkassa.exceptions import *
@@ -18,7 +14,7 @@ from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa import logger
 from src.api.webkassa.commands import WebkassaClientToken,WebkassaClientCloseShift
 from src.api.webkassa.models import SaleRequest, SaleResponse, Position, Payments, CompanyData
-from src.api.printer.commands import PrintXML, CutPresent, PrintQR
+from src.api.printer.commands import PrintXML, CutPresent, PrintQR, PrintBuffer, CheckPrinting
 
 class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     endpoint = 'Check'
@@ -29,8 +25,6 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         token = await Token.get(id=1)
         if receipt.price ==0 or receipt.payment ==0: #type: ignore
             asyncio.ensure_future(logger.error(f'Receipt {receipt.uid} has broken data'))#type: ignore 
-            # if config['emulator']['flush_receipt']:
-            #     await cls._flush(receipt) # flush receipt
             raise UnresolvedCommand(f'{cls.alias}: Receipt {receipt.uid} has broken data')
         else:
             request  = SaleRequest( 
@@ -61,9 +55,10 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 raise e
             else:
                 await asyncio.gather(receipt.update_from_dict({'ack':True}),
-                                    States.filter(id=1).update(gateway=1),
+                                    States.filter(id=1).update(mode=2, gateway=1),
                                     Shift.filter(id=1).update(total_docs=F('total_docs')+1))
                 asyncio.create_task(cls._render_receipt(request, response))
+                asyncio.ensure_future(receipt.save())
 
 
     @classmethod
@@ -80,28 +75,30 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                             inn=config['webkassa']['company']['inn'])
         template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
         try:
-            render = asyncio.ensure_future(template.render_async(horizontal_delimiter='-',
+            render = template.render(
+                horizontal_delimiter='-',
                 dot_delimiter='.',
                 whitespace=' ',
                 company=company,
                 request=request,
-                response=response))
-            while not render.done():
-                await asyncio.sleep(0.1)
+                response=response)
+        except Exception as e:
+            logger.exception(e)
+        else:
+            doc = fromstring(render)
+            asyncio.create_task(cls._render_print(doc))
+
+    @classmethod
+    async def _render_print(cls,doc):
+        try:
+            await PrintXML.handle(doc)
+            await PrintBuffer.handle()           
         except Exception as e:
             await logger.exception(e)
         else:
-            doc = fromstring(render.result())
-            asyncio.create_task(cls._render_print(response, doc))
-
-    @classmethod
-    async def _render_print(cls, response, doc):
-        try:
-            await PrintXML.handle(doc)
-            await PrintBuffer.handle()            
             await CutPresent.handle()
-        except Exception as e:
-            await logger.exception(e)
+            if config['webkassa']['receipt']['ensure']:
+                await CheckPrinting.handle()
 
     @classmethod
     async def exc_callback(cls, exc, payload):

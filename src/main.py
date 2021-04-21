@@ -1,23 +1,17 @@
 import asyncio
 import signal
-import asyncio
 import os
 import uvloop
-from functools import partial
-from src import logger
-from concurrent.futures import ThreadPoolExecutor
+from src import logger, config
 from src.db.connector import DBConnector
 from src.db.models import Shift, States, Token
 from src.api.printer.device import Printer
 from src.api.shtrih.device import Paykiosk
 from src.api.watchdog import Watchdog
-from src.api.printer.commands import PrinterFullStatusQuery
 from src.api.webkassa.commands import WebkassaClientToken
 
 
 class Application:
-    #asyncio 
-    event = asyncio.Event()
     #instances
     db = DBConnector()
     printer = Printer()
@@ -30,16 +24,14 @@ class Application:
         cls.printer.event.set()
         cls.fiscalreg.event.set()
         cls.watchdog.event.set()
-        cls.event.set()
         await logger.warning('Shutting down application')
         try:
             await asyncio.wait_for(cls.db.disconnect(),0.5)
             cls.printer.disconnect()
-            await cls.fiscalreg.disconnect()
+            cls.fiscalreg.disconnect()
+            await logger.shutdown()
         except:
-            await loop.shutdown_default_executor()
             [task.cancel() for task in asyncio.all_tasks(loop)]
-            await loop.shutdown_default_executor
             # perform eventloop shutdown
             try:
                 loop.stop()
@@ -52,21 +44,16 @@ class Application:
     @classmethod
     async def init(cls):
         await logger.warning('Initializing application...')
-        executor = ThreadPoolExecutor(max_workers=1)
-        loop = asyncio.get_running_loop()
-        loop.set_default_executor(executor)
         try:
             # blocking step by step operations
-            await logger.warning('Initializing DB')
+            logger.warning('Initializing DB')
             await cls.db.connect()
-            await Shift.get_or_create(id=1) 
-            await States.get_or_create(id=1)            
-            await logger.warning('Initializing gateway')
+            await asyncio.gather(Shift.get_or_create(id=1), States.get_or_create(id=1))      
+            logger.warning('Initializing gateway')
             token = await WebkassaClientToken.handle()
-            await Token.get_or_create(id=1, token=token)
-            await logger.warning('Initializing devices')
+            asyncio.ensure_future(Token.get_or_create(id=1, token=token))
+            logger.warning('Initializing devices')
             await cls.printer.connect()
-            await PrinterFullStatusQuery.handle()
             await cls.fiscalreg.connect()
         except Exception as e:
             await logger.exception(e)
@@ -76,14 +63,14 @@ class Application:
 
     @classmethod
     async def serve(cls):
-        while not cls.event.is_set():
-            try:
-                await cls.fiscalreg.poll()
-                #background task: watchdog poller
+        try:
+            await cls.fiscalreg.poll()
+            #background task: watchdog poller
+            if config['emulator']['watchdog']:
                 asyncio.create_task(cls.watchdog.poll())
-            except Exception as e:
-                await logger.exception(e)
-                raise SystemExit(f'Emergency shutdown')
+        except Exception as e:
+            logger.exception(e)
+            raise SystemExit(f'Emergency shutdown')
 
     @classmethod
     def run(cls):
