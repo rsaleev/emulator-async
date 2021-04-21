@@ -14,7 +14,7 @@ from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa import logger
 from src.api.webkassa.commands import WebkassaClientToken,WebkassaClientCloseShift
 from src.api.webkassa.models import SaleRequest, SaleResponse, Position, Payments, CompanyData
-from src.api.printer.commands import PrintXML, CutPresent, PrintQR, PrintBuffer, CheckPrinting
+from src.api.printer.commands import PrintXML, CutPresent, PrintBuffer, CheckPrinting
 
 class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     endpoint = 'Check'
@@ -24,7 +24,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     async def handle(cls, receipt):
         token = await Token.get(id=1)
         if receipt.price ==0 or receipt.payment ==0: #type: ignore
-            asyncio.ensure_future(logger.error(f'Receipt {receipt.uid} has broken data'))#type: ignore 
+            logger.error(f'Receipt {receipt.uid} has broken data')#type: ignore 
             raise UnresolvedCommand(f'{cls.alias}: Receipt {receipt.uid} has broken data')
         else:
             request  = SaleRequest( 
@@ -115,7 +115,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 shift = await Shift.get(id=1)
                 # check if total_docs were 0
                 if shift.total_docs ==0:
-                    await shift.update_from_dict({'open_date':timezone.now()})
+                    await Shift.filter(id=1).update(open_date=timezone.now(), total_docs=0)
                     return True
                 # if docs counter >0 set to mode 3
                 else:
@@ -130,11 +130,3 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                 return False
         elif isinstance(exc, UnrecoverableError):
             return False
-        
-
-    @classmethod
-    async def _flush(cls, receipt:Receipt):
-        async with aiofiles.open(f'{os.path.abspath(os.getcwd())}/unprocessed_receipts.txt', "a+") as f:
-            await f.write(str(receipt))
-            await f.flush()
-            await Receipt.filter(id=receipt.id).delete()
