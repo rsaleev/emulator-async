@@ -20,7 +20,11 @@ class UsbDevice(DeviceImpl):
     device = None
     connected = False
 
-    EXECUTOR = ThreadPoolExecutor(max_workers=1)
+    READ_EXECUTOR = ThreadPoolExecutor(max_workers=1)
+    READ_LOCK = asyncio.Lock()
+    WRITE_EXECUTOR = ThreadPoolExecutor(max_workers=1)
+    WRITE_LOCK = asyncio.Lock()
+
     vendor_id = int(os.environ.get('PRINTER_VENDOR_ID'),16) #type: ignore
     product_id =int(os.environ.get('PRINTER_PRODUCT_ID'),16) #type: ignore
     write_timeout = int(os.environ.get('PRINTER_WRITE_TIMEOUT')) #type: ignore
@@ -30,10 +34,8 @@ class UsbDevice(DeviceImpl):
 
 
     @classmethod
-    async def _open(cls):
+    def _open(cls):
         """_open 
-        
-
         [extended_summary]
 
         Raises:
@@ -84,7 +86,8 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            output = await loop.run_in_executor(cls.EXECUTOR, cls.device.read, cls.endpoint_in.bEndpointAddress, cls.endpoint_in.wMaxPacketSize, cls.read_timeout) #type: ignore
+            with cls.READ_LOCK:
+                output = await loop.run_in_executor(cls.READ_EXECUTOR, cls.device.read, cls.endpoint_in.bEndpointAddress, cls.endpoint_in.wMaxPacketSize, cls.read_timeout) #type: ignore
         except (usb.core.USBError, IOError) as e:
             raise DeviceIOError(e)
         except  usb.core.USBTimeoutError as e:
@@ -104,33 +107,50 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            await loop.run_in_executor(cls.EXECUTOR, cls.device.write, cls.endpoint_out.bEndpointAddress, data) #type:ignore
+            with cls.WRITE_LOCK:
+                await loop.run_in_executor(cls.WRITE_EXECUTOR, cls.device.write, cls.endpoint_out.bEndpointAddress, data) #type:ignore
         except (usb.core.USBError, IOError) as e:
             raise DeviceIOError(e)
         except usb.core.USBTimeoutError as e:
             raise DeviceTimeoutError(e)
 
     @classmethod
-    def _close(cls):
+    async def _close(cls):
+        # graceful shutdown with clearance
         try:
-            cls.EXECUTOR.shutdown(wait=True)
+            cls.WRITE_EXECUTOR.shutdown(wait=True)
+            cls.READ_EXECUTOR.shutdown(wait=True)
+        except:
+            pass
+        try:
+            #clear app resources
             usb.util.dispose_resources(cls.device)
+            cls.device.reset() #type: ignore
         except:
             pass
 
     @classmethod
     async def _reconnect(cls):
         cls.connected = False
+        # clear app resources
+        usb.util.dispose_resources(cls.device)
+        loop = asyncio.get_event_loop()
         while not cls.connected:
-            await cls._open()
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                await loop.run_in_executor(executor, cls._open)
+                await asyncio.sleep(0.2)
+
+                
 
 class SerialDevice(DeviceImpl):
 
     device = None 
     connected = False
 
+    LOCK = asyncio.Lock()
+
     @classmethod
-    async def _open(cls):
+    def _open(cls):
         try:
             cls.device = aioserial.AioSerial(
                 port=os.environ.get("PRINTER_PORT"), 
@@ -150,14 +170,12 @@ class SerialDevice(DeviceImpl):
     @classmethod
     async def _read(cls, size):
         try:
-            output = await cls.device.read_async(size)
+            return await cls.device.read_async(size)
         except (SerialException, IOError) as e:
             raise DeviceIOError(e)
         except SerialTimeoutException as e:
             raise DeviceTimeoutError(e)
-        else:
-            return output
-
+       
 
     @classmethod
     async def _write(cls, data):
@@ -171,14 +189,20 @@ class SerialDevice(DeviceImpl):
     @classmethod
     async def _reconnect(cls):
         cls.connected = False
+        loop = asyncio.get_event_loop()
         while not cls.connected:
-            await cls._open()
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                await loop.run_in_executor(executor, cls._open)
+                await asyncio.sleep(0.2)
 
     @classmethod
-    def _close(cls):
+    async def _close(cls):
         try:
             cls.device.cancel_read()
             cls.device.cancel_write()
+            cls.device.flushOutput()
+            cls.device.flushInput()
+            cls.device.flush()
             cls.device.close()
         except:
             pass
@@ -203,13 +227,16 @@ class Printer(PrinterProto, Device):
             self._impl = SerialDevice()
 
     async def connect(self):
+        loop = asyncio.get_running_loop()
         await States.filter(id=1).update(submode=1)
         logger.info(f'Connecting to printer device...')
         if self._impl:
             while not self._impl.connected:
                 if not self.event.is_set():
                     try:
-                        await self._impl._open()
+                        # non-blocking
+                        with ThreadPoolExecutor(max_workers=1) as executor:
+                            await loop.run_in_executor(executor, self._impl._open)
                     except DeviceConnectionError as e:
                         logger.error(e)
                         await asyncio.sleep(1)
@@ -229,11 +256,12 @@ class Printer(PrinterProto, Device):
             logger.error('Implementation not found')
             raise DeviceConnectionError('Implementation not found')
 
-    def disconnect(self):
-        self._impl._close()
+    async def disconnect(self):
+        await self._impl._close()
 
-    def reconnect(self):
-        pass
+    async def reconnect(self):
+        await States.filter(id=1).update(submode=1)
+        await self._impl._reconnect()
 
     async def read(self, size:int):
         # 5 attempts to read requested bytes
@@ -241,35 +269,34 @@ class Printer(PrinterProto, Device):
         # counter
         count = 0
         # while not send an event flag
-        while not self.event.is_set() and count<=attempts:
-            logger.debug(f'Counts {count}')
+        while not self.event.is_set():
             try:
                 output = await self._impl._read(size)
             except (DeviceConnectionError, DeviceIOError) as e:
                 self._impl.connected = False
-                logger.error(e)            
-                fut = asyncio.ensure_future(self.connect())
+                logger.error(f'{e}. Reconnecting')            
+                fut = asyncio.ensure_future(self.reconnect())
                 while not fut.done():
                     await asyncio.sleep(0.5)
                 else:
                     if not fut.exception():
                         continue
             except DeviceTimeoutError as e:
-                logger.error(e)
-                await asyncio.sleep(0.5)
-                count+=1
-                continue          
+                if count <= attempts:
+                    logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
+                    await asyncio.sleep(0.5)
+                    count+=1
+                    continue          
             else:
                 logger.debug(f'INPUT: {hexlify(output, sep=":")}')
                 return output
 
     async def write(self, data:Union[bytearray, bytes]):
-        # 5 attempts to read requested bytes
+        # 5 attempts to write bytes
         attempts = 5
         # counter
         count = 0
-        while not self.event.is_set() and count<=attempts:
-            logger.debug(f'Counts {count}')
+        while not self.event.is_set():
             try:
                 await self._impl._write(data)
             except (DeviceConnectionError, DeviceIOError) as e:
@@ -282,11 +309,11 @@ class Printer(PrinterProto, Device):
                     if not fut.exception():
                         continue
             except DeviceTimeoutError as e:
-                print('TIMEOUT!')
-                logger.error(e)
-                await asyncio.sleep(0.5)
-                count+=1
-                continue
+                if count <= attempts:
+                    logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
+                    await asyncio.sleep(0.5)
+                    count+=1
+                    continue  
             else:
                 logger.debug(f'OUTPUT: {hexlify(data, sep=":")}')
                 break
