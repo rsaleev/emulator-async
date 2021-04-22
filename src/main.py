@@ -64,10 +64,10 @@ class Application:
     @classmethod
     async def serve(cls):
         try:
-            await cls.fiscalreg.poll()
             #background task: watchdog poller
             if config['emulator']['watchdog']:
                 asyncio.create_task(cls.watchdog.poll())
+            asyncio.ensure_future(cls.fiscalreg.poll())
         except Exception as e:
             logger.exception(e)
             raise SystemExit(f'Emergency shutdown')
