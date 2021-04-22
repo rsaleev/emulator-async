@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures.thread import ThreadPoolExecutor
 import aioserial
 import os
 from serial.serialutil import SerialException, SerialTimeoutException
@@ -41,7 +42,6 @@ class SerialDevice(DeviceImpl):
         else:
             return output
 
-
     @classmethod
     async def _write(cls, data):
         try:
@@ -50,6 +50,18 @@ class SerialDevice(DeviceImpl):
             raise DeviceIOError(e)
         except SerialTimeoutException as e:
             raise DeviceTimeoutError(e)
+
+    @classmethod
+    async def _reconnect(cls):
+        try:
+            cls.device.cancel_write()
+            cls.device.cancel_write()
+        except:
+            pass
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            await loop.run_in_executor(executor, cls._open)
+
 
     @classmethod
     def _close(cls):
@@ -78,25 +90,25 @@ class Paykiosk(Device, ShtrihProtoInterface):
 
     async def connect(self):
         logger.info("Connecting to fiscalreg device...")
+        loop = asyncio.get_running_loop()
         if self._impl:
             while not self._impl.connected:
                 if not self.event.is_set():
                     try:
-                        await asyncio.wait_for(self._impl._open(),2)
+                        with ThreadPoolExecutor(max_workers=1) as executor:
+                            await loop.run_in_executor(executor, self._impl._open)
                     except (asyncio.TimeoutError,DeviceConnectionError) as e:
-                        logger.error(e)
-                        await asyncio.sleep(3)
+                        logger.error(f'Connection error: {e}.Continue after 1 second')
+                        await asyncio.sleep(1)
                         continue
                     else:
-                        if self._impl.connected:
-                            try:
-                                self._impl.device.flushInput()
-                                self._impl.device.flushOutput()
-                            except:
-                                pass
-                            finally:
-                                logger.info("Connecton to fiscalreg device established")
-                                break
+                        try:
+                            self._impl.device.flushInput()
+                            self._impl.device.flushOutput()
+                        except:
+                            pass
+                        logger.info("Connecton to fiscalreg device established")
+                        break
                 else:
                     logger.info("Connecton aborted")
                     break
@@ -106,11 +118,12 @@ class Paykiosk(Device, ShtrihProtoInterface):
 
 
             
-    def disconnect(self):
+    async def disconnect(self):
         self._impl._close()
 
-    def reconnect(self):
-        pass
+    async def reconnect(self):
+        await self._impl._reconnect()
+        
 
     async def read(self, size:int):
         attempts = 5
@@ -119,12 +132,12 @@ class Paykiosk(Device, ShtrihProtoInterface):
             try:
                 data = await self._impl._read(size)
             except (DeviceConnectionError, DeviceIOError) as e:
-                logger.error(e)
+                logger.error(f'{e}. Reconnecting')            
                 self._impl.connected = False
-                await self.connect()
+                await self.reconnect()
                 continue
             except DeviceTimeoutError as e:
-                logger.error(e)
+                logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
                 await asyncio.sleep(0.5)
                 count +=1
                 continue
@@ -139,12 +152,12 @@ class Paykiosk(Device, ShtrihProtoInterface):
             try:
                 await self._impl._write(data)
             except (DeviceConnectionError, DeviceIOError) as e:
-                logger.error(e)
+                logger.error(f'{e}. Reconnecting')            
                 self._impl.connected = False
-                await self.connect()
+                await self.reconnect()
                 continue
             except DeviceTimeoutError as e:
-                logger.error(e)
+                logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
                 await asyncio.sleep(0.2)
                 count+=1
                 continue
@@ -160,7 +173,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 else:
                     await asyncio.sleep(0.1)
             except (OSError, DeviceConnectionError, DeviceIOError):
-                await self.connect()
+                await self.reconnect()
                 continue
     
           

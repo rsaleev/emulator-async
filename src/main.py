@@ -27,8 +27,8 @@ class Application:
         await logger.warning('Shutting down application')
         try:
             await asyncio.wait_for(cls.db.disconnect(),0.5)
-            cls.printer.disconnect()
-            cls.fiscalreg.disconnect()
+            await asyncio.wait_for(cls.printer.disconnect(), 0.5)
+            await asyncio.wait_for(cls.fiscalreg.disconnect(), 0.5)
             await logger.shutdown()
         except:
             [task.cancel() for task in asyncio.all_tasks(loop)]
