@@ -45,23 +45,27 @@ class UsbDevice(DeviceImpl):
             idProduct=cls.product_id)
         if cls.device is None:
             raise DeviceConnectionError("Device not found or cable not plugged in.")
-        # if cls.device.backend.__module__.endswith("libusb1"):  #type: ignore
+        try:
+            usb.util.dispose_resources(cls.device)
+        except:
+            raise DeviceConnectionError("Couldn't dispose resources")
+        interface = 0
         if cls.device.is_kernel_driver_active(0):#type: ignore
             cls.device.detach_kernel_driver(0)#type: ignore
-            usb.util.claim_interface(cls.device, 0)#type: ignore
         if cls.device.is_kernel_driver_active(1):#type: ignore
             cls.device.detach_kernel_driver(1)#type: ignore
-            usb.util.claim_interface(cls.device, 1)
         try:
             cls.device.set_configuration() #type: ignore
             #type: ignore
-            usb.util.claim_interface(cls.device, 0)
         except usb.core.USBError as e:
             raise DeviceConnectionError(f"Could not set configuration: {e}")
-        else:
-            cls.endpoint_in = cls.device[0][(0,0)][0] #type: ignore
-            cls.endpoint_out = cls.device[0][(0,0)][1] #type: ignore
-            cls.connected = True
+        try:
+            usb.util.claim_interface(cls.device, interface)
+        except:
+            logger.warning(DeviceConnectionError("Couldn't claim interface. Continue"))
+        cls.endpoint_in = cls.device[0][(0,0)][0] #type: ignore
+        cls.endpoint_out = cls.device[0][(0,0)][1] #type: ignore
+        cls.connected = True
 
 
     
@@ -224,7 +228,7 @@ class Printer(PrinterProto, Device):
         else:
             logger.error('Implementation not found')
             raise DeviceConnectionError('Implementation not found')
-            
+
     def disconnect(self):
         self._impl._close()
 
