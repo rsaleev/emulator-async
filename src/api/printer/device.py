@@ -238,7 +238,7 @@ class Printer(PrinterProto, Device):
                         with ThreadPoolExecutor(max_workers=1) as executor:
                             await loop.run_in_executor(executor, self._impl._open)
                     except DeviceConnectionError as e:
-                        logger.error(e)
+                        logger.error(f'Connection error {e}')
                         await asyncio.sleep(1)
                         continue 
                     else:
