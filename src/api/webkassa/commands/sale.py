@@ -45,16 +45,18 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                             payment_type=receipt.payment_type)], 
                 external_check_number=str(receipt.uid)) 
             try:    
-                asyncio.ensure_future(receipt.update_from_dict({'sent':True}))
+                receipt.update_from_dict({'sent':True})
                 response = await cls.dispatch(endpoint=cls.endpoint, 
                                             request_data=request,   
                                             response_model=SaleResponse, #type: ignore
                                             exc_handler=cls.exc_callback)
+                asyncio.ensure_future(receipt.save())
             except Exception as e:
                 asyncio.ensure_future(logger.exception(e))
                 raise e
             else:
-                await asyncio.gather(receipt.update_from_dict({'ack':True}),
+                receipt.update_from_dict({'ack':True})
+                await asyncio.gather(receipt.save(),
                                     States.filter(id=1).update(mode=2, gateway=1),
                                     Shift.filter(id=1).update(total_docs=F('total_docs')+1))
                 asyncio.create_task(cls._render_receipt(request, response))
