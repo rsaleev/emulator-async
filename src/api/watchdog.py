@@ -74,7 +74,7 @@ class Watchdog:
         while not self.event.is_set():
             if config['emulator']['shift']['watchdog']:
                 asyncio.ensure_future(self._check_shift())
-            if config['webcassa']['token']['watchdog']:
+            if config['webkassa']['token']['watchdog']:
                 asyncio.ensure_future(self._token_check())
            
         
