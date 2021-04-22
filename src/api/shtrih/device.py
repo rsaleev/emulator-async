@@ -78,23 +78,33 @@ class Paykiosk(Device, ShtrihProtoInterface):
 
     async def connect(self):
         logger.info("Connecting to fiscalreg device...")
-        while not self.event.is_set() and not self._impl.connected:
-            try:
-                await self._impl._open()
-            except DeviceConnectionError as e:
-                logger.error(e)
-                await asyncio.sleep(3)
-                continue
-            else:
-                if self._impl.connected:
+        if self._impl:
+            while not self._impl.connected:
+                if not self.event.is_set():
                     try:
-                        self._impl.device.flushInput()
-                        self._impl.device.flushOutput()
-                    except:
-                        pass
-                    finally:
-                        logger.info("Connecton to fiscalreg device established")
-                        break
+                        await asyncio.wait_for(self._impl._open(),2)
+                    except (asyncio.TimeoutError,DeviceConnectionError) as e:
+                        logger.error(e)
+                        await asyncio.sleep(3)
+                        continue
+                    else:
+                        if self._impl.connected:
+                            try:
+                                self._impl.device.flushInput()
+                                self._impl.device.flushOutput()
+                            except:
+                                pass
+                            finally:
+                                logger.info("Connecton to fiscalreg device established")
+                                break
+                else:
+                    logger.info("Connecton aborted")
+                    break
+        else:
+            logger.error('Implementation not found')
+            raise DeviceConnectionError('Implementation not found')
+
+
             
     def disconnect(self):
         self._impl._close()

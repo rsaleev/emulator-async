@@ -219,10 +219,12 @@ class Printer(PrinterProto, Device):
                         await States.filter(id=1).update(submode=0)
                         return self._impl   
                 else:
-                    break             
+                    logger.info("Connecton aborted")
+                    break          
         else:
-            logger.error('Implementation not found')       
-
+            logger.error('Implementation not found')
+            raise DeviceConnectionError('Implementation not found')
+            
     def disconnect(self):
         self._impl._close()
 
