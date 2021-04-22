@@ -76,6 +76,7 @@ class Watchdog:
                 asyncio.ensure_future(self._check_shift())
             if config['webkassa']['token']['watchdog']:
                 asyncio.ensure_future(self._token_check())
+            await asyncio.sleep(1)
            
         
     

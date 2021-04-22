@@ -67,7 +67,7 @@ class Application:
             #background task: watchdog poller
             if config['emulator']['watchdog']:
                 asyncio.create_task(cls.watchdog.poll())
-            asyncio.ensure_future(cls.fiscalreg.poll())
+            await cls.fiscalreg.poll()
         except Exception as e:
             logger.exception(e)
             raise SystemExit(f'Emergency shutdown')
