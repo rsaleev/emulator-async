@@ -140,10 +140,11 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
                     open_date=timezone.now(), total_docs=0)
             states_task = States.filter(id=1).update(mode=2)
             await asyncio.gather(shift_task, states_task)
-            asyncio.ensure_future(cls._flush_receipts(response.shift_number))
+            asyncio.ensure_future(cls._flush_receipts(response))
+            return response
 
     @classmethod
-    async def _flush_receipts(cls, shift_number):
+    async def _flush_receipts(cls,response):
         logger.debug('Printing report reportrchiving receipts')
         try:
             receipts = await Receipt.all()
@@ -159,7 +160,7 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
                                             tax_percent=receipt.tax_percent,
                                             ack=receipt.ack,
                                             sent=receipt.sent,
-                                            shift_number=shift_number))
+                                            shift_number=response.ShiftNumber))
             await asyncio.gather(Receipt.all().delete(), ReceiptArchived.bulk_create(bulk))
         except Exception as e:
             logger.exception(e)
