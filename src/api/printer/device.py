@@ -21,9 +21,7 @@ class UsbDevice(DeviceImpl):
     connected = False
 
     READ_EXECUTOR = ThreadPoolExecutor(max_workers=1)
-    READ_LOCK = asyncio.Lock()
     WRITE_EXECUTOR = ThreadPoolExecutor(max_workers=1)
-    WRITE_LOCK = asyncio.Lock()
 
     vendor_id = int(os.environ.get('PRINTER_VENDOR_ID'),16) #type: ignore
     product_id =int(os.environ.get('PRINTER_PRODUCT_ID'),16) #type: ignore
@@ -81,8 +79,6 @@ class UsbDevice(DeviceImpl):
             else:
                 cls.connected = True
                 print('Init connected')
-                #ensure execution shutdown
-                executor.shutdown(wait=False)
 
     @classmethod
     async def _read(cls, size=None): 
@@ -117,8 +113,7 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            async with cls.WRITE_LOCK:
-                await loop.run_in_executor(cls.WRITE_EXECUTOR, cls.device.write, cls.endpoint_out.bEndpointAddress, data) #type:ignore
+            await loop.run_in_executor(cls.WRITE_EXECUTOR, cls.device.write, cls.endpoint_out.bEndpointAddress, data) #type:ignore
         except (usb.core.USBError, IOError) as e:
             raise DeviceIOError(e)
         except usb.core.USBTimeoutError as e:
@@ -237,7 +232,7 @@ class Printer(PrinterProto, Device):
                     try:
                         await self._impl._connect()
                     except DeviceConnectionError as e:
-                        logger.error(f'Connection error: {e}.Continue after 1 second')
+                        logger.debug(f'Connection error: {e}.Continue after 1 second')
                         await asyncio.sleep(1)
                         continue 
                     else:
@@ -260,24 +255,17 @@ class Printer(PrinterProto, Device):
         await self._impl._disconnect()
 
     async def reconnect(self):
-        count = 1
-        attempts = 100
         logger.warning('Reconnecting...')
         await States.filter(id=1).update(submode=1)
-        while self._impl.connected:
-            if not self.event.is_set() and count <=attempts:
-                try:
-                    logger.warning(f'Attempts ={count}')
-                    await self._impl._connect()
-                except Exception as e:
-                    logger.error(e)
-                    await asyncio.sleep(1)
-                    count+=1
-                    continue
-                else:
-                    break
-            else:        
-                logger.error(f'Reconnecting aborted. Max attempts exhausted ={attempts}')
+        while not self.event.is_set() and not self._impl.connected:
+            try:
+                await self._impl._connect()
+                logger.warning(f'Reconnected')
+            except Exception as e:
+                logger.error(e)
+                await asyncio.sleep(1)
+                continue
+            else:
                 break
                 
 
