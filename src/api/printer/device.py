@@ -234,6 +234,7 @@ class Printer(PrinterProto, Device):
                     except DeviceConnectionError as e:
                         logger.debug(f'Connection error: {e}.Continue after 1 second')
                         await asyncio.sleep(1)
+                        continue
                     else:
                         logger.info('Connection to printer established')
                         self.profile.profile_data['media']['width']['pixels'] = int(
