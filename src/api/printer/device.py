@@ -192,17 +192,17 @@ class SerialDevice(DeviceImpl):
     @classmethod
     async def _reconnect(cls):
         cls.connected = False 
-        while not cls.connected:
-            try:
-                cls.device.cancel_read()
-                cls.device.cancel_write()
-                cls.device.flushInput()
-                cls.device.flushOutput()
-                await cls._connect()
-            except Exception as e:
-                await asyncio.sleep(0.5)
-            else:
-                cls.connected = True
+        try:
+            cls.device.cancel_read()
+            cls.device.cancel_write()
+            cls.device.flushInput()
+            cls.device.flushOutput()
+            await cls._connect()
+        except Exception as e:
+            raise e
+        else:
+            cls.connected = True
+            
 
     @classmethod
     async def _disconnect(cls):
@@ -273,7 +273,8 @@ class Printer(PrinterProto, Device):
                 print('Reconnecting state IN',self._impl.connected)
                 await self._impl._reconnect()
                 print('Reconnecting states OUT', self._impl.connected)
-            except:
+            except Exception as e:
+                logger.error(e)
                 await asyncio.sleep(0.5)
                 continue
             else:
