@@ -63,6 +63,7 @@ class UsbDevice(DeviceImpl):
             cls.device.get_active_configuration()  #type: ignore
             raise DeviceConnectionError(f"Could not set configuration: {e}")
         try:
+            usb.util.release_interface(cls.device, interface)
             usb.util.claim_interface(cls.device, interface)
         except:
             logger.warning(DeviceConnectionError("Couldn't claim interface. Continue"))
@@ -286,7 +287,9 @@ class Printer(PrinterProto, Device):
                 logger.error(f'{e}. Reconnecting')            
                 fut = asyncio.ensure_future(self.reconnect())
                 if fut.done():
-                    break
+                    await asyncio.sleep(0.5)
+                    if self._impl.connected:
+                        continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
@@ -311,7 +314,8 @@ class Printer(PrinterProto, Device):
                 fut = asyncio.ensure_future(self.reconnect())
                 if fut.done():
                     await asyncio.sleep(0.5)
-                    continue
+                    if self._impl.connected:
+                        continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
