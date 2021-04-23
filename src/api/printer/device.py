@@ -126,10 +126,8 @@ class UsbDevice(DeviceImpl):
 
     @classmethod
     async def _reconnect(cls):
-        print('disposing')
         usb.util.dispose_resources(cls.device)
-        print('connecting')
-        asyncio.ensure_future(cls._connect())
+        await cls._connect()
 
     @classmethod
     async def _disconnect(cls):
@@ -264,7 +262,9 @@ class Printer(PrinterProto, Device):
     async def reconnect(self):
         await States.filter(id=1).update(submode=1)
         while not self.event.is_set():
+            print(self._impl.connected)
             await self._impl._reconnect()
+            print(self._impl.connected)
             if self._impl.connected:
                 break
             else:
@@ -284,11 +284,8 @@ class Printer(PrinterProto, Device):
                 self._impl.connected = False
                 logger.error(f'{e}. Reconnecting')            
                 fut = asyncio.ensure_future(self.reconnect())
-                while not fut.done():
-                    await asyncio.sleep(0.5)
-                else:
-                    if not fut.exception():
-                        continue
+                if fut.done() and not fut.exception():
+                    continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
@@ -311,11 +308,8 @@ class Printer(PrinterProto, Device):
                 self._impl.connected = False
                 logger.error(e)
                 fut = asyncio.ensure_future(self.reconnect())
-                while not fut.done():
-                    await asyncio.sleep(0.5)
-                else:
-                    if not fut.exception():
-                        continue
+                if fut.done() and not fut.exception():
+                    continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
