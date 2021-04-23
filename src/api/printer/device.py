@@ -2,6 +2,7 @@ import os
 import aioserial
 import asyncio
 import usb
+import time
 from concurrent.futures import ThreadPoolExecutor
 from src import config
 from binascii import hexlify
@@ -55,12 +56,17 @@ class UsbDevice(DeviceImpl):
                 cls.device.detach_kernel_driver(0)#type: ignore
             if cls.device.is_kernel_driver_active(1):#type: ignore
                 cls.device.detach_kernel_driver(1)#type: ignore
-            try:
-                cls.device.set_configuration() #type: ignore
-                #type: ignore
-            except usb.core.USBError as e:
-                #cls.device.get_active_configuration()  #type: ignore
-                raise DeviceConnectionError(f"Could not set configuration: {e}")
+            while not cls.connected:
+                try:
+                    cls.device.set_configuration() #type: ignore
+                    #type: ignore
+                except usb.core.USBError as e:
+                    logger.error(f"Could not set configuration: {e}")
+                    cls.device.reset()
+                    time.sleep(1)
+                    continue
+                finally:
+                    cls.device.get_active_configuration()  #type: ignore 
             try:
                 usb.util.release_interface(cls.device, interface)
                 usb.util.claim_interface(cls.device, interface)
