@@ -86,7 +86,7 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            with cls.READ_LOCK:
+            async with cls.READ_LOCK:
                 output = await loop.run_in_executor(cls.READ_EXECUTOR, cls.device.read, cls.endpoint_in.bEndpointAddress, cls.endpoint_in.wMaxPacketSize, cls.read_timeout) #type: ignore
         except (usb.core.USBError, IOError) as e:
             raise DeviceIOError(e)
@@ -107,7 +107,7 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            with cls.WRITE_LOCK:
+            async with cls.WRITE_LOCK:
                 await loop.run_in_executor(cls.WRITE_EXECUTOR, cls.device.write, cls.endpoint_out.bEndpointAddress, data) #type:ignore
         except (usb.core.USBError, IOError) as e:
             raise DeviceIOError(e)
@@ -146,8 +146,6 @@ class SerialDevice(DeviceImpl):
 
     device = None 
     connected = False
-
-    LOCK = asyncio.Lock()
 
     @classmethod
     def _open(cls):
