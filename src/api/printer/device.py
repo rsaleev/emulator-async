@@ -261,7 +261,7 @@ class Printer(PrinterProto, Device):
 
     async def reconnect(self):
         count = 1
-        attempts = 5
+        attempts = 100
         logger.warning('Reconnecting...')
         await States.filter(id=1).update(submode=1)
         while self._impl.connected:
