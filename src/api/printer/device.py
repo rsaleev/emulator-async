@@ -43,30 +43,31 @@ class UsbDevice(DeviceImpl):
         cls.device = usb.core.find(
             idVendor= cls.vendor_id,
             idProduct=cls.product_id)
-        if cls.device is None:
+        if not cls.device:
             raise DeviceConnectionError("Device not found or cable not plugged in.")
-        try:
-            usb.util.dispose_resources(cls.device)
-        except:
-            raise DeviceConnectionError("Couldn't dispose resources")
-        interface = 0
-        if cls.device.is_kernel_driver_active(0):#type: ignore
-            cls.device.detach_kernel_driver(0)#type: ignore
-        if cls.device.is_kernel_driver_active(1):#type: ignore
-            cls.device.detach_kernel_driver(1)#type: ignore
-        try:
-            cls.device.set_configuration() #type: ignore
-            #type: ignore
-        except usb.core.USBError as e:
-            cls.device.get_active_configuration()  #type: ignore
-            raise DeviceConnectionError(f"Could not set configuration: {e}")
-        try:
-            usb.util.release_interface(cls.device, interface)
-            usb.util.claim_interface(cls.device, interface)
-        except:
-            logger.warning(DeviceConnectionError("Couldn't claim interface. Continue"))
-        cls.endpoint_in = cls.device[0][(0,0)][0] #type: ignore
-        cls.endpoint_out = cls.device[0][(0,0)][1] #type: ignore
+        else:
+            try:
+                usb.util.dispose_resources(cls.device)
+            except:
+                raise DeviceConnectionError("Couldn't dispose resources")
+            interface = 0
+            if cls.device.is_kernel_driver_active(0):#type: ignore
+                cls.device.detach_kernel_driver(0)#type: ignore
+            if cls.device.is_kernel_driver_active(1):#type: ignore
+                cls.device.detach_kernel_driver(1)#type: ignore
+            try:
+                cls.device.set_configuration() #type: ignore
+                #type: ignore
+            except usb.core.USBError as e:
+                #cls.device.get_active_configuration()  #type: ignore
+                raise DeviceConnectionError(f"Could not set configuration: {e}")
+            try:
+                usb.util.release_interface(cls.device, interface)
+                usb.util.claim_interface(cls.device, interface)
+            except:
+                logger.warning(DeviceConnectionError("Couldn't claim interface. Continue"))
+            cls.endpoint_in = cls.device[0][(0,0)][0] #type: ignore
+            cls.endpoint_out = cls.device[0][(0,0)][1] #type: ignore
 
     @classmethod
     async def _connect(cls):
@@ -264,7 +265,6 @@ class Printer(PrinterProto, Device):
                 await asyncio.sleep(1)
                 continue
             else:
-                self._impl.connected = True
                 break
                 
 
@@ -279,8 +279,9 @@ class Printer(PrinterProto, Device):
                 output = await self._impl._read(size)
             except (DeviceConnectionError, DeviceIOError) as e:
                 logger.error(f'{e}. Reconnecting')            
-                await self.reconnect()
-                break
+                task = asyncio.ensure_future(self.reconnect())
+                if task.done():
+                    continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
@@ -303,8 +304,9 @@ class Printer(PrinterProto, Device):
                 await self._impl._write(data)
             except (DeviceConnectionError, DeviceIOError) as e:
                 logger.error(f'{e}. Reconnecting')
-                await self.reconnect()
-                continue
+                task = asyncio.ensure_future(self.reconnect())
+                if task.done():
+                    continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
