@@ -79,7 +79,7 @@ class UsbDevice(DeviceImpl):
             else:
                 cls.connected = True
         print('connected')
-        
+
     @classmethod
     async def _read(cls, size=None): 
         """ 
@@ -129,7 +129,7 @@ class UsbDevice(DeviceImpl):
         print('disposing')
         usb.util.dispose_resources(cls.device)
         print('connecting')
-        await cls._connect()
+        asyncio.ensure_future(cls._connect())
 
     @classmethod
     async def _disconnect(cls):
