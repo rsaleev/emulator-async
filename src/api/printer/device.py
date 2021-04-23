@@ -249,6 +249,8 @@ class Printer(PrinterProto, Device):
                             await self.write(bytearray((0x1D, 0x65, 0x14)))
                         await States.filter(id=1).update(submode=0)
                         return self._impl 
+                else:
+                    break
             else:
                 logger.info("Connecton aborted")          
         else:
