@@ -61,7 +61,7 @@ class UsbDevice(DeviceImpl):
                     cls.device.set_configuration() #type: ignore
                     #type: ignore
                 except usb.core.USBError as e:
-                    logger.error(f"Could not set configuration: {e}")
+                    print(e)
                     cls.device.reset()
                     time.sleep(1)
                     continue
@@ -70,8 +70,8 @@ class UsbDevice(DeviceImpl):
             try:
                 usb.util.release_interface(cls.device, interface)
                 usb.util.claim_interface(cls.device, interface)
-            except:
-                logger.warning(DeviceConnectionError("Couldn't claim interface. Continue"))
+            except Exception as e:
+                print(e)
             cls.endpoint_in = cls.device[0][(0,0)][0] #type: ignore
             cls.endpoint_out = cls.device[0][(0,0)][1] #type: ignore
 
