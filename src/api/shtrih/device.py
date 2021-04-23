@@ -32,6 +32,8 @@ class SerialDevice(DeviceImpl):
     async def _connect(cls):
         try:
             await cls._open()
+            cls.device.flushInput()
+            cls.device.flushOutput()
         except Exception as e:
             raise e
         else:
@@ -129,7 +131,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
         while not self._impl.connected:
             if not self.event.is_set():
                 try:
-                    await self._impl._reconnect()
+                    await self._impl._connect()
                 except:
                     await asyncio.sleep(0.5)
                     continue
@@ -148,7 +150,8 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 logger.error(f'{e}. Reconnecting')            
                 self._impl.connected = False
                 await self.reconnect()
-                continue
+                if self._impl.connected:
+                    continue
             except DeviceTimeoutError as e:
                 logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
                 await asyncio.sleep(0.5)
@@ -168,7 +171,8 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 logger.error(f'{e}. Reconnecting')            
                 self._impl.connected = False
                 await self.reconnect()
-                continue
+                if self._impl.connected:
+                    continue
             except DeviceTimeoutError as e:
                 logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
                 await asyncio.sleep(0.2)
@@ -186,8 +190,10 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 else:
                     await asyncio.sleep(0.1)
             except (OSError, DeviceConnectionError, DeviceIOError):
+                self._impl.connected = False
                 await self.reconnect()
-                continue
+                if self._impl.connected:
+                    continue
     
           
         
