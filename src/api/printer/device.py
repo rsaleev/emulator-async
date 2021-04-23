@@ -260,15 +260,18 @@ class Printer(PrinterProto, Device):
         await self._impl._disconnect()
 
     async def reconnect(self):
+        count = 0 
+        attempts = 5
         logger.warning('Reconnecting...')
         await States.filter(id=1).update(submode=1)
         while self._impl.connected:
-            if not self.event.is_set():
+            if not self.event.is_set() and count <=attempts:
                 try:
                     await self._impl._connect()
                 except Exception as e:
                     logger.error(e)
                     await asyncio.sleep(1)
+                    count+=1
                     continue
                 else:
                     break
