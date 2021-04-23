@@ -126,8 +126,7 @@ class UsbDevice(DeviceImpl):
 
     @classmethod
     async def _reconnect(cls):
-        print('disposing resources')
-        usb.util.dispose_resources(cls.device)
+        print('Internal reconnection')
         await cls._connect()
 
     @classmethod
