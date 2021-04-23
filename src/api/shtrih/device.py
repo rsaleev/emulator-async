@@ -1,5 +1,6 @@
 import asyncio
 from concurrent.futures.thread import ThreadPoolExecutor
+from typing import Coroutine
 import aioserial
 import os
 from serial.serialutil import SerialException, SerialTimeoutException
@@ -16,7 +17,7 @@ class SerialDevice(DeviceImpl):
     connected = False
 
     @classmethod
-    def _open(cls):
+    async def _open(cls):
         try:
             cls.device = aioserial.AioSerial(
                 port=os.environ.get("PAYKIOSK_PORT"), 
@@ -94,8 +95,11 @@ class Paykiosk(Device, ShtrihProtoInterface):
             while not self._impl.connected:
                 if not self.event.is_set():
                     try:
-                        with ThreadPoolExecutor(max_workers=1) as executor:
-                            await loop.run_in_executor(executor, self._impl._open)
+                        if isinstance(self._impl._open, asyncio.Future):
+                            await self._impl._open()
+                        else:
+                            with ThreadPoolExecutor(max_workers=1) as executor:
+                                await loop.run_in_executor(executor, self._impl._open)
                     except (asyncio.TimeoutError,DeviceConnectionError) as e:
                         logger.error(f'Connection error: {e}.Continue after 1 second')
                         await asyncio.sleep(1)
