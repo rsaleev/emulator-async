@@ -203,8 +203,6 @@ class SerialDevice(DeviceImpl):
     @classmethod
     async def _disconnect(cls):
         try:
-            cls.device.cancel_read()
-            cls.device.cancel_write()
             cls.device.flushOutput()
             cls.device.flushInput()
             cls.device.flush()
