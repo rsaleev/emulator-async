@@ -91,10 +91,10 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
             logger.error(exc)
         else:
             doc = fromstring(render.result())
-            asyncio.create_task(cls._render_print(doc))
+            asyncio.create_task(cls._print_check(doc))
 
     @classmethod
-    async def _render_print(cls,doc):
+    async def _print_check(cls,doc):
         try:
             await PrintXML.handle(doc)
             await asyncio.sleep(0.1)

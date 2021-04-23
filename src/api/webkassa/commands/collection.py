@@ -1,3 +1,4 @@
+from src.api.printer.commands.querying import ClearBuffer
 from src.api.webkassa.exceptions import * 
 from src.db.models import Token, Shift, States
 from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
@@ -61,6 +62,7 @@ class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
             await PrintXML.handle(doc)
             await asyncio.sleep(0.1)
             await CutPresent.handle()
+            await ClearBuffer.handle()
 
     @classmethod
     async def exc_handler(cls, exc, payload):

@@ -1,5 +1,5 @@
 import asyncio
-from src.api.printer.commands.querying import CheckPrinting
+from src.api.printer.commands.querying import CheckPrinting, ClearBuffer
 from tortoise import timezone
 from xml.etree.ElementTree import fromstring
 
@@ -51,16 +51,18 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
         name = response.TaxPayerName  #type: ignore
         name.replace(u'\u201c', '"')
         name.replace(u'\u201d', '"')
-        try:
-            render = template.render(report_type='СМЕННЫЙ Z-ОТЧЕТ',
+        render = asyncio.create_task(template.render_async(report_type='СМЕННЫЙ Z-ОТЧЕТ',
                                 horizontal_delimiter='-',
                                 response=response,
                                 company_name=name,
-                                tab=' ')
-        except Exception as e:
-            logger.exception(e)
+                                tab=' '))
+        while not render.done():
+            await asyncio.sleep(0.02)
+        exc = render.exception()
+        if exc:
+            logger.error(exc)
         else:
-            doc = fromstring(render)
+            doc = fromstring(render.result())
             asyncio.create_task(cls._print_report(doc))
 
     
@@ -68,9 +70,11 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
     async def _print_report(cls, doc):
         logger.debug('Printing report')
         await PrintXML.handle(doc)
+        await asyncio.sleep(0.1)
         await PrintBuffer.handle()
+        await asyncio.sleep(0.1)
         await CutPresent.handle()
-        await CheckPrinting.handle()
+        await ClearBuffer.handle()
 
 
     @classmethod
@@ -216,26 +220,30 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
         name = response.TaxPayerName  #type: ignore
         name.replace(u'\u201c', '"')
         name.replace(u'\u201d', '"')
-        try:
-            render = template.render(report_type='СМЕННЫЙ Х-ОТЧЕТ',
-                                horizontal_delimiter='-',
-                                response=response,
-                                company_name=name,
-                                tab=' ')
-        except Exception as e:
-            logger.exception(e)
+        render = asyncio.create_task(template.render_async(report_type='СМЕННЫЙ Х-ОТЧЕТ',
+                            horizontal_delimiter='-',
+                            response=response,
+                            company_name=name,
+                            tab=' '))
+        while not render.done():
+            await asyncio.sleep(0.02)
+        exc = render.exception()
+        if exc:
+            logger.error(exc)
         else:
-            doc = fromstring(render)
-            print(doc)
+            doc = fromstring(render.result())
             asyncio.create_task(cls._print_report(doc))
+
 
     @classmethod
     async def _print_report(cls, doc):        
         logger.debug('Printing report')
         await PrintXML.handle(doc)
+        await asyncio.sleep(0.1)
         await PrintBuffer.handle()
+        await asyncio.sleep(0.1)
         await CutPresent.handle()
-        await CheckPrinting.handle()
+        await ClearBuffer.handle()
 
     @classmethod
     async def exc_handler(cls, exc, payload):
