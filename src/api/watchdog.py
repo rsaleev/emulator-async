@@ -36,7 +36,7 @@ class Watchdog:
             if shift.total_docs ==0:
                 logger.warning('Autoclosing shift by timer. No documents in this shift')
                 states.update_from_dict({'mode':2}),
-                shift.update_from_dict.update({'open_date':timezone.now()})
+                shift.update_from_dict({'open_date':timezone.now()})
                 asyncio.ensure_future(states.save())
                 asyncio.ensure_future(shift.save())
             else:
