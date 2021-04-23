@@ -67,10 +67,17 @@ class UsbDevice(DeviceImpl):
             logger.warning(DeviceConnectionError("Couldn't claim interface. Continue"))
         cls.endpoint_in = cls.device[0][(0,0)][0] #type: ignore
         cls.endpoint_out = cls.device[0][(0,0)][1] #type: ignore
-        cls.connected = True
 
-
-    
+    @classmethod
+    async def _connect(cls):
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            try:
+                await loop.run_in_executor(executor, cls._open)
+            except Exception as e:
+                raise e
+            else:
+                cls.connected = True
     @classmethod
     async def _read(cls, size=None): 
         """ 
@@ -131,24 +138,17 @@ class UsbDevice(DeviceImpl):
 
     @classmethod
     async def _reconnect(cls):
-        cls.connected = False
-        # clear app resources
         usb.util.dispose_resources(cls.device)
-        loop = asyncio.get_event_loop()
         while not cls.connected:
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                await loop.run_in_executor(executor, cls._open)
-                await asyncio.sleep(0.2)
-
-                
-
+            await cls._connect()
+            
 class SerialDevice(DeviceImpl):
 
     device = None 
     connected = False
 
     @classmethod
-    def _open(cls):
+    async def _open(cls):
         try:
             cls.device = aioserial.AioSerial(
                 port=os.environ.get("PRINTER_PORT"), 
@@ -163,6 +163,15 @@ class SerialDevice(DeviceImpl):
         else:
             cls.device.flushOutput()
             cls.device.flushInput()
+
+
+    @classmethod
+    async def _connect(cls):
+        try:
+            await cls._open()
+        except Exception as e:
+            raise e
+        else:
             cls.connected = True
 
     @classmethod
@@ -186,12 +195,11 @@ class SerialDevice(DeviceImpl):
 
     @classmethod
     async def _reconnect(cls):
-        cls.connected = False
-        loop = asyncio.get_event_loop()
-        while not cls.connected:
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                await loop.run_in_executor(executor, cls._open)
-                await asyncio.sleep(0.2)
+        cls.device.cancel_read()
+        cls.device.cancel_write()
+        cls.device.flushInput()
+        cls.device.flushOutput()
+        await cls._connect()
 
     @classmethod
     async def _close(cls):
@@ -225,16 +233,13 @@ class Printer(PrinterProto, Device):
             self._impl = SerialDevice()
 
     async def connect(self):
-        loop = asyncio.get_running_loop()
         await States.filter(id=1).update(submode=1)
         logger.info(f'Connecting to printer device...')
         if self._impl:
-            while not self._impl.connected:
-                if not self.event.is_set():
+            while not self.event.is_set():
+                if not self._impl.connected:
                     try:
-                        # non-blocking
-                        with ThreadPoolExecutor(max_workers=1) as executor:
-                            await loop.run_in_executor(executor, self._impl._open)
+                        await self._impl._connect()
                     except DeviceConnectionError as e:
                         logger.error(f'Connection error: {e}.Continue after 1 second')
                         await asyncio.sleep(1)
@@ -246,10 +251,11 @@ class Printer(PrinterProto, Device):
                         if config['printer']['presenter']['continuous']:
                             await self.write(bytearray((0x1D, 0x65, 0x14)))
                         await States.filter(id=1).update(submode=0)
-                        return self._impl   
+                        return self._impl 
                 else:
-                    logger.info("Connecton aborted")
-                    break          
+                    break
+            else:
+                logger.info("Connecton aborted")          
         else:
             logger.error('Implementation not found')
             raise DeviceConnectionError('Implementation not found')
@@ -259,7 +265,13 @@ class Printer(PrinterProto, Device):
 
     async def reconnect(self):
         await States.filter(id=1).update(submode=1)
-        await self._impl._reconnect()
+        while not self.event.is_set():
+            await self._impl._reconnect()
+            if self._impl.connected:
+                break
+            else:
+                await asyncio.sleep(0.5)
+                continue
 
     async def read(self, size:int):
         # 5 attempts to read requested bytes
