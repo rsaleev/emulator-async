@@ -59,8 +59,8 @@ class SerialDevice(DeviceImpl):
 
     @classmethod
     async def _reconnect(cls):
-        cls.device.cancel_write()
-        cls.device.cancel_read()
+        # cls.device.cancel_write()
+        # cls.device.cancel_read()
         cls.device.flushInput()
         cls.device.flushOutput()
         await cls._connect()
@@ -125,7 +125,15 @@ class Paykiosk(Device, ShtrihProtoInterface):
         self._impl._disconnect()
 
     async def reconnect(self):
-        await self._impl._reconnect()
+        while not self._impl.connected:
+            if not self.event.is_set():
+                try:
+                    await self._impl._reconnect()
+                except:
+                    await asyncio.sleep(0.5)
+                    continue
+            else:
+                break
         
     async def read(self, size:int):
         attempts = 5
