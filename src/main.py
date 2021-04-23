@@ -57,7 +57,7 @@ class Application:
             await cls.printer.connect()
             logger.warning('Printer initialized')
             logger.warning('Initializing serial connection')
-            await cls.fiscalreg.connect()
+            #await cls.fiscalreg.connect()
             logger.warning('Initializing serial connection done')
         except Exception as e:
             await logger.exception(e)
