@@ -60,6 +60,7 @@ class UsbDevice(DeviceImpl):
             cls.device.set_configuration() #type: ignore
             #type: ignore
         except usb.core.USBError as e:
+            usb.util.dispose_resources(cls.device)
             raise DeviceConnectionError(f"Could not set configuration: {e}")
         try:
             usb.util.claim_interface(cls.device, interface)

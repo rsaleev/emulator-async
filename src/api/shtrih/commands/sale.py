@@ -64,7 +64,7 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
         try:
             await States.filter(id=1).update(gateway=1)
         except Exception as e:
-            asyncio.ensure_future(logger.exception(e))
+            logger.exception(e)
             cls.set_error(3)
         else:
             cls.set_error(0)
