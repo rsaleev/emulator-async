@@ -1,4 +1,5 @@
 
+from src.api.printer.commands.querying import ClearBuffer
 import aiofiles
 import os
 import asyncio
@@ -76,31 +77,37 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         company = CompanyData(name=config['webkassa']['company']['name'],
                             inn=config['webkassa']['company']['inn'])
         template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
-        try:
-            render = template.render(
-                horizontal_delimiter='-',
-                dot_delimiter='.',
-                whitespace=' ',
-                company=company,
-                request=request,
-                response=response)
-        except Exception as e:
-            logger.exception(e)
+        render =asyncio.create_task(template.render_async(
+            horizontal_delimiter='-',
+            dot_delimiter='.',
+            whitespace=' ',
+            company=company,
+            request=request,
+            response=response))
+        while not render.done():
+            await asyncio.sleep(0.02)
+        exc = render.exception()
+        if exc:
+            logger.error(exc)
         else:
-            doc = fromstring(render)
+            doc = fromstring(render.result())
             asyncio.create_task(cls._render_print(doc))
 
     @classmethod
     async def _render_print(cls,doc):
         try:
             await PrintXML.handle(doc)
+            await asyncio.sleep(0.1)
             await PrintBuffer.handle()           
         except Exception as e:
             await logger.exception(e)
         else:
+            await asyncio.sleep(0.1)
             await CutPresent.handle()
             if config['webkassa']['receipt']['ensure']:
                 await CheckPrinting.handle()
+            else:
+                await ClearBuffer.handle()
 
     @classmethod
     async def exc_callback(cls, exc, payload):

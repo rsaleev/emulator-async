@@ -188,7 +188,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 if self._impl.device.in_waiting >0:
                     await self.consume()
                 else:
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.02)
             except (OSError, DeviceConnectionError, DeviceIOError):
                 self._impl.connected = False
                 await self.reconnect()
