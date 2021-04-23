@@ -71,8 +71,6 @@ class SerialDevice(DeviceImpl):
     @classmethod
     def _disconnect(cls):
         try:
-            cls.device.cancel_write()
-            cls.device.cancel_write()
             cls.device.flushInput()
             cls.device.flushOutput()
             cls.device.close()
