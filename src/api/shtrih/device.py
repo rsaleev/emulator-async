@@ -16,7 +16,7 @@ class SerialDevice(DeviceImpl):
     connected = False
 
     @classmethod
-    async def _open(cls):
+    def _open(cls):
         try:
             cls.device = aioserial.AioSerial(
                 port=os.environ.get("PAYKIOSK_PORT"), 
