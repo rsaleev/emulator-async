@@ -122,8 +122,17 @@ class UsbDevice(DeviceImpl):
             raise DeviceTimeoutError(e)
 
     @classmethod
-    async def _close(cls):
-        # graceful shutdown with clearance
+    def _close(cls):
+       pass
+
+    @classmethod
+    async def _reconnect(cls):
+        usb.util.dispose_resources(cls.device)
+        await cls._connect()
+
+    @classmethod
+    async def _disconnect(cls):
+         # graceful shutdown with clearance
         try:
             cls.WRITE_EXECUTOR.shutdown(wait=True)
             cls.READ_EXECUTOR.shutdown(wait=True)
@@ -135,16 +144,6 @@ class UsbDevice(DeviceImpl):
             cls.device.reset() #type: ignore
         except:
             pass
-
-    @classmethod
-    async def _reconnect(cls):
-        usb.util.dispose_resources(cls.device)
-        await cls._connect()
-
-    @classmethod
-    async def _disconnect(cls):
-        usb.util.dispose_resources(cls.device)
-        cls.device.reset() #type: ignore
             
 class SerialDevice(DeviceImpl):
 
@@ -259,7 +258,7 @@ class Printer(PrinterProto, Device):
             raise DeviceConnectionError('Implementation not found')
 
     async def disconnect(self):
-        await self._impl._close()
+        await self._impl._disconnect()
 
     async def reconnect(self):
         await States.filter(id=1).update(submode=1)

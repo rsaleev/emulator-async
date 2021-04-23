@@ -25,6 +25,10 @@ class SerialDevice(DeviceImpl):
             write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000))
      
     @classmethod
+    def _close(cls):
+        pass
+
+    @classmethod
     async def _connect(cls):
         try:
             await cls._open()
