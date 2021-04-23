@@ -127,8 +127,8 @@ class UsbDevice(DeviceImpl):
 
     @classmethod
     async def _reconnect(cls):
-        print('Internal reconnection')
         await cls._connect()
+        await asyncio.sleep(1)
 
     @classmethod
     async def _disconnect(cls):
