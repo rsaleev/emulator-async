@@ -55,21 +55,19 @@ class SerialDevice(DeviceImpl):
 
     @classmethod
     async def _reconnect(cls):
-        try:
-            cls.device.cancel_write()
-            cls.device.cancel_write()
-        except:
-            pass
-        loop = asyncio.get_running_loop()
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            await loop.run_in_executor(executor, cls._open)
-
+        cls.device.cancel_write()
+        cls.device.cancel_read()
+        cls.device.flushInput()
+        cls.device.flushOutput()
+        await cls._connect()
 
     @classmethod
-    def _close(cls):
+    def _disconnect(cls):
         try:
             cls.device.cancel_write()
             cls.device.cancel_write()
+            cls.device.flushInput()
+            cls.device.flushOutput()
             cls.device.close()
         except:
             pass
@@ -120,12 +118,11 @@ class Paykiosk(Device, ShtrihProtoInterface):
 
             
     async def disconnect(self):
-        self._impl._close()
+        self._impl._disconnect()
 
     async def reconnect(self):
         await self._impl._reconnect()
         
-
     async def read(self, size:int):
         attempts = 5
         count =0
