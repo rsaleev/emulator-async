@@ -80,6 +80,8 @@ class UsbDevice(DeviceImpl):
             else:
                 cls.connected = True
                 print('Init connected')
+                #ensure execution shutdown
+                executor.shutdown(wait=False)
 
     @classmethod
     async def _read(cls, size=None): 
