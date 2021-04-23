@@ -35,6 +35,7 @@ class SerialDevice(DeviceImpl):
         except Exception as e:
             raise e
         else:
+            print('Shtrih connected')
             cls.connected = True
 
     @classmethod
@@ -132,6 +133,8 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 except:
                     await asyncio.sleep(0.5)
                     continue
+                else:
+                    break
             else:
                 break
         
