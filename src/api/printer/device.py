@@ -262,14 +262,18 @@ class Printer(PrinterProto, Device):
     async def reconnect(self):
         await States.filter(id=1).update(submode=1)
         while not self.event.is_set():
-            print('Reconnecting state IN',self._impl.connected)
-            await self._impl._reconnect()
-            print('Reconnecting states OUT', self._impl.connected)
-            if self._impl.connected:
-                break
-            else:
+            try:
+                print('Reconnecting state IN',self._impl.connected)
+                await self._impl._reconnect()
+                print('Reconnecting states OUT', self._impl.connected)
+            except:
                 await asyncio.sleep(0.5)
                 continue
+            else:
+                if self._impl.connected:
+                    print('Reconnecting states OUT', self._impl.connected)
+                    break
+                
 
     async def read(self, size:int):
         # 5 attempts to read requested bytes
