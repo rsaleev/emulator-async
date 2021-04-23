@@ -61,7 +61,6 @@ class UsbDevice(DeviceImpl):
                     cls.device.set_configuration() #type: ignore
                     #type: ignore
                 except usb.core.USBError as e:
-                    print(e)
                     cls.device.reset()
                     time.sleep(1)
                     continue
@@ -310,7 +309,7 @@ class Printer(PrinterProto, Device):
             except (DeviceConnectionError, DeviceIOError) as e:
                 logger.error(f'{e}. Reconnecting')
                 await asyncio.create_task(self.reconnect())
-                continue
+                break
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
