@@ -201,6 +201,8 @@ class SerialDevice(DeviceImpl):
                 await cls._connect()
             except Exception as e:
                 await asyncio.sleep(0.5)
+            else:
+                cls.connected = True
 
     @classmethod
     async def _disconnect(cls):
@@ -275,9 +277,7 @@ class Printer(PrinterProto, Device):
                 await asyncio.sleep(0.5)
                 continue
             else:
-                if self._impl.connected:
-                    print('Reconnecting states OUT', self._impl.connected)
-                    break
+                break
                 
 
     async def read(self, size:int):
@@ -294,7 +294,7 @@ class Printer(PrinterProto, Device):
                 logger.error(f'{e}. Reconnecting')            
                 fut = asyncio.ensure_future(self.reconnect())
                 if fut.done():
-                    continue
+                    break
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
@@ -318,6 +318,7 @@ class Printer(PrinterProto, Device):
                 logger.error(e)
                 fut = asyncio.ensure_future(self.reconnect())
                 if fut.done():
+                    await asyncio.sleep(0.5)
                     continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
