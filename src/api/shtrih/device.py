@@ -24,8 +24,7 @@ class SerialDevice(DeviceImpl):
                 dsrdtr=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))), 
                 rtscts=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))),
                 timeout=float(int(os.environ.get("PAYKIOSK_READ_TIMEOUT",5000))/1000), #type_ignore
-                write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000), #type: ignore
-                loop=asyncio.get_running_loop())
+                write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000))
         except Exception as e:
             raise e 
         else:
