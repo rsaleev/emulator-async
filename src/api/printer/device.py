@@ -52,12 +52,14 @@ class UsbDevice(DeviceImpl):
             except:
                 raise DeviceConnectionError("Couldn't dispose resources")
             interface = 0
+            if cls.device.is_kernel_driver_active(0):#type: ignore
+                cls.device.detach_kernel_driver(0)#type: ignore
             if cls.device.is_kernel_driver_active(1):#type: ignore
-                interface = 1
-            cls.device.detach_kernel_driver(interface)#type: ignore
+                cls.device.detach_kernel_driver(1)#type: ignore
             while not cls.connected:
                 try:
-                    cls.device.set_configuration() #type: ignore
+                    cfg = cls.device.get_active_configuration()
+                    cls.device.set_configuration(cfg) #type: ignore
                     #type: ignore
                 except usb.core.USBError as e:
                     print(e)
