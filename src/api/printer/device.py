@@ -60,7 +60,7 @@ class UsbDevice(DeviceImpl):
             cls.device.set_configuration() #type: ignore
             #type: ignore
         except usb.core.USBError as e:
-            usb.util.dispose_resources(cls.device)
+            cls.device.get_active_configuration()  #type: ignore
             raise DeviceConnectionError(f"Could not set configuration: {e}")
         try:
             usb.util.claim_interface(cls.device, interface)
@@ -128,10 +128,9 @@ class UsbDevice(DeviceImpl):
        pass
 
     @classmethod
-    async def _reconnect(cls):
-        await cls._connect()
-        await asyncio.sleep(1)
-
+    async def _reconnect(cls): 
+        pass
+    
     @classmethod
     async def _disconnect(cls):
          # graceful shutdown with clearance
@@ -194,17 +193,7 @@ class SerialDevice(DeviceImpl):
 
     @classmethod
     async def _reconnect(cls):
-        cls.connected = False 
-        try:
-            cls.device.cancel_read()
-            cls.device.cancel_write()
-            cls.device.flushInput()
-            cls.device.flushOutput()
-            await cls._connect()
-        except Exception as e:
-            raise e
-        else:
-            cls.connected = True
+        pass
             
 
     @classmethod
@@ -270,15 +259,14 @@ class Printer(PrinterProto, Device):
         await self._impl._disconnect()
 
     async def reconnect(self):
+        logger.warning('Reconnecting...')
         await States.filter(id=1).update(submode=1)
         while not self.event.is_set():
             try:
-                print('Reconnecting state IN',self._impl.connected)
-                await self._impl._reconnect()
-                print('Reconnecting states OUT', self._impl.connected)
+                await self._impl._connect()
             except Exception as e:
                 logger.error(e)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1)
                 continue
             else:
                 break
