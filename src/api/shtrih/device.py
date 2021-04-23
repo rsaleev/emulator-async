@@ -16,16 +16,20 @@ class SerialDevice(DeviceImpl):
 
     @classmethod
     async def _open(cls):
+        cls.device = aioserial.AioSerial(
+            port=os.environ.get("PAYKIOSK_PORT"), 
+            baudrate=int(os.environ.get("PAYKIOSK_BAUDRATE")), #type: ignore
+            dsrdtr=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))), 
+            rtscts=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))),
+            timeout=float(int(os.environ.get("PAYKIOSK_READ_TIMEOUT",5000))/1000), #type_ignore
+            write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000))
+     
+    @classmethod
+    async def _connect(cls):
         try:
-            cls.device = aioserial.AioSerial(
-                port=os.environ.get("PAYKIOSK_PORT"), 
-                baudrate=int(os.environ.get("PAYKIOSK_BAUDRATE")), #type: ignore
-                dsrdtr=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))), 
-                rtscts=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))),
-                timeout=float(int(os.environ.get("PAYKIOSK_READ_TIMEOUT",5000))/1000), #type_ignore
-                write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000))
+            await cls._open()
         except Exception as e:
-            raise e 
+            raise e
         else:
             cls.connected = True
 
@@ -89,15 +93,10 @@ class Paykiosk(Device, ShtrihProtoInterface):
     async def connect(self):
         logger.info("Connecting to fiscalreg device...")
         if self._impl:
-            while not self._impl.connected:
-                if not self.event.is_set():
+            while not self.event.is_set():
+                if not self._impl.connected:
                     try:
-                        if inspect.iscoroutinefunction(self._impl._open):
-                            await self._impl._open()
-                        else:
-                            loop = asyncio.get_running_loop()
-                            with ThreadPoolExecutor(max_workers=1) as executor:
-                                await loop.run_in_executor(executor, self._impl._open)
+                        await self._impl._connect()
                     except (asyncio.TimeoutError,DeviceConnectionError) as e:
                         logger.error(f'Connection error: {e}.Continue after 1 second')
                         await asyncio.sleep(1)
@@ -111,8 +110,9 @@ class Paykiosk(Device, ShtrihProtoInterface):
                         logger.info("Connecton to fiscalreg device established")
                         break
                 else:
-                    logger.info("Connecton aborted")
                     break
+            else:
+                logger.info("Connecton aborted")
         else:
             logger.error('Implementation not found')
             raise DeviceConnectionError('Implementation not found')
