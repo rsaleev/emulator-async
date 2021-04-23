@@ -52,21 +52,21 @@ class UsbDevice(DeviceImpl):
             except:
                 raise DeviceConnectionError("Couldn't dispose resources")
             interface = 0
-            if cls.device.is_kernel_driver_active(0):#type: ignore
-                cls.device.detach_kernel_driver(0)#type: ignore
             if cls.device.is_kernel_driver_active(1):#type: ignore
-                cls.device.detach_kernel_driver(1)#type: ignore
+                interface = 1
+            cls.device.detach_kernel_driver(interface)#type: ignore
             while not cls.connected:
                 try:
                     cls.device.set_configuration() #type: ignore
                     #type: ignore
                 except usb.core.USBError as e:
+                    print(e)
                     cls.device.reset()
                     time.sleep(1)
                     continue
                 else:
                     try:
-                        #usb.util.release_interface(cls.device, interface)
+                        usb.util.release_interface(cls.device, interface)
                         usb.util.claim_interface(cls.device, interface)
                     except:
                         pass
@@ -81,6 +81,7 @@ class UsbDevice(DeviceImpl):
             try:
                 await loop.run_in_executor(executor, cls._open)
             except Exception as e:
+                await asyncio.sleep(0.5)
                 raise e
             else:
                 cls.connected = True
@@ -282,15 +283,17 @@ class Printer(PrinterProto, Device):
             try:
                 output = await self._impl._read(size)
             except (DeviceConnectionError, DeviceIOError) as e:
-                logger.error(f'{e}. Reconnecting')            
+                logger.error(e)            
                 await asyncio.create_task(self.reconnect())
-                break
+                continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
                     await asyncio.sleep(0.5)
                     count+=1
-                    continue          
+                    continue
+                else:
+                    break
             else:
                 logger.debug(f'INPUT: {hexlify(output, sep=":")}')
                 return output
@@ -306,15 +309,17 @@ class Printer(PrinterProto, Device):
             try:
                 await self._impl._write(data)
             except (DeviceConnectionError, DeviceIOError) as e:
-                logger.error(f'{e}. Reconnecting')
+                logger.error(e)
                 await asyncio.create_task(self.reconnect())
-                break
+                continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
                     await asyncio.sleep(0.5)
                     count+=1
-                    continue  
+                    continue
+                else:
+                    break
             else:
                 logger.debug(f'OUTPUT: {hexlify(data, sep=":")}')
                 break
