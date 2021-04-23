@@ -285,9 +285,8 @@ class Printer(PrinterProto, Device):
                 output = await self._impl._read(size)
             except (DeviceConnectionError, DeviceIOError) as e:
                 logger.error(f'{e}. Reconnecting')            
-                task = asyncio.ensure_future(self.reconnect())
-                if task.done():
-                    continue
+                await asyncio.create_task(self.reconnect())
+                break
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
@@ -310,9 +309,8 @@ class Printer(PrinterProto, Device):
                 await self._impl._write(data)
             except (DeviceConnectionError, DeviceIOError) as e:
                 logger.error(f'{e}. Reconnecting')
-                task = asyncio.ensure_future(self.reconnect())
-                if task.done():
-                    continue
+                await asyncio.create_task(self.reconnect())
+                continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
