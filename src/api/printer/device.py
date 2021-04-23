@@ -78,6 +78,8 @@ class UsbDevice(DeviceImpl):
                 raise e
             else:
                 cls.connected = True
+        print('connected')
+        
     @classmethod
     async def _read(cls, size=None): 
         """ 
@@ -93,14 +95,11 @@ class UsbDevice(DeviceImpl):
         """
         loop = asyncio.get_running_loop()
         try:
-            async with cls.READ_LOCK:
-                output = await loop.run_in_executor(cls.READ_EXECUTOR, cls.device.read, cls.endpoint_in.bEndpointAddress, cls.endpoint_in.wMaxPacketSize, cls.read_timeout) #type: ignore
+            return await loop.run_in_executor(cls.READ_EXECUTOR, cls.device.read, cls.endpoint_in.bEndpointAddress, cls.endpoint_in.wMaxPacketSize, cls.read_timeout) #type: ignore
         except (usb.core.USBError, IOError) as e:
             raise DeviceIOError(e)
         except  usb.core.USBTimeoutError as e:
             raise DeviceTimeoutError(e)
-        else:
-            return output
 
     @classmethod
     async def _write(cls, data:bytes):
@@ -127,7 +126,9 @@ class UsbDevice(DeviceImpl):
 
     @classmethod
     async def _reconnect(cls):
+        print('disposing')
         usb.util.dispose_resources(cls.device)
+        print('connecting')
         await cls._connect()
 
     @classmethod
