@@ -65,8 +65,8 @@ class UsbDevice(DeviceImpl):
                     cls.device.reset()
                     time.sleep(1)
                     continue
-                finally:
-                    cls.device.get_active_configuration()  #type: ignore 
+                else:
+                    break  
             try:
                 usb.util.release_interface(cls.device, interface)
                 usb.util.claim_interface(cls.device, interface)
