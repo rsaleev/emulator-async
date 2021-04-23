@@ -1,12 +1,10 @@
 import asyncio
+import inspect
 from concurrent.futures.thread import ThreadPoolExecutor
-from typing import Coroutine
 import aioserial
 import os
 from serial.serialutil import SerialException, SerialTimeoutException
 from src.api.shtrih import logger
-from serial.tools import list_ports
-from itertools import groupby
 from src.api.device import Device, DeviceImpl, DeviceIOError, DeviceConnectionError, DeviceTimeoutError
 from src.api.shtrih.protocol import ShtrihProtoInterface
 from binascii import hexlify
@@ -90,14 +88,14 @@ class Paykiosk(Device, ShtrihProtoInterface):
 
     async def connect(self):
         logger.info("Connecting to fiscalreg device...")
-        loop = asyncio.get_running_loop()
         if self._impl:
             while not self._impl.connected:
                 if not self.event.is_set():
                     try:
-                        if isinstance(self._impl._open, asyncio.Future):
+                        if inspect.iscoroutinefunction(self._impl._open):
                             await self._impl._open()
                         else:
+                            loop = asyncio.get_running_loop()
                             with ThreadPoolExecutor(max_workers=1) as executor:
                                 await loop.run_in_executor(executor, self._impl._open)
                     except (asyncio.TimeoutError,DeviceConnectionError) as e:
