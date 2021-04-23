@@ -227,24 +227,21 @@ class Printer(PrinterProto, Device):
         await States.filter(id=1).update(submode=1)
         logger.info(f'Connecting to printer device...')
         if self._impl:
-            while not self.event.is_set() and not self._impl.connected:
-                try:
-                    await self._impl._connect()
-                except DeviceConnectionError as e:
-                    logger.debug(f'Connection error: {e}.Continue after 1 second')
-                    await asyncio.sleep(1)
-                    continue 
-                else:
-                    logger.info('Connection to printer established')
-                    self.profile.profile_data['media']['width']['pixels'] = int(
-                        os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
-                    if config['printer']['presenter']['continuous']:
-                        await self.write(bytearray((0x1D, 0x65, 0x14)))
-                    await States.filter(id=1).update(submode=0)
-                    return self._impl 
-                finally:
-                    if self.event.is_set():
-                        break
+            while not self.event.is_set():
+                if not self._impl.connected:
+                    try:
+                        await self._impl._connect()
+                    except DeviceConnectionError as e:
+                        logger.debug(f'Connection error: {e}.Continue after 1 second')
+                        await asyncio.sleep(1)
+                    else:
+                        logger.info('Connection to printer established')
+                        self.profile.profile_data['media']['width']['pixels'] = int(
+                            os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
+                        if config['printer']['presenter']['continuous']:
+                            await self.write(bytearray((0x1D, 0x65, 0x14)))
+                        await States.filter(id=1).update(submode=0)
+                        return self._impl 
             else:
                 logger.info("Connecton aborted")          
         else:
@@ -256,10 +253,10 @@ class Printer(PrinterProto, Device):
 
     async def reconnect(self):
         logger.warning('Reconnecting...')
-        await States.filter(id=1).update(submode=1)
+        self._impl.connected = False
         while not self.event.is_set() and not self._impl.connected:
             try:
-                await self._impl._connect()
+                await self.connect()
                 logger.warning(f'Reconnected')
             except Exception as e:
                 logger.error(e)
@@ -276,22 +273,27 @@ class Printer(PrinterProto, Device):
         count = 1
         # while not send an event flag
         while not self.event.is_set():
-            try:
-                output = await self._impl._read(size)
-            except (DeviceConnectionError, DeviceIOError) as e:
-                self._impl.connected = False
-                logger.error(f'{e}. Reconnecting')            
+            if self._impl.connected:
+                try:
+                    output = await self._impl._read(size)
+                except (DeviceConnectionError, DeviceIOError) as e:
+                    self._impl.connected = False
+                    logger.error(f'{e}. Reconnecting')            
+                    await self.reconnect()
+                    continue
+                except DeviceTimeoutError as e:
+                    if count <= attempts:
+                        logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
+                        await asyncio.sleep(0.5)
+                        count+=1
+                        continue          
+                else:
+                    logger.debug(f'INPUT: {hexlify(output, sep=":")}')
+                    return output
+            else:
                 await self.reconnect()
                 continue
-            except DeviceTimeoutError as e:
-                if count <= attempts:
-                    logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
-                    await asyncio.sleep(0.5)
-                    count+=1
-                    continue          
-            else:
-                logger.debug(f'INPUT: {hexlify(output, sep=":")}')
-                return output
+
 
     async def write(self, data:Union[bytearray, bytes]):
         # 5 attempts to write bytes
