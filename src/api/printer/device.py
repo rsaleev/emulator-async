@@ -227,24 +227,24 @@ class Printer(PrinterProto, Device):
         await States.filter(id=1).update(submode=1)
         logger.info(f'Connecting to printer device...')
         if self._impl:
-            while not self.event.is_set():
-                if not self._impl.connected:
-                    try:
-                        await self._impl._connect()
-                    except DeviceConnectionError as e:
-                        logger.debug(f'Connection error: {e}.Continue after 1 second')
-                        await asyncio.sleep(1)
-                        continue 
-                    else:
-                        logger.info('Connection to printer established')
-                        self.profile.profile_data['media']['width']['pixels'] = int(
-                            os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
-                        if config['printer']['presenter']['continuous']:
-                            await self.write(bytearray((0x1D, 0x65, 0x14)))
-                        await States.filter(id=1).update(submode=0)
-                        return self._impl 
+            while not self.event.is_set() and not self._impl.connected:
+                try:
+                    await self._impl._connect()
+                except DeviceConnectionError as e:
+                    logger.debug(f'Connection error: {e}.Continue after 1 second')
+                    await asyncio.sleep(1)
+                    continue 
                 else:
-                    break
+                    logger.info('Connection to printer established')
+                    self.profile.profile_data['media']['width']['pixels'] = int(
+                        os.environ.get("PRINTER_PAPER_WIDTH", 540))  #type:ignore
+                    if config['printer']['presenter']['continuous']:
+                        await self.write(bytearray((0x1D, 0x65, 0x14)))
+                    await States.filter(id=1).update(submode=0)
+                    return self._impl 
+                finally:
+                    if self.event.is_set():
+                        break
             else:
                 logger.info("Connecton aborted")          
         else:
@@ -281,11 +281,8 @@ class Printer(PrinterProto, Device):
             except (DeviceConnectionError, DeviceIOError) as e:
                 self._impl.connected = False
                 logger.error(f'{e}. Reconnecting')            
-                fut = asyncio.ensure_future(self.reconnect())
-                if fut.done():
-                    await asyncio.sleep(0.5)
-                    if self._impl.connected:
-                        continue
+                await self.reconnect()
+                continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
@@ -307,11 +304,8 @@ class Printer(PrinterProto, Device):
             except (DeviceConnectionError, DeviceIOError) as e:
                 self._impl.connected = False
                 logger.error(e)
-                fut = asyncio.ensure_future(self.reconnect())
-                if fut.done():
-                    await asyncio.sleep(0.5)
-                    if self._impl.connected:
-                        continue
+                await self.reconnect()
+                continue
             except DeviceTimeoutError as e:
                 if count <= attempts:
                     logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
