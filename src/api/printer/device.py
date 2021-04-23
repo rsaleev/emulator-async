@@ -78,7 +78,7 @@ class UsbDevice(DeviceImpl):
                 raise e
             else:
                 cls.connected = True
-        print('connected')
+                print('Init connected')
 
     @classmethod
     async def _read(cls, size=None): 
@@ -126,6 +126,7 @@ class UsbDevice(DeviceImpl):
 
     @classmethod
     async def _reconnect(cls):
+        print('disposing resources')
         usb.util.dispose_resources(cls.device)
         await cls._connect()
 
@@ -262,9 +263,9 @@ class Printer(PrinterProto, Device):
     async def reconnect(self):
         await States.filter(id=1).update(submode=1)
         while not self.event.is_set():
-            print(self._impl.connected)
+            print('Reconnecting state IN',self._impl.connected)
             await self._impl._reconnect()
-            print(self._impl.connected)
+            print('Reconnecting states OUT', self._impl.connected)
             if self._impl.connected:
                 break
             else:
