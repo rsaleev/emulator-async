@@ -139,8 +139,12 @@ class UsbDevice(DeviceImpl):
     @classmethod
     async def _reconnect(cls):
         usb.util.dispose_resources(cls.device)
-        while not cls.connected:
-            await cls._connect()
+        await cls._connect()
+
+    @classmethod
+    async def _disconnect(cls):
+        usb.util.dispose_resources(cls.device)
+        cls.device.reset() #type: ignore
             
 class SerialDevice(DeviceImpl):
 
@@ -149,21 +153,13 @@ class SerialDevice(DeviceImpl):
 
     @classmethod
     async def _open(cls):
-        try:
-            cls.device = aioserial.AioSerial(
-                port=os.environ.get("PRINTER_PORT"), 
-                baudrate=int(os.environ.get("PRINTER_BAUDRATE")), #type: ignore
-                dsrdtr=bool(int(os.environ.get("PRINTER_FLOW_CONTROL"))), #type: ignore
-                rtscts=bool(int(os.environ.get("PRINTER_FLOW_CONTROL"))), #type: ignore
-                write_timeout=float(int(os.environ.get("PRINTER_write_timeout"))/1000), #type: ignore
-                timeout=float(int(os.environ.get("PRINTER_read_timeout"))/1000), #type: ignore
-                loop=asyncio.get_running_loop())
-        except Exception as e:
-            logger.exception(e)
-        else:
-            cls.device.flushOutput()
-            cls.device.flushInput()
-
+        cls.device = aioserial.AioSerial(
+            port=os.environ.get("PRINTER_PORT"), 
+            baudrate=int(os.environ.get("PRINTER_BAUDRATE")), #type: ignore
+            dsrdtr=bool(int(os.environ.get("PRINTER_FLOW_CONTROL"))), #type: ignore
+            rtscts=bool(int(os.environ.get("PRINTER_FLOW_CONTROL"))), #type: ignore
+            write_timeout=float(int(os.environ.get("PRINTER_write_timeout"))/1000), #type: ignore
+            timeout=float(int(os.environ.get("PRINTER_read_timeout"))/1000)) #type: ignore
 
     @classmethod
     async def _connect(cls):
@@ -172,6 +168,8 @@ class SerialDevice(DeviceImpl):
         except Exception as e:
             raise e
         else:
+            cls.device.flushOutput()
+            cls.device.flushInput()
             cls.connected = True
 
     @classmethod
@@ -202,7 +200,7 @@ class SerialDevice(DeviceImpl):
         await cls._connect()
 
     @classmethod
-    async def _close(cls):
+    async def _disconnect(cls):
         try:
             cls.device.cancel_read()
             cls.device.cancel_write()
@@ -312,7 +310,7 @@ class Printer(PrinterProto, Device):
             except (DeviceConnectionError, DeviceIOError) as e:
                 self._impl.connected = False
                 logger.error(e)
-                fut = asyncio.ensure_future(self.connect())
+                fut = asyncio.ensure_future(self.reconnect())
                 while not fut.done():
                     await asyncio.sleep(0.5)
                 else:
