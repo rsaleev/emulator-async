@@ -260,13 +260,14 @@ class Printer(PrinterProto, Device):
         await self._impl._disconnect()
 
     async def reconnect(self):
-        count = 0 
+        count = 1
         attempts = 5
         logger.warning('Reconnecting...')
         await States.filter(id=1).update(submode=1)
         while self._impl.connected:
             if not self.event.is_set() and count <=attempts:
                 try:
+                    logger.warning(f'Attempts ={count}')
                     await self._impl._connect()
                 except Exception as e:
                     logger.error(e)
@@ -275,7 +276,8 @@ class Printer(PrinterProto, Device):
                     continue
                 else:
                     break
-            else:
+            else:        
+                logger.error(f'Reconnecting aborted. Max attempts exhausted ={attempts}')
                 break
                 
 
@@ -283,7 +285,7 @@ class Printer(PrinterProto, Device):
         # 5 attempts to read requested bytes
         attempts = 5
         # counter
-        count = 0
+        count = 1
         # while not send an event flag
         while not self.event.is_set():
             try:
@@ -310,7 +312,7 @@ class Printer(PrinterProto, Device):
         # 5 attempts to write bytes
         attempts = 5
         # counter
-        count = 0
+        count = 1
         while not self.event.is_set():
             try:
                 await self._impl._write(data)
