@@ -65,12 +65,12 @@ class UsbDevice(DeviceImpl):
                     time.sleep(1)
                     continue
                 else:
-                    break  
-            try:
-                usb.util.release_interface(cls.device, interface)
-                usb.util.claim_interface(cls.device, interface)
-            except Exception as e:
-                print(e)
+                    try:
+                        #usb.util.release_interface(cls.device, interface)
+                        usb.util.claim_interface(cls.device, interface)
+                    except:
+                        pass
+                    break
             cls.endpoint_in = cls.device[0][(0,0)][0] #type: ignore
             cls.endpoint_out = cls.device[0][(0,0)][1] #type: ignore
 
