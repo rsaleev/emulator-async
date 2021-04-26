@@ -1,4 +1,5 @@
 import asyncio
+from re import S
 import struct
 from uuid import uuid4
 from tortoise.functions import Max
@@ -117,6 +118,48 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(change)
         return arr
         
+class AdvancedCloseReceipt(ShtrihCommand, ShtrihCommandInterface):
+    _length = bytearray((0x08,))# B[1] LEN - 1 byte
+    _command_code = bytearray((0x8E,)) #B[2] - 1 byte
+
+    @classmethod
+    async def handle(cls, payload:bytearray):
+        change = bytearray((0x00,0x00,0x00,0x00,0x00))
+        payment_type = 0
+        payment = 0
+        cash = struct.unpack('<iB', payload[4:9])[0]//10**2
+        cc = struct.unpack('<iB', payload[9:14])[0]//10**2
+        if cash >0:
+            payment = cash
+        elif cc >0:
+            payment = cc
+            payment_type = 1
+        else:
+            cls.set_error(0x03)
+        receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
+        if payment >0 and receipt.id :
+            change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
+            await receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
+            asyncio.ensure_future(receipt.save())
+            asyncio.ensure_future(States.filter(id=1).update(mode=8))
+            asyncio.create_task(PrintDeferredBytes.handle())
+            try:
+                await WebkassaClientSale.handle(receipt)
+            except:
+                cls.set_error(0x03)
+            else:
+                cls.set_error(0x00) 
+        else:
+            asyncio.ensure_future(logger.error('No payment data'))
+            cls.set_error(0x03)
+        arr = bytearray()
+        arr.extend(cls._length)
+        arr.extend(cls._command_code)
+        arr.extend(cls._error_code)
+        arr.extend(cls._password)
+        arr.extend(change)
+        return arr
+
 
 
 
