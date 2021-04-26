@@ -26,7 +26,13 @@ class SerialDevice(DeviceImpl):
      
     @classmethod
     def _close(cls):
-        pass
+        try:
+            cls.device.flushOutput()
+            cls.device.flushInput()
+            cls.device.flush()
+            cls.device.close()
+        except:
+            pass
 
     @classmethod
     async def _connect(cls):
@@ -61,21 +67,12 @@ class SerialDevice(DeviceImpl):
             raise DeviceTimeoutError(e)
 
     @classmethod
-    async def _reconnect(cls):
-        # cls.device.cancel_write()
-        # cls.device.cancel_read()
-        cls.device.flushInput()
-        cls.device.flushOutput()
-        await cls._connect()
-
-    @classmethod
-    def _disconnect(cls):
-        try:
-            cls.device.flushInput()
-            cls.device.flushOutput()
-            cls.device.close()
-        except:
-            pass
+    async def _disconnect(cls):
+        await cls.device._cancel_read_async()
+        await cls.device._cancel_write_async()
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            await loop.run_in_executor(executor, cls._close)
 
 class Paykiosk(Device, ShtrihProtoInterface):
 
@@ -120,10 +117,8 @@ class Paykiosk(Device, ShtrihProtoInterface):
             logger.error('Implementation not found')
             raise DeviceConnectionError('Implementation not found')
 
-
-            
     async def disconnect(self):
-        self._impl._disconnect()
+        await self._impl._disconnect()
 
     async def reconnect(self):
         while not self._impl.connected:
