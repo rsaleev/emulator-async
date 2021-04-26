@@ -4,7 +4,7 @@ import os
 import uvloop
 from src import logger, config
 from src.db.connector import DBConnector
-from src.db.models import Shift, States, Token
+from src.db.models import Shift, States
 from src.api.printer.device import Printer
 from src.api.shtrih.device import Paykiosk
 from src.api.watchdog import Watchdog
@@ -17,7 +17,6 @@ class Application:
     printer = Printer()
     fiscalreg = Paykiosk()
     watchdog = Watchdog()
-
 
     @classmethod
     async def signal_handler(cls, signal, loop):
