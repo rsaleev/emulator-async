@@ -28,14 +28,6 @@ class Device(ABC):
 class DeviceImpl(ABC):
 
     @abstractclassmethod
-    def _open(cls, *args:Any, **kwargs):
-        pass
-
-    @abstractclassmethod
-    async def _close(cls, *args:Any, **kwargs):
-        pass
-
-    @abstractclassmethod
     async def _read(cls, *args:Any, **kwargs):
         pass
 
@@ -45,10 +37,6 @@ class DeviceImpl(ABC):
 
     @abstractclassmethod
     async def _connect(cls):
-        pass
-    
-    @abstractclassmethod
-    async def _reconnect(cls):
         pass
 
     @abstractclassmethod
