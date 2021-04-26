@@ -1,7 +1,0 @@
-#!/bin/bash
-sqlite3 /home/ubuntu/emulator/webcassa.db <<EOF
-.timeout 2000
-UPDATE states SET '$1'='$2' WHERE id=1;
-.quit
-EOF
-
