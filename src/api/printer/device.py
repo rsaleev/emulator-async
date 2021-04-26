@@ -58,14 +58,16 @@ class UsbDevice(DeviceImpl):
                 cls.device.detach_kernel_driver(1)#type: ignore
             while not cls.connected:
                 try:
-                    cfg = cls.device.get_active_configuration()
+                    cfg = cls.device.get_active_configuration() #type: ignore
                     cls.device.set_configuration(cfg) #type: ignore
                     #type: ignore
-                except usb.core.USBError as e:
-                    cls.device.reset()
+                # ignore exception and proceed: reset device and get configuration again
+                except usb.core.USBError:
+                    cls.device.reset() #type: ignore
                     time.sleep(1)
                     continue
                 else:
+                    # try to claim same interface 
                     try:
                         usb.util.release_interface(cls.device, interface)
                         usb.util.claim_interface(cls.device, interface)
