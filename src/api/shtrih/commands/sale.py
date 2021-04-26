@@ -129,7 +129,7 @@ class OpenSale2(ShtrihCommand, ShtrihCommandInterface):
         try:
             count = struct.unpack('<i2B',payload[5:11])[0]//10**6
             price = struct.unpack('<iB', payload[11:16])[0]//10**2
-            tax_percent = config['webkassa']['taxgroup'][str(payload[27])]
+            tax_percent = config['webkassa']['taxgroup'][str(payload[26])]
             tax = round(price*count/(100+int(tax_percent))*tax_percent,2)
             receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
             if receipt.id: #type: ignore
