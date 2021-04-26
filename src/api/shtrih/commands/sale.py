@@ -120,22 +120,13 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         
 class AdvancedCloseReceipt(ShtrihCommand, ShtrihCommandInterface):
     _length = bytearray((0x08,))# B[1] LEN - 1 byte
-    _command_code = bytearray((0x8E,)) #B[2] - 1 byte
+    _command_code = bytearray((0xFF,0x46)) #B[2] - 1 byte
 
     @classmethod
     async def handle(cls, payload:bytearray):
         change = bytearray((0x00,0x00,0x00,0x00,0x00))
-        payment_type = 0
-        payment = 0
-        cash = struct.unpack('<iB', payload[4:9])[0]//10**2
-        cc = struct.unpack('<iB', payload[9:14])[0]//10**2
-        if cash >0:
-            payment = cash
-        elif cc >0:
-            payment = cc
-            payment_type = 1
-        else:
-            cls.set_error(0x03)
+        payment = struct.unpack('<iB', payload[11:16])[0]//10**2
+        payment_type = struct.unpack('<B', payload[16:17])[0]
         receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
         if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
