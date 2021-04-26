@@ -26,18 +26,20 @@ class Application:
         cls.watchdog.event.set()
         await logger.warning('Shutting down application')
         try:
-            await asyncio.wait_for(cls.db.disconnect(),0.5)
-            await asyncio.wait_for(cls.printer.disconnect(), 0.5)
-            await asyncio.wait_for(cls.fiscalreg.disconnect(), 0.5)
+            [task.cancel() for task in asyncio.all_tasks(loop)]
+            await asyncio.wait_for(asyncio.gather(
+                                                cls.printer.disconnect(),
+                                                cls.fiscalreg.disconnect(),
+                                                cls.db.disconnect()),1)
             await logger.shutdown()
         except:
-            [task.cancel() for task in asyncio.all_tasks(loop)]
             # perform eventloop shutdown
             try:
                 loop.stop()
                 loop.close()
             except:
                 pass
+        finally:
             os._exit(0)
 
 
@@ -60,10 +62,9 @@ class Application:
             await cls.fiscalreg.connect()
             logger.warning('Initializing serial connection done')
         except Exception as e:
-            await logger.exception(e)
-            raise SystemExit('Emergency shutdown')
+            raise SystemExit(f'Emergency shutdown: {e}')
         else:
-            await logger.warning('Application initialized.Serving')
+            logger.warning('Application initialized.Serving')
 
     @classmethod
     async def serve(cls):
@@ -73,8 +74,7 @@ class Application:
                 asyncio.create_task(cls.watchdog.poll())
             await cls.fiscalreg.poll()
         except Exception as e:
-            logger.exception(e)
-            raise SystemExit(f'Emergency shutdown')
+            raise SystemExit(f'Emergency shutdown: {e}')
 
     @classmethod
     def run(cls):
