@@ -76,6 +76,20 @@ class UsbDevice(DeviceImpl):
             cls.endpoint_out = cls.device[0][(0,0)][1] #type: ignore
 
     @classmethod
+    def _close(cls):
+        try:
+            cls.WRITE_EXECUTOR.shutdown(wait=False)
+            cls.READ_EXECUTOR.shutdown(wait=False)
+        except:
+            pass
+        try:
+            #clear app resources
+            usb.util.dispose_resources(cls.device)
+            cls.device.reset() #type: ignore
+        except:
+            pass
+
+    @classmethod
     async def _connect(cls):
         loop = asyncio.get_running_loop()
         with ThreadPoolExecutor(max_workers=1) as executor:
@@ -86,7 +100,6 @@ class UsbDevice(DeviceImpl):
                 raise e
             else:
                 cls.connected = True
-                print('Init connected')
 
     @classmethod
     async def _read(cls, size=None): 
@@ -127,9 +140,7 @@ class UsbDevice(DeviceImpl):
         except usb.core.USBTimeoutError as e:
             raise DeviceTimeoutError(e)
 
-    @classmethod
-    def _close(cls):
-       pass
+    
 
     @classmethod
     async def _reconnect(cls): 
@@ -137,18 +148,11 @@ class UsbDevice(DeviceImpl):
     
     @classmethod
     async def _disconnect(cls):
-         # graceful shutdown with clearance
-        try:
-            cls.WRITE_EXECUTOR.shutdown(wait=True)
-            cls.READ_EXECUTOR.shutdown(wait=True)
-        except:
-            pass
-        try:
-            #clear app resources
-            usb.util.dispose_resources(cls.device)
-            cls.device.reset() #type: ignore
-        except:
-            pass
+        # graceful shutdown with clearance
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            await loop.run_in_executor(executor, cls._close)
+        
             
 class SerialDevice(DeviceImpl):
 
@@ -164,6 +168,16 @@ class SerialDevice(DeviceImpl):
             rtscts=bool(int(os.environ.get("PRINTER_FLOW_CONTROL"))), #type: ignore
             write_timeout=float(int(os.environ.get("PRINTER_write_timeout"))/1000), #type: ignore
             timeout=float(int(os.environ.get("PRINTER_read_timeout"))/1000)) #type: ignore
+
+    @classmethod
+    def _close(cls):
+        try:
+            cls.device.flushOutput()
+            cls.device.flushInput()
+            cls.device.flush()
+            cls.device.close()
+        except:
+            pass
 
     @classmethod
     async def _connect(cls):
@@ -199,17 +213,14 @@ class SerialDevice(DeviceImpl):
     async def _reconnect(cls):
         pass
             
-
     @classmethod
-    async def _disconnect(cls):
-        try:
-            cls.device.flushOutput()
-            cls.device.flushInput()
-            cls.device.flush()
-            cls.device.close()
-        except:
-            pass
-       
+    async def _disconnect(cls):        
+        await cls.device._cancel_read_async()
+        await cls.device._cancel_write_async()
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            await loop.run_in_executor(executor, cls._close)
+
 
 class Printer(PrinterProto, Device):
 
@@ -221,7 +232,6 @@ class Printer(PrinterProto, Device):
         self._impl = None
         self.discover()
         self.event = asyncio.Event()
-        
 
     def discover(self):
         if os.environ.get('PRINTER_TYPE') == 'USB':
@@ -271,7 +281,6 @@ class Printer(PrinterProto, Device):
             else:
                 break
                 
-
     async def read(self, size:int):
         # 5 attempts to read requested bytes
         attempts = 5
@@ -296,8 +305,6 @@ class Printer(PrinterProto, Device):
             else:
                 logger.debug(f'INPUT: {hexlify(output, sep=":")}')
                 return output
-          
-
 
     async def write(self, data:Union[bytearray, bytes]):
         # 5 attempts to write bytes
@@ -323,4 +330,3 @@ class Printer(PrinterProto, Device):
                 logger.debug(f'OUTPUT: {hexlify(data, sep=":")}')
                 break
                 
-               
