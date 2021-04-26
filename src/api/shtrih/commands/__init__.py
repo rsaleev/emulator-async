@@ -11,4 +11,4 @@ from src.api.shtrih.commands.collection import Deposit, Withdraw
 
 
 COMMANDS =[PrintDefaultLine, ZReport, XReport, OpenReceipt, OpenSale, OpenShift, CloseShift, SimpleCloseSale, AdvancedCloseReceipt
-            SubTotal, FullState, SerialNumber, Deposit, Withdraw, Cut, TableModif]
+            SubTotal, FullState, SerialNumber, Deposit, Withdraw, Cut, TableModify]
