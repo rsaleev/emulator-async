@@ -137,7 +137,7 @@ class WebcassaClient:
                 asyncio.ensure_future(logger.error(
                         f'Catched API error {repr(e)}. Attempt: {counter}. Continue'
                     ))
-                return 
+                raise e 
             except ConnectionError as e:
                 # when connection error occures: send request until connection will be established (until attempts will be exhausted)
                 counter += 1
