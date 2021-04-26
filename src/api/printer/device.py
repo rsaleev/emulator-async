@@ -62,7 +62,8 @@ class UsbDevice(DeviceImpl):
                     cls.device.set_configuration(cfg) #type: ignore
                     #type: ignore
                 # ignore exception and proceed: reset device and get configuration again
-                except usb.core.USBError:
+                except usb.core.USBError as e:
+                    print(e)
                     cls.device.reset() #type: ignore
                     time.sleep(1)
                     continue
