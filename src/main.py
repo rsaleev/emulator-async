@@ -43,6 +43,19 @@ class Application:
 
 
     @classmethod
+    async def _init_printer(cls):
+        logger.warning('Initializing printer')
+        await cls.printer.connect()
+        logger.warning('Printer initialized')
+
+    @classmethod 
+    async def _init_serial(cls):
+        logger.warning('Initializing serial connection')
+        await cls.fiscalreg.connect()
+        logger.warning('Initializing serial connection done')
+
+
+    @classmethod
     async def init(cls):
         await logger.warning('Initializing application...')
         try:
@@ -54,12 +67,7 @@ class Application:
             await WebkassaClientToken.handle()
             logger.warning('Initializing gateway done')
             logger.warning('Initializing devices')
-            logger.warning('Initializing printer')
-            await cls.printer.connect()
-            logger.warning('Printer initialized')
-            logger.warning('Initializing serial connection')
-            await cls.fiscalreg.connect()
-            logger.warning('Initializing serial connection done')
+            await asyncio.gather(cls._init_printer(), cls._init_serial())
         except Exception as e:
             raise SystemExit(f'Emergency shutdown: {e}')
         else:
