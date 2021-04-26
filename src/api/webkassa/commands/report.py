@@ -5,7 +5,7 @@ from xml.etree.ElementTree import fromstring
 
 from src import config
 from src.db.models import Shift, Token, States, Receipt, ReceiptArchived
-from src.api.webkassa.exceptions import ExpiredTokenError, ShiftAlreadyClosed, CredentialsError, UnrecoverableError, UnresolvedCommand
+from src.api.webkassa.exceptions import ExpiredTokenError, ShiftAlreadyClosed, CredentialsError, ShiftExceededTime, UnrecoverableError, UnresolvedCommand
 from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa.command import WebcassaCommand
 from src.api.webkassa.client import WebcassaClient
@@ -103,9 +103,10 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
     @classmethod
     async def exc_handler(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
-            asyncio.create_task(Shift.filter(id=1).update(open_date=timezone.now(),
-                                            total_docs=0))
-            asyncio.create_task(States.filter(id=1).update(mode=2))
+            await asyncio.gather(
+                                Shift.filter(id=1).update(open_date=timezone.now(),
+                                                            total_docs=0),
+                                States.filter(id=1).update(mode=2, gateway=1))
             return False
         elif isinstance(exc, CredentialsError):
             asyncio.create_task(States.filter(id=1).update(gateway=0))
@@ -172,10 +173,10 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
     @classmethod
     async def exc_callback(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
-            task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
-                                          total_docs=0)
-            task_states_modify = States.filter(id=1).update(mode=2)
-            await asyncio.gather(task_shift_modify, task_states_modify)
+            await asyncio.gather(
+                                Shift.filter(id=1).update(open_date=timezone.now(),
+                                                            total_docs=0),
+                                States.filter(id=1).update(mode=2, gateway=1))
             return False
         elif isinstance(exc, CredentialsError):
             try:
@@ -258,3 +259,8 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
                 return True
             except:
                 return False
+        elif isinstance(exc, ShiftExceededTime):
+            return False
+        elif isinstance(exc, ShiftAlreadyClosed):
+            return False
+        
