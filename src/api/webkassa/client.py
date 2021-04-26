@@ -135,7 +135,7 @@ class WebcassaClient:
                     raise e
             except (UnrecoverableError) as e:
                 asyncio.ensure_future(logger.error(
-                        f'Catched API error {repr(e)}. Attempt: {counter}. Continue'
+                        f'Catched API error {repr(e)}. Attempt: {counter}. Unrecoverable'
                     ))
                 raise e 
             except ConnectionError as e:
