@@ -62,7 +62,7 @@ class Application:
             # blocking step by step operations
             logger.warning('Initializing DB')
             await cls.db.connect()
-            await asyncio.gather(Shift.get_or_create(id=1), States.get_or_create(id=1))      
+            await asyncio.gather(Shift.get_or_create(id=1), States.get_or_create(id=1), return_exceptions=True)      
             logger.warning('Initializing gateway')
             await WebkassaClientToken.handle()
             logger.warning('Initializing gateway done')
