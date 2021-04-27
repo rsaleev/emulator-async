@@ -67,6 +67,8 @@ class WebcassaClient:
             raise CredentialsError(f'Code:{err.code} Msg:{err.text}')
         elif err.code == 2:
             raise ExpiredTokenError(f'Code:{err.code} Msh:{err.text}')
+        elif err.code == 12:
+            raise ShiftAlreadyClosed(f'Code:{err.code} Msh:{err.text}')
         elif err.code == 11:
             raise ShiftExceededTime(f'Code:{err.code} Msg:{err.text}')
         elif err.code == 14:

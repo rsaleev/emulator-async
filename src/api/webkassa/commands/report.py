@@ -101,6 +101,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
             asyncio.create_task(Shift.filter(id=1).update(open_date=timezone.now(),
                                             total_docs=0))
             asyncio.create_task(States.filter(id=1).update(mode=2))
+            asyncio.create_task(cls._flush_receipts(0))
             return False
         elif isinstance(exc, CredentialsError):
             asyncio.create_task(States.filter(id=1).update(gateway=0))
@@ -170,6 +171,7 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
                                           total_docs=0)
             task_states_modify = States.filter(id=1).update(mode=2)
             await asyncio.gather(task_shift_modify, task_states_modify)
+            asyncio.create_task(cls._flush_receipts(0))
             return False
         elif isinstance(exc, CredentialsError):
             try:
