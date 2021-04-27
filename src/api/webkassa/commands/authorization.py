@@ -30,7 +30,7 @@ class WebkassaClientToken(WebcassaClient):
             logger.error(e)
             return
         else:
-            asyncio.create_task(Token.filter(id=1).update(token=response.token, ts=timezone.now()))
+            await Token.filter(id=1).update(token=response.token, ts=timezone.now())
             return response.token
 
     @classmethod
