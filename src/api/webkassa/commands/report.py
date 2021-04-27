@@ -1,9 +1,4 @@
 import asyncio
-<<<<<<< HEAD
-from src.api.printer.commands.querying import ClearBuffer
-=======
-from src.api.printer.commands.querying import CheckPrinting, ClearBuffer
->>>>>>> origin/testing
 from tortoise import timezone
 from xml.etree.ElementTree import fromstring
 from src import config
@@ -15,7 +10,7 @@ from src.api.webkassa.client import WebcassaClient
 from src.api.webkassa.models import ZXReportRequest, ZXReportResponse
 from src.api.webkassa.commands.authorization import WebkassaClientToken
 from src.api.webkassa import logger
-from src.api.printer.commands import PrintXML, CutPresent, PrintBuffer, CheckPrinting
+from src.api.printer.commands import PrintXML, CutPresent, PrintBuffer, ClearBuffer
 
 class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
 
@@ -78,10 +73,6 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
         await asyncio.sleep(0.1)
         await CutPresent.handle()
         await ClearBuffer.handle()
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/testing
 
     @classmethod
     async def _flush_receipts(cls, response):
@@ -110,17 +101,10 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
     @classmethod
     async def exc_handler(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
-<<<<<<< HEAD
-            asyncio.create_task(Shift.filter(id=1).update(open_date=timezone.now(),
-                                            total_docs=0))
-            asyncio.create_task(States.filter(id=1).update(mode=2))
-            asyncio.create_task(cls._flush_receipts(0))
-=======
             await asyncio.gather(
                                 Shift.filter(id=1).update(open_date=timezone.now(),
                                                             total_docs=0),
                                 States.filter(id=1).update(mode=2, gateway=1))
->>>>>>> origin/testing
             return False
         elif isinstance(exc, CredentialsError):
             asyncio.create_task(States.filter(id=1).update(gateway=0))
@@ -163,13 +147,8 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
             return response
 
     @classmethod
-<<<<<<< HEAD
-    async def _flush_receipts(cls, shift_number):
-        logger.debug('Archiving receipts')
-=======
     async def _flush_receipts(cls,response):
-        logger.debug('Printing report reportrchiving receipts')
->>>>>>> origin/testing
+        logger.debug('Archiving receipts')
         try:
             receipts = await Receipt.all()
             bulk = []
@@ -192,18 +171,10 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
     @classmethod
     async def exc_callback(cls, exc, payload):
         if isinstance(exc, ShiftAlreadyClosed):
-<<<<<<< HEAD
-            task_shift_modify = Shift.filter(id=1).update(open_date=timezone.now(),
-                                          total_docs=0)
-            task_states_modify = States.filter(id=1).update(mode=2)
-            await asyncio.gather(task_shift_modify, task_states_modify)
-            asyncio.create_task(cls._flush_receipts(0))
-=======
             await asyncio.gather(
                                 Shift.filter(id=1).update(open_date=timezone.now(),
                                                             total_docs=0),
                                 States.filter(id=1).update(mode=2, gateway=1))
->>>>>>> origin/testing
             return False
         elif isinstance(exc, CredentialsError):
             try:
@@ -259,11 +230,7 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
         if exc:
             logger.error(exc)
         else:
-<<<<<<< HEAD
-            doc = fromstring(render)
-=======
             doc = fromstring(render.result())
->>>>>>> origin/testing
             asyncio.create_task(cls._print_report(doc))
 
 

@@ -2,6 +2,7 @@ import asyncio
 from tortoise import timezone
 from src.api.webkassa.client import WebcassaClient
 from src.api.webkassa.models import TokenGetRequest, TokenGetResponse
+from src.api.webkassa import logger
 from src import config
 from src.db.models import Token
 from src.api.webkassa.exceptions import CredentialsError, UnrecoverableError
@@ -19,20 +20,18 @@ class WebkassaClientToken(WebcassaClient):
         """
         request = TokenGetRequest(login=config['webkassa']['login'],
                                   password=config['webkassa']['password'])
-        response = await WebcassaClient.dispatch(
-            endpoint=cls.endpoint,
-            request_data=request,
-            response_model=TokenGetResponse, #type:ignore
-            exc_handler=cls.exc_handler)
-        if response:
-<<<<<<< HEAD
-            asyncio.create_task(Token.filter(id=1).update(token=response.token, ts=timezone.now()))
-=======
-            await Token.filter(id=1).update(token=response.token, ts=timezone.now())
->>>>>>> origin/testing
-            return response.token
+        try:
+            response = await WebcassaClient.dispatch(
+                endpoint=cls.endpoint,
+                request_data=request,
+                response_model=TokenGetResponse, #type:ignore
+                exc_handler=cls.exc_handler)
+        except Exception as e:
+            logger.error(e)
+            return
         else:
-            return 
+            asyncio.create_task(Token.filter(id=1).update(token=response.token, ts=timezone.now()))
+            return response.token
 
     @classmethod
     async def exc_handler(cls, exc, payload):

@@ -1,10 +1,7 @@
-<<<<<<< HEAD
-from src.api.printer.commands.querying import CheckPrinting, PrintBuffer
-=======
-from src.api.printer.commands.querying import ClearBuffer
->>>>>>> origin/testing
+
+from src.api.printer.commands.querying import PrintBuffer, ClearBuffer
 from src.api.webkassa.exceptions import * 
-from src.db.models import Token, Shift, States
+from src.db.models import Token, States
 from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa.command import WebcassaCommand
 from src.api.webkassa.client import WebcassaClient
@@ -44,25 +41,27 @@ class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
                                     request_data=request, 
                                     response_model=MoneyCollectionResponse, #type: ignore
                                     exc_handler=cls.exc_handler)
-            asyncio.create_task(cls._render_collection(request, response))
         except Exception as e:
-            await logger.exception(e)
-            return 
+            logger.exception(e)
+            raise e 
+        else:
+            asyncio.create_task(cls._render_collection(request, response))
 
     @classmethod
     async def _render_collection(cls, request, response):
         logger.debug('Rendering collection report')
-        try:
-            template = TEMPLATE_ENVIRONMENT.get_or_select_template('collection.xml')
-            render = template.render(
-                operation_type = request.operation_type,
-                request=request,
-                response=response)
-        except Exception as e:
-            logger.exception(e)
+        template = TEMPLATE_ENVIRONMENT.get_or_select_template('collection.xml')
+        render = asyncio.ensure_future(template.render_async(
+            operation_type = request.operation_type,
+            request=request,
+            response=response))
+        while not render.done():
+            await asyncio.sleep(0.2)
+        exc = render.exception()
+        if exc:
+            logger.error(exc)
         else:
-<<<<<<< HEAD
-            doc = fromstring(render)
+            doc = fromstring(render.result())
             asyncio.create_task(cls._print_collection(doc))
 
     @classmethod
@@ -71,14 +70,7 @@ class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
         await PrintXML.handle(doc)
         await PrintBuffer.handle()
         await CutPresent.handle()
-        await CheckPrinting.handle()
-=======
-            await asyncio.sleep(0.1)
-            await PrintXML.handle(doc)
-            await asyncio.sleep(0.1)
-            await CutPresent.handle()
-            await ClearBuffer.handle()
->>>>>>> origin/testing
+        await ClearBuffer.handle()
 
     @classmethod
     async def exc_handler(cls, exc, payload):
