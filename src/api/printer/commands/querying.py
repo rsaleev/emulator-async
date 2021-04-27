@@ -106,7 +106,10 @@ class PrintingStatusQuery(Printer):
 
     @classmethod
     def _get_printing_status(cls, v:int):
+       
         st = [int(elem) for elem in list(bin(v)[2:].zfill(8))] 
+        logger.debug(
+                f'AFTERPRINT BITS:{st}') #type: ignore
         if st[5] == 0:
             return True
         else:
