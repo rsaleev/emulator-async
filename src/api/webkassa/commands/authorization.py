@@ -30,7 +30,7 @@ class WebkassaClientToken(WebcassaClient):
             logger.error(e)
             return
         else:
-            await Token.update_or_create(id=1, token=response.token, ts=timezone.now())
+            await Token.filter(id=1).update(token=response.token, ts=timezone.now())
             return response.token
 
     @classmethod
