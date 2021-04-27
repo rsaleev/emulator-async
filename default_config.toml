@@ -94,6 +94,9 @@ attempts = 5
 inn = '' # ЗАПОЛНИТЬ
 name = '' # ЗАПОЛНИТЬ
 
+[webkassa.token]
+watchdog = true
+
 [webkassa.report]
 # Печать фискальных/нефискальных отчетов true-печтать/false-не печатать
 printable = true
