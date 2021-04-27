@@ -97,8 +97,6 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
             await logger.exception(e)
         else:
             await CutPresent.handle()
-            if config['webkassa']['receipt']['ensure']:
-                await CheckPrinting.handle()
 
     @classmethod
     async def exc_callback(cls, exc, payload):

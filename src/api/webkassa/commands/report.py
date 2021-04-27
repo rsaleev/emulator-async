@@ -232,7 +232,6 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
         await PrintXML.handle(doc)
         await PrintBuffer.handle()
         await CutPresent.handle()
-        await CheckPrinting.handle()
 
     @classmethod
     async def exc_handler(cls, exc, payload):

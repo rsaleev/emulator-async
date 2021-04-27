@@ -86,7 +86,6 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
             # if error occured -> return 0x200
             await PrintBuffer.handle()
             await CutPresent.handle()
-            await CheckPrinting.handle()
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
         else:
