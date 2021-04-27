@@ -106,13 +106,16 @@ class PrintingStatusQuery(Printer):
 
     @classmethod
     def _get_printing_status(cls, v:int):
-       
-        st = [int(elem) for elem in list(bin(v)[2:].zfill(8))] 
-        logger.debug(
-                f'AFTERPRINT BITS:{st}') #type: ignore
-        if st[5] == 0:
-            return True
-        else:
+        try:
+            st = [int(elem) for elem in list(bin(v)[2:].zfill(8))] 
+            logger.debug(
+                    f'AFTERPRINT BITS:{st}') #type: ignore
+            if st[5] == 0:
+                return True
+            else:
+                return False
+        except Exception as e:
+            logger.error(e)
             return False
 
 
@@ -155,6 +158,8 @@ class CheckPrinting(Printer):
         # check after printing errors
         while not Printer().event.is_set():
             after_printing_status = await PrintingStatusQuery.handle()
+            logger.debug(f'Afterprint check: {after_printing_status}')
+
             # no errors: True
             if after_printing_status:
                 # change submode=3: ready for next command 
@@ -162,6 +167,8 @@ class CheckPrinting(Printer):
                 Printer().buffer.clear()
                 break
             else:
+                logger.debug(f'Afterprint check attempt: {counter}')
+
                 if counter <= attempts:
                     await asyncio.sleep(0.5)
                     counter+=1
@@ -176,11 +183,16 @@ class CheckPrinting(Printer):
     
     @classmethod
     async def _afterprint(cls):
+        logger.debug(f'Afterprint check attempt: wait for recover')
+
         while not Printer().event.is_set():
             status = await PrinterFullStatusQuery.handle()
+            logger.debug(f'Afterprint check full status:{status}')
             if status:
                 asyncio.ensure_future(States.filter(id=1).update(submode=2))
                 await Printer().write(Printer().buffer.output)
+                logger.debug(f'Afterprint check :printing buffer')
+
                 Printer().buffer.clear()
                 await asyncio.gather(States.filter(id=1).update(submode=3),
                     CutPresent.handle())
