@@ -73,17 +73,10 @@ class Watchdog:
     async def poll(self):
         while not self.event.is_set():
             if config['emulator']['shift']['watchdog']:
-<<<<<<< HEAD
-                await self._check_shift()
-            if config['watchdog']['token']['watchdog']:
-                await self._token_check()
-        
-=======
                 asyncio.ensure_future(self._check_shift())
             if config['webkassa']['token']['watchdog']:
                 asyncio.ensure_future(self._token_check())
             await asyncio.sleep(1)
            
->>>>>>> origin/testing
         
     
