@@ -144,8 +144,7 @@ launch.*
 settings.*
 deployment/
 *.db.db-*
-webcassa*
-webassa.db
+webcassa.db
 webcassa.db-shm 
 webcassa.db-wal
 

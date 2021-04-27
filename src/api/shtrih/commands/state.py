@@ -116,7 +116,4 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._inn)
         return arr
 
-    @classmethod
-    async def _dispatch(cls) -> None:
-        pass
 

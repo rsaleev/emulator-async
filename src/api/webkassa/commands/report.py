@@ -1,8 +1,6 @@
 import asyncio
-from src.api.printer.commands.querying import CheckPrinting, ClearBuffer
 from tortoise import timezone
 from xml.etree.ElementTree import fromstring
-
 from src import config
 from src.db.models import Shift, Token, States, Receipt, ReceiptArchived
 from src.api.webkassa.exceptions import ExpiredTokenError, ShiftAlreadyClosed, CredentialsError, ShiftExceededTime, UnrecoverableError, UnresolvedCommand
@@ -12,7 +10,7 @@ from src.api.webkassa.client import WebcassaClient
 from src.api.webkassa.models import ZXReportRequest, ZXReportResponse
 from src.api.webkassa.commands.authorization import WebkassaClientToken
 from src.api.webkassa import logger
-from src.api.printer.commands import PrintXML, CutPresent, PrintBuffer
+from src.api.printer.commands import PrintXML, CutPresent, PrintBuffer, CheckPrinting, ClearBuffer
 
 class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
 
@@ -97,6 +95,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
                                             sent=receipt.sent,
                                             shift_num=response.ShiftNumber))
             await asyncio.gather(Receipt.all().delete(), ReceiptArchived.bulk_create(bulk, 10))
+
         except Exception as e:
             logger.exception(e)
 
@@ -149,8 +148,8 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
             return response
 
     @classmethod
-    async def _flush_receipts(cls,response):
-        logger.debug('Printing report reportrchiving receipts')
+    async def _flush_receipts(cls, shift_number):
+        logger.debug('Archiving receipts')
         try:
             receipts = await Receipt.all()
             bulk = []

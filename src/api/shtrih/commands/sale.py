@@ -28,10 +28,11 @@ class OpenSale(ShtrihCommand, ShtrihCommandInterface):
             # create record with empty ticket number
             else:
                 await Receipt.create(uid=uuid4(), ticket='', count=count, price=price, tax_percent=tax_percent, tax=tax)
+            await States.filter(id=1).update(mode=8)
             if not config['webkassa']['receipt']['header']:
                 asyncio.ensure_future(ClearBuffer.handle())
         except Exception as e:
-            asyncio.ensure_future(logger.exception(e))
+            logger.exception(e)
             cls.set_error(3)
         else:
             cls.set_error(0)
@@ -63,7 +64,7 @@ class CancelReceipt(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def handle(cls, payload:bytearray) -> bytearray:
         try:
-            await States.filter(id=1).update(gateway=1)
+            await States.filter(id=1).update(gateway=1, mode=2)
         except Exception as e:
             logger.exception(e)
             cls.set_error(3)

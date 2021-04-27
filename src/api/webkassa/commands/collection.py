@@ -1,4 +1,5 @@
-from src.api.printer.commands.querying import ClearBuffer
+
+from src.api.printer.commands.querying import CheckPrinting, PrintBuffer, ClearBuffer
 from src.api.webkassa.exceptions import * 
 from src.db.models import Token, Shift, States
 from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
@@ -47,22 +48,26 @@ class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
 
     @classmethod
     async def _render_collection(cls, request, response):
+        logger.debug('Rendering collection report')
         try:
             template = TEMPLATE_ENVIRONMENT.get_or_select_template('collection.xml')
-            render = await template.render_async(
+            render = template.render(
                 operation_type = request.operation_type,
                 request=request,
                 response=response)
-            await asyncio.sleep(0.1)
-            doc = fromstring(render)
         except Exception as e:
-            await logger.debug(e)
+            logger.exception(e)
         else:
-            await asyncio.sleep(0.1)
-            await PrintXML.handle(doc)
-            await asyncio.sleep(0.1)
-            await CutPresent.handle()
-            await ClearBuffer.handle()
+            doc = fromstring(render)
+            asyncio.create_task(cls._print_collection(doc))
+
+    @classmethod
+    async def _print_collection(cls, doc):
+        logger.debug('Printing collection report')
+        await PrintXML.handle(doc)
+        await PrintBuffer.handle()
+        await CutPresent.handle()
+        await CheckPrinting.handle()
 
     @classmethod
     async def exc_handler(cls, exc, payload):

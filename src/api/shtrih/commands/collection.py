@@ -12,7 +12,12 @@ class Withdraw(ShtrihCommand):
 
     @classmethod
     async def handle(cls, payload:bytearray) -> bytearray:
-        await WebkassaClientCollection.handle(payload, 0)
+        try:
+            await WebkassaClientCollection.handle(payload, 0)
+        except:
+            cls.set_error(32)
+        else:
+            cls.set_error(0)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -28,7 +33,12 @@ class Deposit(ShtrihCommand):
         
     @classmethod
     async def handle(cls, payload:bytearray):
-        await WebkassaClientCollection.handle(payload, 1)
+        try:
+            await WebkassaClientCollection.handle(payload, 1)
+        except:
+            cls.set_error(32)
+        else:
+            cls.set_error(0)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
