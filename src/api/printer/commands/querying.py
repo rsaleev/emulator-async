@@ -101,7 +101,7 @@ class PrintingStatusQuery(Printer):
             status = await Printer().read(40)
         logger.debug(
                 f'AFTERPRINT:{status}') #type: ignore
-        output = cls._get_printing_status(status[2]) #type: ignore
+        output = cls._get_printing_status(status[0]) #type: ignore
         return output
 
     @classmethod
