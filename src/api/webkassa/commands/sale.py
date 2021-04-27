@@ -1,4 +1,5 @@
 
+from src.api.printer.commands.querying import ClearBuffer
 import aiofiles
 import os
 import asyncio
@@ -97,6 +98,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
             await logger.exception(e)
         else:
             await CutPresent.handle()
+            await ClearBuffer.handle()
 
     @classmethod
     async def exc_callback(cls, exc, payload):
