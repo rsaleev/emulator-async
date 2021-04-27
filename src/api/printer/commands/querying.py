@@ -165,8 +165,8 @@ class CheckPrinting(Printer):
                     continue
                 else:
                     # set error status and clear dispenser/presenter
-                    await asyncio.gather(States.filter(id=1).update(submode=1))
-                    asyncio.create_task(cls._afterprint())
+                    await States.filter(id=1).update(submode=1)
+                    await cls._afterprint()
                     break
                   
 
