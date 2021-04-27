@@ -153,40 +153,23 @@ class CheckPrinting(Printer):
 
     @classmethod
     async def handle(cls):
-        attempts = 15
-        counter = 0 
+        await asyncio.sleep(0.5)
         # check after printing errors
-        while not Printer().event.is_set():
-            after_printing_status = await PrintingStatusQuery.handle()
-            logger.debug(f'Afterprint check: {after_printing_status}')
-            # no errors: True
-            if after_printing_status:
-                if counter ==0:
-                    # change submode=3: ready for next command
-                    asyncio.ensure_future(States.filter(id=1).update(submode=0))
-                    Printer().buffer.clear()
-                    break
-                else:
-                    asyncio.create_task(cls._afterprint())
-                    break
-            else:
-                logger.debug(f'Afterprint check attempt: {counter}')
-                if counter <= attempts:
-                    await asyncio.sleep(0.5)
-                    counter+=1
-                    continue
-                else:
-                    # set error status and clear dispenser/presenter
-                    asyncio.create_task(States.filter(id=1).update(submode=1))
-                    asyncio.create_task(cls._afterprint())
-                    break
-                  
-
+        after_printing_status = await PrintingStatusQuery.handle()
+        logger.debug(f'Afterprint check: {after_printing_status}')
+        # no errors: True
+        if after_printing_status:
+                # change submode=3: ready for next command
+                asyncio.ensure_future(States.filter(id=1).update(submode=0))
+                Printer().buffer.clear()
+        else:
+            logger.debug(f'Afterprint check attempt: wait for recover')
+            # set error status and clear dispenser/presenter
+            asyncio.create_task(States.filter(id=1).update(submode=1))
+            asyncio.create_task(cls._afterprint())
     
     @classmethod
     async def _afterprint(cls):
-        logger.debug(f'Afterprint check attempt: wait for recover')
-
         while not Printer().event.is_set():
             status = await PrinterFullStatusQuery.handle()
             logger.debug(f'Afterprint check full status:{status}')
@@ -194,11 +177,10 @@ class CheckPrinting(Printer):
                 asyncio.ensure_future(States.filter(id=1).update(submode=2))
                 await Printer().write(Printer().buffer.output)
                 logger.debug(f'Afterprint check :printing buffer')
-
                 Printer().buffer.clear()
                 await asyncio.gather(States.filter(id=1).update(submode=3),
                     CutPresent.handle())
                 break
             else:
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1)
                 continue
