@@ -97,7 +97,7 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
         receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
         if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
-            await receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
+            receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
             asyncio.ensure_future(receipt.save())
             asyncio.ensure_future(States.filter(id=1).update(mode=8))
             asyncio.create_task(PrintDeferredBytes.handle())
@@ -138,7 +138,7 @@ class OpenSale2(ShtrihCommand, ShtrihCommandInterface):
             if not config['webkassa']['receipt']['header']:
                 asyncio.ensure_future(ClearBuffer.handle())
         except Exception as e:
-            asyncio.ensure_future(logger.exception(e))
+            logger.exception(e)
             cls.set_error(3)
         else:
             cls.set_error(0)
@@ -169,7 +169,7 @@ class CloseReceipt2(ShtrihCommand, ShtrihCommandInterface):
         receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
         if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
-            await receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
+            receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
             asyncio.ensure_future(receipt.save())
             asyncio.ensure_future(States.filter(id=1).update(mode=8))
             asyncio.create_task(PrintDeferredBytes.handle())
@@ -180,7 +180,7 @@ class CloseReceipt2(ShtrihCommand, ShtrihCommandInterface):
             else:
                 cls.set_error(0x00) 
         else:
-            asyncio.ensure_future(logger.error('No payment data'))
+            logger.error('No payment data')
             cls.set_error(0x03)
         arr = bytearray()
         arr.extend(cls._length)
