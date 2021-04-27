@@ -67,7 +67,7 @@ double_width=false
 double_height=false
 input = 'utf8'
 output ='cp866'
-send_encoding = false
+send_encoding = true
 
 [webkassa]
 # Авторизационные данные для идентификации кассы при запросах в WebkassaLocal
