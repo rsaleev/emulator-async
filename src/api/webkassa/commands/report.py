@@ -62,6 +62,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
         else:
             doc = fromstring(render.result())
             asyncio.create_task(cls._print_report(doc))
+            asyncio.create_task(cls._flush_receipts(response))
 
     
     @classmethod
@@ -143,7 +144,7 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
                     open_date=timezone.now(), total_docs=0)
             states_task = States.filter(id=1).update(mode=2)
             await asyncio.gather(shift_task, states_task)
-            asyncio.ensure_future(cls._flush_receipts(response))
+            asyncio.create_task(cls._flush_receipts(response))
             return response
 
     @classmethod
