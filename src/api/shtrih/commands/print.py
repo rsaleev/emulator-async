@@ -1,6 +1,6 @@
 import re
 import asyncio
-from src.api.printer.commands.querying import CheckPrinting
+from src.api.printer.commands.querying import CheckPrinting, ClearBuffer
 from uuid import uuid4
 from src import config
 from src.api.printer.commands import PrintBytes, CutPresent, PrintBuffer, PrintDeferredBytes, PrintGraphicLines
@@ -86,7 +86,7 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
             # if error occured -> return 0x200
             await PrintBuffer.handle()
             await CutPresent.handle()
-            await CheckPrinting.handle()
+            await ClearBuffer.handle()
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
         else:

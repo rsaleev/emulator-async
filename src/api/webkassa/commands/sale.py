@@ -104,10 +104,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         else:
             await asyncio.sleep(0.1)
             await CutPresent.handle()
-            if config['webkassa']['receipt']['ensure']:
-                await CheckPrinting.handle()
-            else:
-                await ClearBuffer.handle()
+            await ClearBuffer.handle()
 
     @classmethod
     async def exc_callback(cls, exc, payload):
