@@ -60,7 +60,7 @@ class WebcassaClient:
         See API docs for more information about error codes and what they mean
         """
         if err.code in [
-                -1, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 16, 18, 1014, 505
+                -1, 4, 5, 6, 7, 8, 9, 10, 13, 15, 16, 18, 1014, 505
         ]:
             raise UnrecoverableError(f'Code:{err.code} Msg:{err.text}')
         elif err.code in [1, 3]:
@@ -71,6 +71,8 @@ class WebcassaClient:
             raise ShiftAlreadyClosed(f'Code:{err.code} Msh:{err.text}')
         elif err.code == 11:
             raise ShiftExceededTime(f'Code:{err.code} Msg:{err.text}')
+        elif err.code == 12:
+            raise ShiftAlreadyClosed(f'Code:{err.code} Msg:{err.text}')
         elif err.code == 14:
             raise ReceiptUniqueNumDuplication(
                 f'Code:{err.code} Msg:{err.text}')
@@ -132,12 +134,12 @@ class WebcassaClient:
                     asyncio.ensure_future(logger.error(
                         f'Max attempts exhausted. Attempt: {counter} Error:{repr(e)}'
                     ))
-                    return
+                    raise e
             except (UnrecoverableError) as e:
                 asyncio.ensure_future(logger.error(
-                        f'Catched API error {repr(e)}. Attempt: {counter}. Continue'
+                        f'Catched API error {repr(e)}. Attempt: {counter}. Unrecoverable'
                     ))
-                return 
+                raise e 
             except ConnectionError as e:
                 # when connection error occures: send request until connection will be established (until attempts will be exhausted)
                 counter += 1

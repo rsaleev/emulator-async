@@ -4,7 +4,7 @@ import os
 import uvloop
 from src import logger, config
 from src.db.connector import DBConnector
-from src.db.models import Shift, States, Token
+from src.db.models import Shift, States
 from src.api.printer.device import Printer
 from src.api.shtrih.device import Paykiosk
 from src.api.watchdog import Watchdog
@@ -18,7 +18,6 @@ class Application:
     fiscalreg = Paykiosk()
     watchdog = Watchdog()
 
-
     @classmethod
     async def signal_handler(cls, signal, loop):
         cls.printer.event.set()
@@ -26,19 +25,34 @@ class Application:
         cls.watchdog.event.set()
         await logger.warning('Shutting down application')
         try:
-            await asyncio.wait_for(cls.db.disconnect(),0.5)
-            cls.printer.disconnect()
-            cls.fiscalreg.disconnect()
+            [task.cancel() for task in asyncio.all_tasks(loop)]
+            await asyncio.wait_for(asyncio.gather(
+                                                cls.printer.disconnect(),
+                                                cls.fiscalreg.disconnect(),
+                                                cls.db.disconnect()),1)
             await logger.shutdown()
         except:
-            [task.cancel() for task in asyncio.all_tasks(loop)]
             # perform eventloop shutdown
             try:
                 loop.stop()
                 loop.close()
             except:
                 pass
+        finally:
             os._exit(0)
+
+
+    @classmethod
+    async def _init_printer(cls):
+        logger.warning('Initializing printer')
+        await cls.printer.connect()
+        logger.warning('Printer initialized')
+
+    @classmethod 
+    async def _init_serial(cls):
+        logger.warning('Initializing serial connection')
+        await cls.fiscalreg.connect()
+        logger.warning('Initializing serial connection done')
 
 
     @classmethod
@@ -50,27 +64,24 @@ class Application:
             await cls.db.connect()
             await asyncio.gather(Shift.get_or_create(id=1), States.get_or_create(id=1))      
             logger.warning('Initializing gateway')
-            token = await WebkassaClientToken.handle()
-            asyncio.ensure_future(Token.get_or_create(id=1, token=token))
+            await WebkassaClientToken.handle()
+            logger.warning('Initializing gateway done')
             logger.warning('Initializing devices')
-            await cls.printer.connect()
-            await cls.fiscalreg.connect()
+            await asyncio.gather(cls._init_printer(), cls._init_serial())
         except Exception as e:
-            await logger.exception(e)
-            raise SystemExit('Emergency shutdown')
+            raise SystemExit(f'Emergency shutdown: {e}')
         else:
-            await logger.warning('Application initialized.Serving')
+            logger.warning('Application initialized.Serving')
 
     @classmethod
     async def serve(cls):
         try:
-            await cls.fiscalreg.poll()
             #background task: watchdog poller
             if config['emulator']['watchdog']:
                 asyncio.create_task(cls.watchdog.poll())
+            await cls.fiscalreg.poll()
         except Exception as e:
-            logger.exception(e)
-            raise SystemExit(f'Emergency shutdown')
+            raise SystemExit(f'Emergency shutdown: {e}')
 
     @classmethod
     def run(cls):

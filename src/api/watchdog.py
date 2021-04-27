@@ -10,45 +10,54 @@ class Watchdog:
         self.event = asyncio.Event()
 
     async def _check_shift(self):
-        asyncio.ensure_future(logger.debug('Checking shift'))
-        shift, states = await asyncio.gather(Shift.filter(id=1).first(), States.filter(id=1).first())
-        if config['emulator']['shift']['close_by'] == 1: #close by counter
-            await self._check_shift_by_counter(shift, states)
-        elif config['emulator']['shift']['close_by'] ==2:
-            await self._check_shift_by_time(shift)
+        logger.debug('Checking shift')
+        fut = asyncio.ensure_future(asyncio.gather(Shift.filter(id=1).first(), States.filter(id=1).first()))
+        while not fut.done():
+            await asyncio.sleep(0.2)
+        if not fut.exception():
+            shift, states = fut.result()
+            if config['emulator']['shift']['close_by'] == 1: #close by counter
+                asyncio.create_task(self._check_shift_by_counter(shift, states))
+            elif config['emulator']['shift']['close_by'] ==2:
+                asyncio.create_task(self._check_shift_by_time(shift))
         await asyncio.sleep(1)
+
 
     
     async def _check_shift_by_counter(self, shift, states):
-        if config['emulator']['shift']['close_by'] == 'counter':
-            period = timezone.now() - shift.open_date
-            hours= int(period.total_seconds() // 3600)
-            if (hours < 24
-                and shift.total_docs == 0):
-                if states.mode !=2:
-                    await states.update_from_dict({'mode':2})
-            elif hours >= 24:
-                # closing shift for emulator status, no request to gateway
-                if shift.total_docs ==0:
-                    asyncio.ensure_future(logger.warning('Autoclosing shift by timer. No documents in this shift'))
-                    await asyncio.gather(states.update_from_dict({'mode':2}),
-                                        shift.update_from_dict.update({'open_date':timezone.now()}))
+        period = timezone.now() - shift.open_date
+        hours= int(period.total_seconds() // 3600)
+        if (hours < 24 and shift.total_docs == 0):
+            if states.mode !=2:
+                states.update_from_dict({'mode':2})
+                asyncio.ensure_future(states.save())
+        elif hours >= 24:
+            # closing shift for emulator status, no request to gateway
+            if shift.total_docs ==0:
+                logger.warning('Autoclosing shift by timer. No documents in this shift')
+                states.update_from_dict({'mode':2}),
+                shift.update_from_dict({'open_date':timezone.now()})
+                asyncio.ensure_future(states.save())
+                asyncio.ensure_future(shift.save())
+            else:
+                # if autclose enabled shift will be closed without printing report
+                if config['emulator']['shift']['autoclose']:
+                    logger.warning('Autoclosing shift by timer')
+                    asyncio.ensure_future(WebkassaClientCloseShift.handle())
                 else:
-                    # if autclose enabled shift will be closed without printing report
-                    if config['emulator']['shift']['autoclose']:
-                        asyncio.ensure_future(logger.warning('Autoclosing shift by timer'))
-                        await WebkassaClientCloseShift.handle()
-                    else:
-                        asyncio.ensure_future(logger.warning('Close shift manually. 24H elapsed'))
-                        await States.filter(id=1).update(mode=3)
+                    logger.warning('Close shift manually. 24H elapsed')
+                    states.update_from_dict({'mode':3})
+                    asyncio.ensure_future(states.save())
+
 
     async def _check_shift_by_time(self, shift):
         close_at = shift.open_date.time()+timedelta(hours=24)
         if timezone.now().time() >= close_at and shift.mode !=3:
             logger.warning('Autoclosing shift by timer')
-            try:
-                await WebkassaClientCloseShift.handle() 
-            except:
+            fut = asyncio.ensure_future(WebkassaClientCloseShift.handle())
+            while not fut.done():
+                await asyncio.sleep(0.2)
+            if fut.exception():
                 logger.warning('Autoclosing shift by timer: unsuccess')
             else:
                 logger.warning('Autoclosing shift by timer: success')
@@ -57,21 +66,24 @@ class Watchdog:
         logger.debug('Checking token')
         token_in_db = await Token.filter(id=1).get()
         if token_in_db.token =='' or (token_in_db.ts-timezone.now()).total_seconds()//3600 > 23:
-            try:
-                token = await WebkassaClientToken.handle()
-                await Token.filter(id=1).update(
-                                            token=token,
-                                            ts=timezone.now())
-            except:
-                pass
+            asyncio.ensure_future(WebkassaClientToken.handle())
         await asyncio.sleep(1)
+               
 
     async def poll(self):
         while not self.event.is_set():
             if config['emulator']['shift']['watchdog']:
+<<<<<<< HEAD
                 await self._check_shift()
             if config['watchdog']['token']['watchdog']:
                 await self._token_check()
         
+=======
+                asyncio.ensure_future(self._check_shift())
+            if config['webkassa']['token']['watchdog']:
+                asyncio.ensure_future(self._token_check())
+            await asyncio.sleep(1)
+           
+>>>>>>> origin/testing
         
     

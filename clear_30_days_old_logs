@@ -1,0 +1,3 @@
+#!/bin/bash
+# DELETE LOGS OLDER THAT 30 days
+find $PWD/logs -name "*.log.*" -type f -mtime +30 -delete 

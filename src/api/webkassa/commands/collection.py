@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 from src.api.printer.commands.querying import CheckPrinting, PrintBuffer
+=======
+from src.api.printer.commands.querying import ClearBuffer
+>>>>>>> origin/testing
 from src.api.webkassa.exceptions import * 
 from src.db.models import Token, Shift, States
 from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
@@ -57,6 +61,7 @@ class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
         except Exception as e:
             logger.exception(e)
         else:
+<<<<<<< HEAD
             doc = fromstring(render)
             asyncio.create_task(cls._print_collection(doc))
 
@@ -67,6 +72,13 @@ class WebkassaClientCollection(WebcassaCommand, WebcassaClient):
         await PrintBuffer.handle()
         await CutPresent.handle()
         await CheckPrinting.handle()
+=======
+            await asyncio.sleep(0.1)
+            await PrintXML.handle(doc)
+            await asyncio.sleep(0.1)
+            await CutPresent.handle()
+            await ClearBuffer.handle()
+>>>>>>> origin/testing
 
     @classmethod
     async def exc_handler(cls, exc, payload):

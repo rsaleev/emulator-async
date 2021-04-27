@@ -46,16 +46,18 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
                             payment_type=receipt.payment_type)], 
                 external_check_number=str(receipt.uid)) 
             try:    
-                asyncio.ensure_future(receipt.update_from_dict({'sent':True}))
+                receipt.update_from_dict({'sent':True})
                 response = await cls.dispatch(endpoint=cls.endpoint, 
                                             request_data=request,   
                                             response_model=SaleResponse, #type: ignore
                                             exc_handler=cls.exc_callback)
+                asyncio.ensure_future(receipt.save())
             except Exception as e:
                 asyncio.ensure_future(logger.exception(e))
                 raise e
             else:
-                await asyncio.gather(receipt.update_from_dict({'ack':True}),
+                receipt.update_from_dict({'ack':True})
+                await asyncio.gather(receipt.save(),
                                     States.filter(id=1).update(mode=2, gateway=1),
                                     Shift.filter(id=1).update(total_docs=F('total_docs')+1))
                 asyncio.create_task(cls._render_receipt(request, response))
@@ -75,28 +77,32 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         company = CompanyData(name=config['webkassa']['company']['name'],
                             inn=config['webkassa']['company']['inn'])
         template = TEMPLATE_ENVIRONMENT.get_template('receipt.xml')
-        try:
-            render = template.render(
-                horizontal_delimiter='-',
-                dot_delimiter='.',
-                whitespace=' ',
-                company=company,
-                request=request,
-                response=response)
-        except Exception as e:
-            logger.exception(e)
+        render =asyncio.create_task(template.render_async(
+            horizontal_delimiter='-',
+            dot_delimiter='.',
+            whitespace=' ',
+            company=company,
+            request=request,
+            response=response))
+        while not render.done():
+            await asyncio.sleep(0.02)
+        exc = render.exception()
+        if exc:
+            logger.error(exc)
         else:
-            doc = fromstring(render)
-            asyncio.create_task(cls._render_print(doc))
+            doc = fromstring(render.result())
+            asyncio.create_task(cls._print_check(doc))
 
     @classmethod
-    async def _render_print(cls,doc):
+    async def _print_check(cls,doc):
         try:
             await PrintXML.handle(doc)
+            await asyncio.sleep(0.1)
             await PrintBuffer.handle()           
         except Exception as e:
             await logger.exception(e)
         else:
+            await asyncio.sleep(0.1)
             await CutPresent.handle()
             await ClearBuffer.handle()
 

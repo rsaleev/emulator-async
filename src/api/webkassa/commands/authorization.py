@@ -25,7 +25,11 @@ class WebkassaClientToken(WebcassaClient):
             response_model=TokenGetResponse, #type:ignore
             exc_handler=cls.exc_handler)
         if response:
+<<<<<<< HEAD
             asyncio.create_task(Token.filter(id=1).update(token=response.token, ts=timezone.now()))
+=======
+            await Token.filter(id=1).update(token=response.token, ts=timezone.now())
+>>>>>>> origin/testing
             return response.token
         else:
             return 
