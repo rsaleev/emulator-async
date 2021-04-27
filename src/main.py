@@ -4,7 +4,7 @@ import os
 import uvloop
 from src import logger, config
 from src.db.connector import DBConnector
-from src.db.models import Shift, States
+from src.db.models import Shift, States, Token
 from src.api.printer.device import Printer
 from src.api.shtrih.device import Paykiosk
 from src.api.watchdog import Watchdog
@@ -62,7 +62,7 @@ class Application:
             # blocking step by step operations
             logger.warning('Initializing DB')
             await cls.db.connect()
-            await asyncio.gather(Shift.get_or_create(id=1), States.get_or_create(id=1), return_exceptions=True)      
+            await asyncio.gather(Shift.get_or_create(id=1), States.get_or_create(id=1), Token.get_or_create(id=1))      
             logger.warning('Initializing gateway')
             await WebkassaClientToken.handle()
             logger.warning('Initializing gateway done')
