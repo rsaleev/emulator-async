@@ -4,6 +4,7 @@ watchdog=true # включить -true, выключить - false. Провер
 [emulator.sale]
 # Статус Mode(Режим) в случае наличия ошибки при обращении к ЛМ без возможности обработки
 gateway_error_state = 8 #ИЗМЕНИТЬ
+wait_response = false # false - не ожидать, вернут ответ без ошибки, true - ожидать
 
 [emulator.shift]
 watchdog = true # true - контроль смены включен/false - выключен.

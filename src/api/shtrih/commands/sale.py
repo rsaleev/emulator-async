@@ -94,7 +94,7 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
             payment = cc
             payment_type = 1
         else:
-            cls.set_error(0x03)
+            cls.set_error(3)
         receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
         if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
@@ -102,15 +102,19 @@ class SimpleCloseSale(ShtrihCommand, ShtrihCommandInterface):
             asyncio.ensure_future(receipt.save())
             asyncio.ensure_future(States.filter(id=1).update(mode=8))
             asyncio.create_task(PrintDeferredBytes.handle())
-            try:
-                await WebkassaClientSale.handle(receipt)
-            except:
-                cls.set_error(0x03)
+            if config['emulator']['sale']['wait_response']:
+                try:
+                    await WebkassaClientSale.handle(receipt)
+                except:
+                    cls.set_error(3)
+                else:
+                    cls.set_error(0) 
             else:
-                cls.set_error(0x00) 
+                asyncio.create_task(WebkassaClientSale.handle(receipt))
+                cls.set_error(0)
         else:
             asyncio.ensure_future(logger.error('No payment data'))
-            cls.set_error(0x03)
+            cls.set_error(3)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -168,23 +172,27 @@ class CloseReceipt2(ShtrihCommand, ShtrihCommandInterface):
             payment = cc
             payment_type = 1
         else:
-            cls.set_error(0x03)
+            cls.set_error(3)
         receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
         if payment >0 and receipt.id :
             change = bytearray(struct.pack('<iB', (payment-receipt.price)*10**2,0)) #type: ignore
-            await receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
+            receipt.update_from_dict({'payment_type':payment_type, 'payment':payment})
             asyncio.ensure_future(receipt.save())
             asyncio.ensure_future(States.filter(id=1).update(mode=8))
             asyncio.create_task(PrintDeferredBytes.handle())
-            try:
-                await WebkassaClientSale.handle(receipt)
-            except:
-                cls.set_error(0x03)
+            if config['emulator']['sale']['wait_response']:
+                try:
+                    await WebkassaClientSale.handle(receipt)
+                except:
+                    cls.set_error(3)
+                else:
+                    cls.set_error(0)
             else:
-                cls.set_error(0x00) 
+                asyncio.create_task(WebkassaClientSale.handle(receipt))
+                cls.set_error(0) 
         else:
             asyncio.ensure_future(logger.error('No payment data'))
-            cls.set_error(0x03)
+            cls.set_error(3)
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
