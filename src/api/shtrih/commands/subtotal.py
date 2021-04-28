@@ -19,11 +19,11 @@ class SubTotal(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._password)
         receipt = await Receipt.filter(ack=False).annotate(max_value = Max('id')).first()
         if receipt:
-            cls.set_error(0x00)
+            cls.set_error(0)
             subtotal = bytearray(struct.pack('<iB', receipt.price*10**2, 0))
             arr.extend(subtotal)
         else:
-            cls.set_error(0x35)
+            cls.set_error(35)
             arr.extend(bytearray((0x00,0x00,0x00,0x00,0x00)))
         return arr
 

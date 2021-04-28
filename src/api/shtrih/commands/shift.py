@@ -44,9 +44,9 @@ class CloseShift(ShtrihCommand, ShtrihCommandInterface):
             arr.extend(fiscal_attribute)
             dt = struct.pack('<5B', datetime.now().day, datetime.now().month,datetime.now().year%100, datetime.now().hour, datetime.now().minute)
             arr.extend(dt)
-            cls.set_error(0x03)
+            cls.set_error(3)
         else:
-            cls.set_error(0x00)
+            cls.set_error(0)
             shift_num = struct.pack('<2B', res.ShiftNumber,0) #type: ignore
             arr.extend(shift_num)
             shift_doc_num = struct.pack('<i',res.ReportNumber) #type: ignore
