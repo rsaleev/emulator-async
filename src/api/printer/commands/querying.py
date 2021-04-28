@@ -125,7 +125,8 @@ class PrintBuffer(Printer):
     alias = 'buffer'
 
     @classmethod
-    async def handle(cls, payload=None):    
+    async def handle(cls, payload=None):
+        await States.filter(id=1).update(submode=2) 
         await Printer().write(Printer().buffer.output)
 
 
