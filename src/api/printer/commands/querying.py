@@ -126,7 +126,8 @@ class PrintBuffer(Printer):
 
     @classmethod
     async def _recover(cls):
-        while not Printer().event.is_set():
+        logger.warning('Waiting for paper feed')
+        while not Printer.event.is_set():
             status = await PrinterFullStatusQuery.handle()
             logger.debug(f'Afterprint check full status:{status}')
             if status:
@@ -138,17 +139,20 @@ class PrintBuffer(Printer):
                         
     @classmethod
     async def _check(cls):
+        # get status of last operation
         check = await PrintingStatusQuery.handle()
-        logger.debug(f'Printed w/o issues:{check}')
+        logger.debug(f'Printed issues:{check}')
+        # no errors
         if check:
             return True
+        # printing stopped due paper end
         else:
+            # set submode=2 - paper not present (active)
             await States.filter(id=1).update(submode=2)
-            # check printed afterstate
+            # check for recover
             rec_fut = asyncio.ensure_future(cls._recover())
             while not rec_fut.done():
                 # sleep until paper feeder notify
-                logger.debug('Waiting for paper feed')
                 await asyncio.sleep(0.5)
             if not rec_fut.exception():
                 # present failed document and continue
@@ -163,27 +167,21 @@ class PrintBuffer(Printer):
     async def handle(cls, payload=None):
         await States.filter(id=1).update(submode=5)
         while not Printer().event.is_set():
-            try:
-                data = next(q for q in Printer().buffer.queue)
-            except StopIteration:
-                await ClearBuffer.handle()
-                break
+            # print buffer
+            await Printer().write(Printer().buffer.output)
+            logger.debug(f'Printing buffer:{hexlify(Printer().buffer.output, sep=":")}')
+            # check operation result for errors
+            if config['printer']['receipt']['ensure']:
+                r = asyncio.ensure_future(cls._check())
+                while not r.done():
+                    await asyncio.sleep(0.5)                        
+                if r.result():
+                    # reprint buffer
+                    await Printer().write(Printer().buffer.output)
+                    break
             else:
-                logger.debug(f'Printing buffer:{hexlify(data, sep=":")}')
-                await Printer().write(data)
-                if config['printer']['receipt']['ensure']:
-                    r = asyncio.ensure_future(cls._check())
-                    while not r.done():
-                        await asyncio.sleep(0.1)                        
-                    if r.result():
-                        continue
+                break
 
-
-
-
-                
-
-   
 class ClearBuffer(Printer):
 
     alias = 'clear'
