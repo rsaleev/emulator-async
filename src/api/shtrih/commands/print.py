@@ -1,5 +1,6 @@
 import re
 import asyncio
+from src.api.printer.commands.querying import CheckPrinted, ClearBuffer
 from uuid import uuid4
 from src import config
 from src.api.printer.commands import PrintBytes, CutPresent, PrintBuffer, PrintDeferredBytes, PrintGraphicLines
@@ -84,7 +85,10 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         try:
             # wait for execution:
             # if error occured -> return 0x200
-            await asyncio.wait_for(asyncio.shield(PrintBuffer.handle()),2)
+            await PrintBuffer.handle()
+            if config['printer']['receipt']['ensure']:
+                asyncio.create_task(CheckPrinted.handle())
+            await ClearBuffer.handle()
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
         else:

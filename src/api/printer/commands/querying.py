@@ -123,45 +123,8 @@ class PrintingStatusQuery(Printer):
 class PrintBuffer(Printer):
   
     alias = 'buffer'
-
-    @classmethod
-    async def _recover(cls):
-        logger.warning('Waiting for paper feed')
-        while not Printer.event.is_set():
-            status = await PrinterFullStatusQuery.handle()
-            logger.debug(f'Afterprint check full status:{status}')
-            if status:
-                asyncio.ensure_future(States.filter(id=1).update(submode=3))
-                break
-            else:
-                await asyncio.sleep(0.5)
-                continue
+           
                         
-    @classmethod
-    async def _check(cls):
-        # get status of last operation
-        check = await PrintingStatusQuery.handle()
-        logger.debug(f'Printed issues:{check}')
-        # no errors
-        if check:
-            return True
-        # printing stopped due paper end
-        else:
-            # set submode=2 - paper not present (active)
-            await States.filter(id=1).update(submode=2)
-            # check for recover
-            rec_fut = asyncio.ensure_future(cls._recover())
-            while not rec_fut.done():
-                # sleep until paper feeder notify
-                await asyncio.sleep(0.5)
-            if not rec_fut.exception():
-                # present failed document and continue
-                await CutPresent.handle()
-                return True
-            else:
-                logger.error(rec_fut.exception())
-                return False           
-
 
     @classmethod
     async def handle(cls, payload=None):
@@ -170,21 +133,34 @@ class PrintBuffer(Printer):
             # print buffer
             await Printer().write(Printer().buffer.output)
             logger.debug(f'Printing buffer:{hexlify(Printer().buffer.output, sep=":")}')
-            # check operation result for errors
-            if config['printer']['receipt']['ensure']:
-                await asyncio.sleep(0.5)
-                r = asyncio.ensure_future(cls._check())
-                while not r.done():
-                    await asyncio.sleep(0.5)                        
-                if r.result():
-                    # reprint buffer
-                    await Printer().write(Printer().buffer.output)
-                    await CutPresent.handle()
-                    await ClearBuffer.handle()
+            break
+
+
+class CheckPrinted(Printer):
+
+    @classmethod
+    async def handle(cls):
+        buffer = Printer().buffer.output
+        await asyncio.sleep(1.5)
+        # get status of last operation
+        check = await PrintingStatusQuery.handle()
+        logger.debug(f'Printed issues:{check}')
+        # no errors
+        if not check:
+            await States.filter(id=1).update(submode=2)
+            while not Printer().event.is_set():
+                # set submode=2 - paper not present (active)
+                # check for recover
+                status = await PrinterFullStatusQuery.handle()
+                logger.debug(f'Afterprint check full status:{status}')
+                if status:
+                    asyncio.ensure_future(States.filter(id=1).update(submode=3))
+                    await Printer().write(buffer)
+                    await CutPresent().handle()
                     break
-            else:
-                await ClearBuffer.handle()
-                break
+                else:
+                    await asyncio.sleep(0.5)
+                    continue       
 
 class ClearBuffer(Printer):
 
