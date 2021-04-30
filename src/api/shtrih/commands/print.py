@@ -88,8 +88,9 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
         else:
-            await CutPresent.handle()
             cls.set_error(0)
+        finally:
+            await CutPresent.handle()
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
