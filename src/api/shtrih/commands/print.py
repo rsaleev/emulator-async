@@ -29,8 +29,6 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._password)
         return arr
         
-  
-
     class NoChangeHeader:
         line1=r"^Невыданная сдача\W+"
         line2=r"^\W+Банкноты\W+\d+\W+\d+\w+"
