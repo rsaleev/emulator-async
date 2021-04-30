@@ -12,7 +12,6 @@ from serial.serialutil import SerialException, SerialTimeoutException
 from src.api.shtrih import logger
 from src.db.models import States
 from src.api.device import *
-from src.api.printer.buffer import PrinterBuffer
 from src.api.printer.protocol import PrinterProto
 from src.api.printer import logger
 
@@ -228,7 +227,7 @@ class SerialDevice(DeviceImpl):
 
 class Printer(PrinterProto, Device):
 
-    buffer = PrinterBuffer()
+    buffer = Dummy()
     event:asyncio.Event
 
     def __init__(self):
