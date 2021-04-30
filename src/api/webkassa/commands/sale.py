@@ -15,7 +15,7 @@ from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa import logger
 from src.api.webkassa.commands import WebkassaClientToken,WebkassaClientCloseShift
 from src.api.webkassa.models import SaleRequest, SaleResponse, Position, Payments, CompanyData
-from src.api.printer.commands import PrintXML, CutPresent, PrintBuffer, CheckPrinting
+from src.api.printer.commands import PrintXML, CutPresent, PrintBuffer
 
 class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     endpoint = 'Check'
