@@ -1,7 +1,7 @@
 
 import asyncio
 import os
-from src import config
+from binascii import hexlify
 from src.api.printer.commands.printing import PrintDeferredBytes
 from src.api.printer.device import Printer
 from src.db.models.state import States
@@ -126,11 +126,48 @@ class PrintBuffer(Printer):
 
     @classmethod
     async def handle(cls, payload=None):
-        await States.filter(id=1).update(submode=2) 
-        await Printer().write(Printer().buffer.output)
+        await States.filter(id=1).update(submode=5)
+        while not Printer().event.is_set():
+            try:
+                data = next(q for q in Printer().buffer.queue)
+            except StopIteration:
+                Printer().buffer.clear()
+                break
+            else:
+                logger.debug(f'Printing buffer:{hexlify(data, sep=":")}')
+                await Printer().write(data)
+                check = await PrintingStatusQuery.handle()
+                logger.debug(f'Printed w/o issues:{check}')
+                if check:
+                    continue
+                else:
+                    try:
+                        await Printer().write(bytes('***ОБРЫВ БУМАГИ ДОКУМЕНТ НЕДЕЙСТВИТЕЛЕН***', 'cp1251'))
+                    except:
+                        pass
+                    await States.filter(id=1).update(submode=2)
+                    rec_fut = asyncio.ensure_future(cls._recover())
+                    while not rec_fut.done():
+                        logger.debug('Waiting for paper feed')
+                        await asyncio.sleep(0.5)
+                    if not rec_fut.exception():
+                        continue
+                    else:
+                        logger.error(rec_fut_exception())
+                        
 
-
-
+    @classmethod
+    async def _recover(cls):
+        while not Printer().event.is_set():
+            status = await PrinterFullStatusQuery.handle()
+            logger.debug(f'Afterprint check full status:{status}')
+            if status:
+                asyncio.ensure_future(States.filter(id=1).update(submode=3))
+                return
+            else:
+                await asyncio.sleep(0.5)
+                continue
+   
 class ClearBuffer(Printer):
 
     alias = 'clear'
@@ -148,40 +185,4 @@ class ModeSetter(Printer):
     async def handle(cls):
         Printer()._raw(cls.command)
 
-class CheckPrinting(Printer):
 
-    alias='aftercheck'
-
-    @classmethod
-    async def handle(cls):
-        await asyncio.sleep(0.5)
-        # check after printing errors
-        after_printing_status = await PrintingStatusQuery.handle()
-        logger.debug(f'Afterprint check: {after_printing_status}')
-        # no errors: True
-        if after_printing_status:
-                # change submode=3: ready for next command
-                asyncio.ensure_future(States.filter(id=1).update(submode=0))
-                Printer().buffer.clear()
-        else:
-            logger.debug(f'Afterprint check attempt: wait for recover')
-            # set error status and clear dispenser/presenter
-            asyncio.create_task(States.filter(id=1).update(submode=1))
-            asyncio.create_task(cls._afterprint())
-    
-    @classmethod
-    async def _afterprint(cls):
-        while not Printer().event.is_set():
-            status = await PrinterFullStatusQuery.handle()
-            logger.debug(f'Afterprint check full status:{status}')
-            if status:
-                asyncio.ensure_future(States.filter(id=1).update(submode=2))
-                await Printer().write(Printer().buffer.output)
-                logger.debug(f'Afterprint check :printing buffer')
-                Printer().buffer.clear()
-                await asyncio.gather(States.filter(id=1).update(submode=3),
-                    CutPresent.handle())
-                break
-            else:
-                await asyncio.sleep(1)
-                continue

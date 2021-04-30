@@ -1,6 +1,7 @@
 import os
 import aioserial
 import asyncio
+from escpos.printer import Dummy
 import usb
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -11,7 +12,7 @@ from serial.serialutil import SerialException, SerialTimeoutException
 from src.api.shtrih import logger
 from src.db.models import States
 from src.api.device import *
-from escpos.printer import Dummy
+from src.api.printer.buffer import PrinterBuffer
 from src.api.printer.protocol import PrinterProto
 from src.api.printer import logger
 
@@ -227,7 +228,7 @@ class SerialDevice(DeviceImpl):
 
 class Printer(PrinterProto, Device):
 
-    buffer = Dummy()
+    buffer = PrinterBuffer()
     event:asyncio.Event
 
     def __init__(self):
