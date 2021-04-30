@@ -172,14 +172,18 @@ class PrintBuffer(Printer):
             logger.debug(f'Printing buffer:{hexlify(Printer().buffer.output, sep=":")}')
             # check operation result for errors
             if config['printer']['receipt']['ensure']:
+                await asyncio.sleep(0.5)
                 r = asyncio.ensure_future(cls._check())
                 while not r.done():
                     await asyncio.sleep(0.5)                        
                 if r.result():
                     # reprint buffer
                     await Printer().write(Printer().buffer.output)
+                    await CutPresent.handle()
+                    await ClearBuffer.handle()
                     break
             else:
+                await ClearBuffer.handle()
                 break
 
 class ClearBuffer(Printer):
