@@ -1,0 +1,6 @@
+
+
+
+
+class PaperBreak(Exception):
+    pass
