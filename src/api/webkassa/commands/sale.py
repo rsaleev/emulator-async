@@ -1,7 +1,4 @@
 
-from src.api.printer.commands.querying import ClearBuffer
-import aiofiles
-import os
 import asyncio
 from xml.etree.ElementTree import fromstring
 from tortoise.expressions import F
@@ -15,7 +12,7 @@ from src.api.webkassa.templates import TEMPLATE_ENVIRONMENT
 from src.api.webkassa import logger
 from src.api.webkassa.commands import WebkassaClientToken,WebkassaClientCloseShift
 from src.api.webkassa.models import SaleRequest, SaleResponse, Position, Payments, CompanyData
-from src.api.printer.commands import PrintXML, CutPresent, PrintBuffer
+from src.api.printer.commands import PrintXML, CutPresent, PrintBuffer, EnsurePrintBuffer, ClearBuffer
 
 class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     endpoint = 'Check'
@@ -97,14 +94,15 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
     async def _print_check(cls,doc):
         try:
             await PrintXML.handle(doc)
-            await asyncio.sleep(0.1)
             await PrintBuffer.handle()           
         except Exception as e:
             await logger.exception(e)
         else:
-            await asyncio.sleep(0.1)
             await CutPresent.handle()
-            await ClearBuffer.handle()
+            if not config['printer']['ensure_printed']:
+                await ClearBuffer.handle()
+            else:
+                asyncio.create_task(EnsurePrintBuffer.handle())
 
     @classmethod
     async def exc_callback(cls, exc, payload):

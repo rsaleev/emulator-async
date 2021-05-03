@@ -4,10 +4,11 @@ import asyncio
 from escpos.printer import Dummy
 import usb
 import time
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from src import config
 from binascii import hexlify
-from typing import Union
+from typing import Deque, Union
 from serial.serialutil import SerialException, SerialTimeoutException
 from src.api.shtrih import logger
 from src.db.models import States
@@ -225,9 +226,21 @@ class SerialDevice(DeviceImpl):
             await loop.run_in_executor(executor, cls._close)
 
 
+class Buffer(Dummy):
+
+    def __init__(self):
+        super().__init__()
+        self.content = deque([])
+
+    def queue_append(self, cmd):
+        self.content.append(cmd)
+
+    def queue_clear(self):
+        self.content.clear()
+
 class Printer(PrinterProto, Device):
 
-    buffer = Dummy()
+    buffer = Buffer()
     event:asyncio.Event
 
     def __init__(self):
