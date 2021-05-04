@@ -128,19 +128,19 @@ class PrintBuffer(Printer):
     @classmethod
     async def handle(cls, payload=None):
         await States.filter(id=1).update(submode=5)
-        while not Printer().event.is_set() and Printer().buffer.content:
-            # print each buffer content line and check printing result
-            data = next(d for d in Printer().buffer.content)
-            logger.debug(f'Printing buffer:{hexlify(data, sep=":")}')
-            await Printer().write(data)
-            await asyncio.sleep(0.05)
-            check = await PrintingStatusQuery.handle()
-            logger.debug(f'Printed w/o issues:{check}')
-            # no errors
-            if not check:
-                logger.error(f'Break printing operation. Error:{check}')
-                await States.filter(id=1).update(submode=2)
-                break
+        while not Printer().event.is_set():
+            for data in Printer().buffer.content:
+                logger.debug(f'Printing buffer:{hexlify(data, sep=":")}')
+                await Printer().write(data)
+                await asyncio.sleep(0.05)
+                check = await PrintingStatusQuery.handle()
+                logger.debug(f'Printed w/o issues:{check}')
+                # no errors
+                if not check:
+                    logger.error(f'Break printing operation. Error:{check}')
+                    await States.filter(id=1).update(submode=2)
+                    break
+            break
 
 class EnsurePrintBuffer(Printer):
 
