@@ -124,7 +124,7 @@ class PrintingStatusQuery(Printer):
                 f'AFTERPRINT BITS:{st}') #type: ignore
         if st[5] ==1:
             raise PaperBreak()
-        if st[6] ==1:
+        if st[3] ==1:
             raise DragMotorOff()
 
 class PrintBuffer(Printer):
