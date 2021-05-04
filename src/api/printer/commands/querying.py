@@ -104,6 +104,7 @@ class PrintingStatusQuery(Printer):
             cls._get_printing_status(status[0]) #type: ignore
         except Exception as e:
             await States.filter(id=1).update(submode=2)
+            logger.error(e)
             raise e
 
 
