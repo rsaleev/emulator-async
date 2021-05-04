@@ -98,7 +98,6 @@ class PrintingStatusQuery(Printer):
             raw = await Printer().read(1)
             status = bytearray(raw) #type: ignore
         elif cls.device_type == 'USB':
-            await asyncio.sleep(0.5)
             status = await Printer().read(40)
         logger.debug(
                 f'AFTERPRINT:{status}') #type: ignore
