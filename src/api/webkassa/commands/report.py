@@ -10,7 +10,7 @@ from src.api.webkassa.client import WebcassaClient
 from src.api.webkassa.models import ZXReportRequest, ZXReportResponse
 from src.api.webkassa.commands.authorization import WebkassaClientToken
 from src.api.webkassa import logger
-from src.api.printer.commands import PrintXML, CutPresent, PrintBuffer, ClearBuffer, EnsurePrintBuffer
+from src.api.printer.commands import *
 
 
 class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
@@ -75,11 +75,18 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
         await PrintBuffer.handle()
         await asyncio.sleep(0.1)
         await CutPresent.handle()
-        if not config['printer']['ensure_printed']:
-            await ClearBuffer.handle()
+        if config['printer']['ensure_printed']:
+            try:
+                await CheckLastOperation.handle()
+            except:
+                asyncio.create_task(EnsurePrintBuffer.handle())
+            else:
+                await ClearBuffer.handle()
+                await CutPresent.handle()
         else:
-            asyncio.create_task(EnsurePrintBuffer.handle())
-
+            await ClearBuffer.handle()
+            await CutPresent.handle()
+            
     @classmethod
     async def _flush_receipts(cls, response):
         logger.debug('Archiving receipts')
@@ -254,11 +261,17 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
         await asyncio.sleep(0.1)
         await PrintBuffer.handle()
         await asyncio.sleep(0.1)
-        await CutPresent.handle()
-        if not config['printer']['ensure_printed']:
-            await ClearBuffer.handle()
+        if config['printer']['ensure_printed']:
+            try:
+                await CheckLastOperation.handle()
+            except:
+                asyncio.create_task(EnsurePrintBuffer.handle())
+            else:
+                await ClearBuffer.handle()
+                await CutPresent.handle()
         else:
-            asyncio.create_task(EnsurePrintBuffer.handle())
+            await ClearBuffer.handle()
+            await CutPresent.handle()
 
     @classmethod
     async def exc_handler(cls, exc, payload):
