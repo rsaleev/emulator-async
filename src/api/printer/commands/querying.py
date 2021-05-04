@@ -136,7 +136,7 @@ class EnsurePrintBuffer(Printer):
 
     @classmethod
     async def handle(cls):
-        await asyncio.sleep(1)
+        await asyncio.sleep(1.5)
         check = await PrintingStatusQuery.handle()
         logger.debug(f'Printed w/o issues:{check}')
         # no errors
@@ -145,7 +145,6 @@ class EnsurePrintBuffer(Printer):
             await States.filter(id=1).update(submode=2)
             while not Printer().event.is_set():
                 status = await PrinterFullStatusQuery.handle()
-                await asyncio.sleep(0.05)
                 logger.info('Re-printing buffer')
                 logger.debug(f'Ready to re-print:{status}')
                 if status:
@@ -161,7 +160,7 @@ class EnsurePrintBuffer(Printer):
                     logger.debug(f'Cutting and presenting')
                     break
                 else:
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(1)
                     continue 
         else:
             await ClearBuffer.handle()      
