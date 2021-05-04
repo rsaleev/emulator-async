@@ -225,22 +225,9 @@ class SerialDevice(DeviceImpl):
         with ThreadPoolExecutor(max_workers=1) as executor:
             await loop.run_in_executor(executor, cls._close)
 
-
-class Buffer(Dummy):
-
-    def __init__(self):
-        super().__init__()
-        self.content = deque([])
-
-    def queue_append(self, cmd):
-        self.content.append(cmd)
-
-    def queue_clear(self):
-        self.content.clear()
-
 class Printer(PrinterProto, Device):
 
-    buffer = Buffer()
+    buffer = Dummy()
     event:asyncio.Event
 
     def __init__(self):

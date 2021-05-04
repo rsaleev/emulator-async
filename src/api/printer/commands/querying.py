@@ -128,17 +128,17 @@ class PrintBuffer(Printer):
     async def handle(cls):
         logger.debug('Printing buffer')
         await States.filter(id=1).update(submode=5)
-        for data in Printer().buffer.content:
-            logger.debug(f'Printing buffer:{hexlify(data, sep=":")}')
-            await Printer().write(data)
-            await asyncio.sleep(0.08)
-            check = await PrintingStatusQuery.handle()
-            logger.debug(f'Printed w/o issues:{check}')
-            # no errors
-            if not check:
-                logger.error(f'Break printing operation. Error:{check}')
-                await States.filter(id=1).update(submode=2)
-                raise PaperBreak()
+        await Printer().write(Printer().buffer.output)
+        await asyncio.sleep(0.08)
+        check = await PrintingStatusQuery.handle()
+        logger.debug(f'Printed w/o issues:{check}')
+        # no errors
+        if not check:
+            logger.error(f'Break printing operation. Error:{check}')
+            await States.filter(id=1).update(submode=2)
+            raise PaperBreak()
+        else:
+            await ClearBuffer.handle()
                 
 
 class EnsurePrintBuffer(Printer):
@@ -152,12 +152,10 @@ class EnsurePrintBuffer(Printer):
             if status:
                 await CutPresent.handle()
                 asyncio.ensure_future(States.filter(id=1).update(submode=3))
-                data = next(d for d in Printer().buffer.content)
-                logger.debug(f'Re-printing buffer:{hexlify(data, sep=":")}')
-                await Printer().write(data)
+                await Printer().write(Printer().buffer.output)
+                await asyncio.sleep(0.2)
                 check = await PrintingStatusQuery.handle()
                 logger.debug(f'Re-printed w/o issues:{check}')
-                PrintBuffer().buffer.content.clear()
                 logger.debug(f'Clearing buffer:{check}')
                 await CutPresent().handle()
                 logger.debug(f'Cutting and presenting:{check}')
@@ -172,7 +170,7 @@ class ClearBuffer(Printer):
 
     @classmethod
     async def handle(cls):
-        Printer().buffer.queue_clear()
+        Printer().buffer.clear()
 
 class ModeSetter(Printer):
 

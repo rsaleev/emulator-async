@@ -58,9 +58,6 @@ class PrintBytes(Printer):
         except Exception as e:
             logger.exception(e)
             raise e
-        else:
-            Printer().buffer.queue_append(Printer().buffer.output)
-            Printer().buffer.clear()
 
 
 
@@ -120,13 +117,13 @@ class PrintXML(Printer):
                         codepage.extend(cls.CP1251)
                     elif cls.encoding_output == 'CP866':
                         codepage.extend(cls.CP866)
-                Printer().buffer.queue_append(Printer().buffer.set(
+                Printer().buffer.set(
                     align=align,
                     font=cls.font,
                     bold=bold,
                     width=cls.width,
                     height=cls.height,
-                    custom_size=cls.custom_size))  #type: ignore
+                    custom_size=cls.custom_size) #type: ignore
                 output = content.text.encode(cls.encoding_output)
                 Printer().buffer._raw(output)               
             elif content.tag == 'br':
@@ -136,9 +133,6 @@ class PrintXML(Printer):
                     content=unescape(content.text),#type: ignore
                     center=True,
                     size=config['printer']['qr']['size'])  #type: ignore
-            # add to buffer full cmd and clear temporary
-            Printer().buffer.queue_append(Printer().buffer.output)
-            Printer().buffer.clear()
         except Exception as e:
             logger.exception(e)
             raise e

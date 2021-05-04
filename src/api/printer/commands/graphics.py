@@ -12,8 +12,6 @@ class PrintQR(Printer):
     @classmethod
     async def handle(cls, payload:str):
         Printer().buffer.qr(content=payload, center=True, size=cls.size)
-        Printer().buffer.queue_append(Printer().buffer.output)
-        Printer().buffer.clear()
         logger.debug('Buffering QR image')
 
 
@@ -53,8 +51,6 @@ class PrintGraphicLines(Printer):
             logger.exception(e)
         else:
             Printer().buffer.image(bc_inverted, impl=cls.impl, center=cls.center)
-            Printer().buffer.queue_append(Printer().buffer.output)
-            Printer().buffer.clear()
             logger.debug('Buffering barcode image')
 
 
