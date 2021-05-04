@@ -92,7 +92,6 @@ class PrintingStatusQuery(Printer):
 
     @classmethod
     async def handle(cls):
-        output = False
         await Printer().write(cls.command)
         if cls.device_type == 'SERIAL':
             raw = await Printer().read(1)
@@ -101,69 +100,61 @@ class PrintingStatusQuery(Printer):
             status = await Printer().read(40)
         logger.debug(
                 f'AFTERPRINT:{status}') #type: ignore
-        output = cls._get_printing_status(status[0]) #type: ignore
-        return output
+        try:
+            cls._get_printing_status(status[0]) #type: ignore
+        except Exception as e:
+            await States.filter(id=1).update(submode=2)
+            raise e
+
 
     @classmethod
     def _get_printing_status(cls, v:int):
-        try:
-            st = [int(elem) for elem in list(bin(v)[2:].zfill(8))] 
-            logger.debug(
-                    f'AFTERPRINT BITS:{st}') #type: ignore
-            if st[5] == 0:
-                return True
-            else:
-                return False
-        except Exception as e:
-            logger.error(e)
-            return False
-
+        st = [int(elem) for elem in list(bin(v)[2:].zfill(8))] 
+        logger.debug(
+                f'AFTERPRINT BITS:{st}') #type: ignore
+        if st[5] ==1:
+            raise PaperBreak()
 
 class PrintBuffer(Printer):
   
     alias = 'buffer'
-           
                     
     @classmethod
     async def handle(cls):
         logger.debug('Printing buffer')
         await States.filter(id=1).update(submode=5)
         await Printer().write(Printer().buffer.output)
-      
-                
+class CheckLastOperation(Printer):
+
+    @classmethod
+    async def handle(cls):
+        await asyncio.sleep(1.5)
+        await PrintingStatusQuery.handle()
 
 class EnsurePrintBuffer(Printer):
 
     @classmethod
     async def handle(cls):
-        await asyncio.sleep(1.5)
-        check = await PrintingStatusQuery.handle()
-        logger.debug(f'Printed w/o issues:{check}')
-        # no errors
-        if not check:
-            logger.error(f'Break printing operation. Error:{check}')
-            await States.filter(id=1).update(submode=2)
-            while not Printer().event.is_set():
-                status = await PrinterFullStatusQuery.handle()
-                logger.info('Re-printing buffer')
-                logger.debug(f'Ready to re-print:{status}')
-                if status:
-                    await CutPresent.handle()
-                    await asyncio.sleep(0.05)
-                    asyncio.ensure_future(States.filter(id=1).update(submode=3))
-                    await Printer().write(Printer().buffer.output)
-                    await asyncio.sleep(1)
-                    check = await PrintingStatusQuery.handle()
-                    logger.debug(f'Re-printed w/o issues:{check}')
-                    logger.debug(f'Clearing buffer:{check}')
-                    await CutPresent().handle()
-                    logger.debug(f'Cutting and presenting')
-                    break
-                else:
-                    await asyncio.sleep(1)
-                    continue 
-        else:
-            await ClearBuffer.handle()      
+        while not Printer().event.is_set():
+            status = await PrinterFullStatusQuery.handle()
+            logger.info('Re-printing buffer')
+            logger.debug(f'Ready to re-print:{status}')
+            if status:
+                await CutPresent.handle()
+                await asyncio.sleep(0.05)
+                asyncio.ensure_future(States.filter(id=1).update(submode=3))
+                await Printer().write(Printer().buffer.output)
+                await asyncio.sleep(1)
+                check = await PrintingStatusQuery.handle()
+                logger.debug(f'Re-printed w/o issues:{check}')
+                logger.debug(f'Clearing buffer:{check}')
+                await CutPresent().handle()
+                logger.debug(f'Cutting and presenting')
+                break
+            else:
+                await asyncio.sleep(1)
+                continue 
+          
 
 class ClearBuffer(Printer):
 

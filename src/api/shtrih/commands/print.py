@@ -1,6 +1,6 @@
 import re
 import asyncio
-from src.api.printer.commands.querying import ClearBuffer, EnsurePrintBuffer
+from src.api.printer.commands.querying import CheckLastOperation, ClearBuffer, EnsurePrintBuffer
 from uuid import uuid4
 from src import config
 from src.api.printer.commands import PrintBytes, CutPresent, PrintBuffer, PrintDeferredBytes, PrintGraphicLines
@@ -83,10 +83,21 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         # wait for execution:
         # if error occured -> return 0x200
         await PrintBuffer.handle()
-        await CutPresent.handle()
         if config['printer']['ensure_printed']:
-            asyncio.create_task(EnsurePrintBuffer.handle())
-        cls.set_error(0)
+            try:
+                await CheckLastOperation.handle()
+            except:
+                cls.set_error(200)
+                asyncio.create_task(EnsurePrintBuffer.handle())
+            else:
+                cls.set_error(0)
+                await ClearBuffer.handle()
+                await CutPresent.handle()
+
+        else:
+            cls.set_error(0)
+            await ClearBuffer.handle()
+            await CutPresent.handle()
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
