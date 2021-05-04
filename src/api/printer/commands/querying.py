@@ -129,7 +129,7 @@ class PrintBuffer(Printer):
         logger.debug('Printing buffer')
         await States.filter(id=1).update(submode=5)
         await Printer().write(Printer().buffer.output)
-        await asyncio.sleep(0.08)
+        await asyncio.sleep(1)
         check = await PrintingStatusQuery.handle()
         logger.debug(f'Printed w/o issues:{check}')
         # no errors
