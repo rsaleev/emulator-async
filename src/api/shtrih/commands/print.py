@@ -80,19 +80,16 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
    
     @classmethod
     async def handle(cls, payload:bytearray) -> bytearray:
+        # wait for execution:
+        # if error occured -> return 0x200
         try:
-            # wait for execution:
-            # if error occured -> return 0x200
             await PrintBuffer.handle()
-            if not config['printer']['ensure_printed']:
-                await ClearBuffer.handle()
-            else:
-                asyncio.create_task(EnsurePrintBuffer.handle())
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
+            if config['printer']['ensure_printed']:
+                asyncio.create_task(EnsurePrintBuffer.handle())
         else:
             cls.set_error(0)
-        finally:
             await CutPresent.handle()
         arr = bytearray()
         arr.extend(cls._length)

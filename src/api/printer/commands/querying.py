@@ -8,7 +8,7 @@ from src.api.printer.device import Printer
 from src.db.models.state import States
 from src.api.printer import logger
 from src.api.printer.commands.present import CutPresent
-
+from src.api.printer.exceptions import * 
 class PrinterFullStatusQuery(Printer):
 
     alias = 'status'
@@ -138,6 +138,8 @@ class PrintBuffer(Printer):
             if not check:
                 logger.error(f'Break printing operation. Error:{check}')
                 await States.filter(id=1).update(submode=2)
+                raise PaperBreak()
+                
 
 class EnsurePrintBuffer(Printer):
 
@@ -148,6 +150,7 @@ class EnsurePrintBuffer(Printer):
             logger.info('Re-printing buffer')
             logger.debug(f'Ready to re-print:{status}')
             if status:
+                await CutPresent.handle()
                 asyncio.ensure_future(States.filter(id=1).update(submode=3))
                 data = next(d for d in Printer().buffer.content)
                 logger.debug(f'Re-printing buffer:{hexlify(data, sep=":")}')
