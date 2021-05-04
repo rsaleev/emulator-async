@@ -138,7 +138,6 @@ class PrintBuffer(Printer):
             if not check:
                 logger.error(f'Break printing operation. Error:{check}')
                 await States.filter(id=1).update(submode=2)
-                break
 
 class EnsurePrintBuffer(Printer):
 
