@@ -30,24 +30,31 @@ class Watchdog:
         if (hours < 24 and shift.total_docs == 0):
             if states.mode !=2:
                 states.update_from_dict({'mode':2})
-                asyncio.ensure_future(states.save())
+                await states.save()
         elif hours >= 24:
             # closing shift for emulator status, no request to gateway
             if shift.total_docs ==0:
                 logger.warning('Autoclosing shift by timer. No documents in this shift')
                 states.update_from_dict({'mode':2}),
                 shift.update_from_dict({'open_date':timezone.now()})
-                asyncio.ensure_future(states.save())
-                asyncio.ensure_future(shift.save())
+                await asyncio.gather(
+                                    states.save(),
+                                    shift.save())
             else:
                 # if autclose enabled shift will be closed without printing report
                 if config['emulator']['shift']['autoclose']:
                     logger.warning('Autoclosing shift by timer')
-                    asyncio.ensure_future(WebkassaClientCloseShift.handle())
+                    fut = asyncio.ensure_future(WebkassaClientCloseShift.handle())
+                    while not fut.done():
+                        await asyncio.sleep(0.2)
+                    if fut.exception():
+                        logger.warning('Autoclosing shift by timer: unsuccess')
+                    else:
+                        logger.warning('Autoclosing shift by timer: success')
                 else:
                     logger.warning('Close shift manually. 24H elapsed')
                     states.update_from_dict({'mode':3})
-                    asyncio.ensure_future(states.save())
+                    await states.save()
 
 
     async def _check_shift_by_time(self, shift):
