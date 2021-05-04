@@ -129,6 +129,13 @@ class PrintBuffer(Printer):
         logger.debug('Printing buffer')
         await States.filter(id=1).update(submode=5)
         await Printer().write(Printer().buffer.output)
+      
+                
+
+class EnsurePrintBuffer(Printer):
+
+    @classmethod
+    async def handle(cls):
         await asyncio.sleep(1)
         check = await PrintingStatusQuery.handle()
         logger.debug(f'Printed w/o issues:{check}')
@@ -136,33 +143,26 @@ class PrintBuffer(Printer):
         if not check:
             logger.error(f'Break printing operation. Error:{check}')
             await States.filter(id=1).update(submode=2)
-            raise PaperBreak()
+            while not Printer().event.is_set():
+                status = await PrinterFullStatusQuery.handle()
+                logger.info('Re-printing buffer')
+                logger.debug(f'Ready to re-print:{status}')
+                if status:
+                    await CutPresent.handle()
+                    asyncio.ensure_future(States.filter(id=1).update(submode=3))
+                    await Printer().write(Printer().buffer.output)
+                    await asyncio.sleep(0.2)
+                    check = await PrintingStatusQuery.handle()
+                    logger.debug(f'Re-printed w/o issues:{check}')
+                    logger.debug(f'Clearing buffer:{check}')
+                    await CutPresent().handle()
+                    logger.debug(f'Cutting and presenting:{check}')
+                    break
+                else:
+                    await asyncio.sleep(0.5)
+                    continue 
         else:
-            await ClearBuffer.handle()
-                
-
-class EnsurePrintBuffer(Printer):
-
-    @classmethod
-    async def handle(cls):
-        while not Printer().event.is_set():
-            status = await PrinterFullStatusQuery.handle()
-            logger.info('Re-printing buffer')
-            logger.debug(f'Ready to re-print:{status}')
-            if status:
-                await CutPresent.handle()
-                asyncio.ensure_future(States.filter(id=1).update(submode=3))
-                await Printer().write(Printer().buffer.output)
-                await asyncio.sleep(0.2)
-                check = await PrintingStatusQuery.handle()
-                logger.debug(f'Re-printed w/o issues:{check}')
-                logger.debug(f'Clearing buffer:{check}')
-                await CutPresent().handle()
-                logger.debug(f'Cutting and presenting:{check}')
-                break
-            else:
-                await asyncio.sleep(0.5)
-                continue       
+            await ClearBuffer.handle()      
 
 class ClearBuffer(Printer):
 
