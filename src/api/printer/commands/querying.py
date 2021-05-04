@@ -23,6 +23,7 @@ class PrinterFullStatusQuery(Printer):
     @classmethod
     async def _fetch_full_status(cls):
         output = False
+        states = await States.filter(id=1).first()
         await Printer().write(cls.command)
         if cls.device_type == 'SERIAL':
             raw = await Printer().read(6)
@@ -48,11 +49,19 @@ class PrinterFullStatusQuery(Printer):
                                                                     jam=int(rec_err)))
                 output = True
             else:
-                asyncio.ensure_future(States.filter(id=1).update(submode=1, 
+                if not states.submode in [2]:
+                    asyncio.ensure_future(States.filter(id=1).update( 
                                                                     paper=int(paper), 
                                                                     cover=int(cover), 
                                                                     roll=int(roll), 
                                                                     jam=int(rec_err)))
+                else:
+                    asyncio.ensure_future(States.filter(id=1).update(submode=1, 
+                                                                    paper=int(paper), 
+                                                                    cover=int(cover), 
+                                                                    roll=int(roll), 
+                                                                    jam=int(rec_err)))
+
         except:
             pass
         return output
