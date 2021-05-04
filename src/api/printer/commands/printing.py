@@ -59,7 +59,8 @@ class PrintBytes(Printer):
             logger.exception(e)
             raise e
         else:
-            asyncio.ensure_future(States.filter(id=1).update(submode=3))
+            Printer().buffer.queue_append(Printer().buffer.output)
+            Printer().buffer.clear()
 
 
 class PrintXML(Printer):
