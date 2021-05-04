@@ -127,6 +127,7 @@ class PrintBuffer(Printer):
                     
     @classmethod
     async def handle(cls, payload=None):
+        logger.debug('Printing buffer')
         await States.filter(id=1).update(submode=5)
         while not Printer().event.is_set():
             for data in Printer().buffer.content:
