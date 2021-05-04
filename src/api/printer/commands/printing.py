@@ -61,6 +61,8 @@ class PrintBytes(Printer):
         else:
             Printer().buffer.queue_append(Printer().buffer.output)
             Printer().buffer.clear()
+            logger.debug(Printer().buffer.content)
+
 
 
 class PrintXML(Printer):
