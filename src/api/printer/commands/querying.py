@@ -131,7 +131,7 @@ class PrintBuffer(Printer):
         for data in Printer().buffer.content:
             logger.debug(f'Printing buffer:{hexlify(data, sep=":")}')
             await Printer().write(data)
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.05)
             check = await PrintingStatusQuery.handle()
             logger.debug(f'Printed w/o issues:{check}')
             # no errors
