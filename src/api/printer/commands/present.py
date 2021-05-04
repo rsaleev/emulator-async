@@ -2,7 +2,6 @@ import asyncio
 from src import config
 from src.api.printer.device import Printer
 from src.api.printer import logger
-from src.api.printer.commands.querying import PrinterFullStatusQuery
 
 
 class CutPresent(Printer):
@@ -42,6 +41,5 @@ class CutPresent(Printer):
                 present_mode.extend(cls.present)
                 present_mode.append(cls.present_length)
                 await Printer().write(present_mode) #type: ignore PyLance
-            await PrinterFullStatusQuery.handle()
         except Exception as e:
             logger.exception(e)
