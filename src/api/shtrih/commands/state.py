@@ -71,7 +71,7 @@ class FullState(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def handle(cls, payload):
         task = asyncio.create_task(PrinterFullStatusQuery.handle())
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
         if task.done() and not task.exception():
             printer_online=True
         else:

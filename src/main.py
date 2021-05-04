@@ -62,12 +62,13 @@ class Application:
             # blocking step by step operations
             logger.warning('Initializing DB')
             await cls.db.connect()
-            await asyncio.gather(Shift.get_or_create(id=1), States.get_or_create(id=1), Token.get_or_create(id=1))      
+            await asyncio.gather(Shift.get_or_create(id=1), States.get_or_create(id=1), Token.get_or_create(id=1)) 
+            logger.warning('Initializing devices')
+            await cls._init_serial()
+            await cls._init_printer()
             logger.warning('Initializing gateway')
             await WebkassaClientToken.handle()
             logger.warning('Initializing gateway done')
-            logger.warning('Initializing devices')
-            await asyncio.gather(cls._init_printer(), cls._init_serial())
         except Exception as e:
             raise SystemExit(f'Emergency shutdown: {e}')
         else:
