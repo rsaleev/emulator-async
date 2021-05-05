@@ -96,7 +96,7 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
         await PrintBuffer.handle()           
         if config['printer']['doc']['ensure_printed']:
             try:
-                asyncio.sleep(1.5)
+                await asyncio.sleep(1.5)
                 await CheckLastOperation.handle()
             except:
                 asyncio.create_task(EnsurePrintBuffer.handle())
