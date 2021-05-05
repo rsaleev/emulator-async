@@ -84,8 +84,14 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         # if error occured -> return 0x200
         await PrintBuffer.handle()
         await CutPresent.handle()
+        arr = bytearray()
+        arr.extend(cls._length)
+        arr.extend(cls._command_code)
+        arr.extend(cls._error_code)
+        arr.extend(cls._password)
         if config['printer']['text']['ensure_printed']:
             try:
+                await asyncio.sleep(1)
                 await CheckLastOperation.handle()
             except:
                 cls.set_error(200)
@@ -96,11 +102,6 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         else:
             await ClearBuffer.handle()
             cls.set_error(0)
-
-        arr = bytearray()
-        arr.extend(cls._length)
-        arr.extend(cls._command_code)
-        arr.extend(cls._error_code)
-        arr.extend(cls._password)
         return arr
- 
+
+
