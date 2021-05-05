@@ -90,7 +90,7 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._password)
         if config['printer']['text']['ensure_printed']:
             try:
-                await asyncio.sleep(1)
+                await asyncio.sleep(config['printer']['doc']['ensure_printed_delay'])
                 await CheckLastOperation.handle()
             except:
                 cls.set_error(200)

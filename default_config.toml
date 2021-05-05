@@ -57,7 +57,11 @@ input = 'CP1251' #codepage 46
 output ='CP866' #codepage 17
 # при изменении атрибутов выше, поменять флаг на true
 send_encoding = true
-ensure_printed = true
+# в случае обрыва ленты автоматически печать данные из буфера после восстановления
+ensure_printed = true # true- включено, false - отключено
+# задержка перед проверкой и ожиданием восстановления
+ensure_printed_delay = 0.5
+
 
 [printer.doc]
 # Настройки относятся к печати фискального документа. См. атрибуты для команды 17H
@@ -71,6 +75,7 @@ input = 'utf8'
 output ='cp866'
 send_encoding = true
 ensure_printed = true
+ensure_printed_delay = 0.5
 
 [webkassa]
 # Авторизационные данные для идентификации кассы при запросах в WebkassaLocal
