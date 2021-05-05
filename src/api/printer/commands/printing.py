@@ -117,6 +117,7 @@ class PrintXML(Printer):
                         codepage.extend(cls.CP1251)
                     elif cls.encoding_output == 'CP866':
                         codepage.extend(cls.CP866)
+                    Printer().buffer._raw(codepage)
                 Printer().buffer.set(
                     align=align,
                     font=cls.font,
