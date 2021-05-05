@@ -153,6 +153,7 @@ class EnsurePrintBuffer(Printer):
                 asyncio.ensure_future(States.filter(id=1).update(submode=3))
                 await Printer().write(Printer().buffer.output)
                 await CutPresent().handle()
+                await ClearBuffer().handle()
                 logger.debug(f'Cutting and presenting')
                 break
             else:
