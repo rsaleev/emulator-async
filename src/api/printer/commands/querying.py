@@ -49,7 +49,7 @@ class PrinterFullStatusQuery(Printer):
                                                                     jam=int(rec_err)))
                 output = True
             else:
-                if not states.submode in [2]:
+                if states.submode in [2]:
                     asyncio.ensure_future(States.filter(id=1).update( 
                                                                     paper=int(paper), 
                                                                     cover=int(cover), 
