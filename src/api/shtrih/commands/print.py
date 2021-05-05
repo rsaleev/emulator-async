@@ -83,7 +83,7 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         # wait for execution:
         # if error occured -> return 0x200
         await PrintBuffer.handle()
-        if config['printer']['ensure_printed']:
+        if config['printer']['text']['ensure_printed']:
             try:
                 await CheckLastOperation.handle()
             except:
@@ -93,11 +93,11 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
                 cls.set_error(0)
                 await ClearBuffer.handle()
                 await CutPresent.handle()
-
         else:
             cls.set_error(0)
             await ClearBuffer.handle()
             await CutPresent.handle()
+
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)

@@ -75,7 +75,7 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
         await PrintBuffer.handle()
         await asyncio.sleep(0.1)
         await CutPresent.handle()
-        if config['printer']['ensure_printed']:
+        if config['printer']['doc']['ensure_printed']:
             try:
                 await CheckLastOperation.handle()
             except:
@@ -261,7 +261,7 @@ class WebkassaClientXReport(WebcassaCommand, WebcassaClient):
         await asyncio.sleep(0.1)
         await PrintBuffer.handle()
         await asyncio.sleep(0.1)
-        if config['printer']['ensure_printed']:
+        if config['printer']['doc']['ensure_printed']:
             try:
                 await CheckLastOperation.handle()
             except:

@@ -92,12 +92,9 @@ class WebkassaClientSale(WebcassaCommand, WebcassaClient):
 
     @classmethod
     async def _print_check(cls,doc):
-        try:
-            await PrintXML.handle(doc)
-            await PrintBuffer.handle()           
-        except Exception as e:
-            await logger.exception(e)
-        if config['printer']['ensure_printed']:
+        await PrintXML.handle(doc)
+        await PrintBuffer.handle()           
+        if config['printer']['doc']['ensure_printed']:
             try:
                 await CheckLastOperation.handle()
             except:
