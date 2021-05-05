@@ -83,7 +83,6 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         # wait for execution:
         # if error occured -> return 0x200
         await PrintBuffer.handle()
-        await CutPresent.handle()
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -99,9 +98,11 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
             else:
                 cls.set_error(0)
                 await ClearBuffer.handle()
+                await CutPresent.handle()
         else:
-            await ClearBuffer.handle()
             cls.set_error(0)
+            await CutPresent.handle()
+            await ClearBuffer.handle()
         return arr
 
 
