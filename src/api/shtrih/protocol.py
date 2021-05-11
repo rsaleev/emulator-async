@@ -1,4 +1,3 @@
-from asyncio.tasks import current_task
 import operator
 from functools import reduce
 import asyncio
@@ -109,11 +108,12 @@ class ShtrihProtoInterface:
         if hdlr:
             await self.write(ShtrihProto.ACK)
             output = await hdlr.handle(data)
-            await self.write(ShtrihProto.payload_pack(output))
-            self.buffer.put_nowait(output)
+            payload_out = ShtrihProto.payload_pack(output)
+            self.buffer.put_nowait(payload_out)
+            await self.write(payload_out)
         else:
+            logger.error(f"{cmd} not implemented in current build version ")
             await self.write(ShtrihProto.NAK)
-            asyncio.ensure_future(logger.error(f"{cmd} not implemented in current build version "))
              
    
            
