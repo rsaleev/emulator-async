@@ -60,7 +60,7 @@ send_encoding = true
 # в случае обрыва ленты автоматически печать данные из буфера после восстановления
 ensure_printed = true # true- включено, false - отключено
 # задержка перед проверкой и ожиданием восстановления
-ensure_printed_delay = 0.5
+ensure_printed_delay = 0.8
 
 
 [printer.doc]
@@ -75,7 +75,7 @@ input = 'utf8'
 output ='cp866'
 send_encoding = true
 ensure_printed = true
-ensure_printed_delay = 0.5
+ensure_printed_delay = 0.8
 
 [webkassa]
 # Авторизационные данные для идентификации кассы при запросах в WebkassaLocal
@@ -85,8 +85,8 @@ url = 'http://127.0.0.1:1331/api'
 login = '' # ЗАПОЛНИтЬ
 password = '' # ЗАПОЛНИтЬ
 # Время ожидания ответа от WebkassaLocal в секундах
-timeout = 15
-# Количество попыток получения ответа от WebkassaLocal в секундах
+timeout = 6
+# Количество попыток получения ответа от WebkassaLocal
 attempts = 5
 
 [webkassa.taxgroup]
