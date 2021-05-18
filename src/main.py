@@ -1,3 +1,6 @@
+__version__ ='2.0.2'
+
+
 import asyncio
 import signal
 import os
