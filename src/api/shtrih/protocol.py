@@ -48,8 +48,8 @@ class ShtrihProtoInterface:
             elif payload == ShtrihProto.NAK:
                 await self._nak_handle()
             else:
+                logger.error(f'INPUT:{hexlify(payload, sep=":")}.Unknown bytes')
                 await self.write(ShtrihProto.NAK) 
-                logger.error(f'INPUT:{hexlify(payload, sep=":")}.Unknown byte controls ')
         except Exception as e:
            logger.exception(e)
 
@@ -63,7 +63,7 @@ class ShtrihProtoInterface:
     
     async def _enq_handle(self):
         if not self.buffer.empty(): 
-            queued = self.buffer.get_nowait()
+            queued = await self.buffer.get()
             await self.write(ShtrihProto.ACK)
             await self.write(queued) 
         else:
@@ -71,10 +71,10 @@ class ShtrihProtoInterface:
 
     async def _stx_handle(self): 
         length = await self.read(1) 
-        logger.debug(f'LEN:{hexlify(length, sep=":")}')
+        await logger.debug(f'LEN:{hexlify(length, sep=":")}')
         # read bytes: total bytes size = length
         data = await self.read(length[0]) 
-        logger.debug(f'DATA:{hexlify(data, sep=":")}')
+        await logger.debug(f'DATA:{hexlify(data, sep=":")}')
         # check if data presented
         if not data:
             # if data not presented in payload 
@@ -82,20 +82,20 @@ class ShtrihProtoInterface:
         # # if data presented in payload
         else:
             crc = await self.read(1) 
-            logger.debug(f'CRC:{hexlify(crc, sep=":")}')
+            await logger.info(f'CRC:{hexlify(crc, sep=":")}')
             # check crc
             crc_arr = bytearray()
             crc_arr.extend(length)
             crc_arr.extend(data)
             # if crc positive
             if ShtrihProto.payload_crc_calc(crc_arr) == crc:
+                logger.info('CRC:ACCEPTED')
                 await self._cmd_handle(data)
-                logger.debug('CRC:ACCEPTED')
 
             # # if crc negative
             else:
+                logger.error('CRC:DECLINED')
                 await self.write(ShtrihProto.NAK)
-                logger.debug('CRC:DECLINED')
 
 
     async def _cmd_handle(self, payload:bytearray):
@@ -109,8 +109,8 @@ class ShtrihProtoInterface:
             await self.write(ShtrihProto.ACK)
             output = await hdlr.handle(data)
             payload_out = ShtrihProto.payload_pack(output)
-            self.buffer.put_nowait(payload_out)
             await self.write(payload_out)
+            await self.buffer.put(payload_out)
         else:
             logger.error(f"{cmd} not implemented in current build version ")
             await self.write(ShtrihProto.NAK)
