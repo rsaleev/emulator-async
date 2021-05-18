@@ -1,6 +1,5 @@
 from tortoise.models import Model
-from tortoise.fields.data import UUIDField, CharField, IntField, FloatField, DatetimeField, BooleanField, BigIntField
-from tortoise import timezone
+from tortoise.fields.data import UUIDField, CharField, IntField, FloatField, DatetimeField, BooleanField
 
 class Receipt(Model):
     id = IntField(pk=True)
