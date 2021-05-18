@@ -17,8 +17,8 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def handle(cls, payload:bytearray) ->bytearray:
         try:
+            asyncio.create_task(cls._parse_custom_line(payload))
             await PrintBytes.handle(payload=payload[4:])
-            await cls._parse_custom_line(payload)
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
         else:
@@ -47,7 +47,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
         line12=r"^Application:\W+\w+\W+\w+"
         line13=r"^AID:\W+\w+"
         line14=r"^TC:\W+\w+"
-        lines = [line1, line2, line3, line4, line5, line6, line7, line8, line9, line10, line11, line12,line13,line14]
+        lines = [line1, line2, line3, line4, line5, line6, line7, line8, line9, line10, line11, line12, line13, line14]
 
 
     @classmethod
@@ -63,7 +63,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
                 await Receipt.create(uid=uuid4(), ticket=num)
             # check if line consists payment w/o change data
             for line in cls.CustomHeader.lines:
-                data = re.match(line,line_to_print)
+                data = re.match(pattern=line,string=line_to_print,flags=re.IGNORECASE)
                 if data:
                     # store 
                     await PrintDeferredBytes.append(payload) 
@@ -107,7 +107,7 @@ class Cut(ShtrihCommand, ShtrihCommandInterface):
         arr.extend(cls._password)
         if config['printer']['text']['ensure_printed']:
             try:
-                await asyncio.sleep(config['printer']['doc']['ensure_printed_delay'])
+                await asyncio.sleep(config['printer']['text']['ensure_printed_delay'])
                 await CheckLastOperation.handle()
             except:
                 cls.set_error(200)
