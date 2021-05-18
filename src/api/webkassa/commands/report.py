@@ -65,7 +65,6 @@ class WebkassaClientZReport(WebcassaCommand, WebcassaClient):
         else:
             doc = fromstring(render.result())
             asyncio.create_task(cls._print_report(doc))
-            asyncio.create_task(cls._flush_receipts(response))
 
     @classmethod
     async def _print_report(cls, doc):
