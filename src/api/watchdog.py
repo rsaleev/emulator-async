@@ -19,7 +19,7 @@ class Watchdog:
             if config['emulator']['shift']['close_by'] == 1: #close by counter
                 asyncio.create_task(self._check_shift_by_counter(shift, states))
             elif config['emulator']['shift']['close_by'] ==2:
-                asyncio.create_task(self._check_shift_by_time(shift))
+                asyncio.create_task(self._check_shift_by_time(shift, states))
         await asyncio.sleep(1)
 
 
@@ -57,9 +57,11 @@ class Watchdog:
                     await states.save()
 
 
-    async def _check_shift_by_time(self, shift):
-        close_at = shift.open_date.time()+timedelta(hours=24)
-        if timezone.now().time() >= close_at and shift.mode !=3:
+    async def _check_shift_by_time(self, shift,states):
+        close_at = config['emulator']['shift']['close_at']
+        close_at_today = shift.open_date.replace(hour=close_at.hour, minute=close_at.minute, second=close_at.second)
+        delta = (timezone.now()-close_at_today).total_seconds()
+        if -1 <=delta <=1 and states.mode !=3:
             logger.warning('Autoclosing shift by timer')
             fut = asyncio.ensure_future(WebkassaClientCloseShift.handle())
             while not fut.done():
@@ -68,6 +70,7 @@ class Watchdog:
                 logger.warning('Autoclosing shift by timer: unsuccess')
             else:
                 logger.warning('Autoclosing shift by timer: success')
+            await asyncio.sleep(1)
 
     async def _token_check(self):
         logger.debug('Checking token')
