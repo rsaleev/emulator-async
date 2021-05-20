@@ -77,7 +77,7 @@ class Application:
 
     @classmethod
     async def init(cls):
-        await logger.warning('Initializing application...')
+        await logger.warning(f'Initializing application. {__version__}')
         await cls._init_db()
         await logger.warning('Initializing devices')
         await cls._init_serial()
