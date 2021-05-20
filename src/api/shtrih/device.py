@@ -164,7 +164,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 continue
             else:
                 logger.info(f'OUTPUT:{hexlify(bytes(data), sep=":")}')
-                logger.debug(f'OUTPUT BUFFER: {self._impl.device.in_waiting}')
+                logger.debug(f'OUTPUT BUFFER: {self._impl.device.out_waiting}')
                 break
 
     async def poll(self):
