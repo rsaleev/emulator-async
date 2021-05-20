@@ -1,7 +1,8 @@
-__version__ ='2.0.2'
+__version__ ='2.0.3'
 
 
 import asyncio
+from asyncio.locks import Event
 import signal
 import os
 import uvloop
@@ -20,6 +21,7 @@ class Application:
     printer = Printer()
     fiscalreg = Paykiosk()
     watchdog = Watchdog()
+    event = Event()
 
     @classmethod
     async def signal_handler(cls, signal, loop):
@@ -44,6 +46,21 @@ class Application:
         finally:
             os._exit(0)
 
+    @classmethod
+    async def _init_db(cls):
+        try:
+            # blocking step by step operations
+            await logger.warning('Initializing DB')
+            await asyncio.wait_for(cls.db.connect(),1)
+        except asyncio.TimeoutError:
+            await logger.error(f'Database connection issue')
+            raise SystemExit(f'Emergency shutdown:Database connection issue')
+        try:
+            await asyncio.wait_for(asyncio.gather(Shift.get_or_create(id=1), States.get_or_create(id=1), Token.get_or_create(id=1)),1)
+        except asyncio.TimeoutError:
+            await logger.error(f'Database creating tables issue')
+            raise SystemExit(f'Emergency shutdown: Creating database tables issue')
+
 
     @classmethod
     async def _init_printer(cls):
@@ -61,24 +78,15 @@ class Application:
     @classmethod
     async def init(cls):
         await logger.warning('Initializing application...')
-        try:
-            # blocking step by step operations
-            logger.warning('Initializing DB')
-            await cls.db.connect()
-            await asyncio.gather(Shift.get_or_create(id=1), States.get_or_create(id=1), Token.get_or_create(id=1)) 
-            logger.warning('Initializing devices')
-            await cls._init_serial()
-            await cls._init_printer()
-            logger.warning('Initializing gateway')
-            await WebkassaClientToken.handle()
-            logger.warning('Initializing gateway done')
-        except Exception as e:
-            raise SystemExit(f'Emergency shutdown: {e}')
-        else:
-            logger.warning('Application initialized.Serving')
+        await cls._init_db()
+        await logger.warning('Initializing devices')
+        await cls._init_serial()
+        asyncio.ensure_future(cls._init_printer())
+        asyncio.ensure_future(WebkassaClientToken.handle())
 
     @classmethod
     async def serve(cls):
+        await logger.warning('Application initialized.Serving')
         try:
             #background task: watchdog poller
             if config['emulator']['watchdog']:
