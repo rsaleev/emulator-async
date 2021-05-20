@@ -7,7 +7,7 @@ from src.db.models import Receipt
 
 
 class SubTotal(ShtrihCommand, ShtrihCommandInterface):
-    _length = bytearray((0x03,))
+    _length = bytearray((0x08,))
     _command_code = bytearray((0x89,))
 
     @classmethod
