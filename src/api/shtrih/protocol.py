@@ -22,7 +22,7 @@ class ShtrihProto:
         output = bytearray()
         output.extend(ShtrihProto.STX)
         output.extend(payload)
-        output.extend(cls.payload_crc_calc(output))
+        output.extend(cls.payload_crc_calc(payload))
         return output
 
 class ShtrihProtoInterface:

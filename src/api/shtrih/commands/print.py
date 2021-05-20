@@ -1,3 +1,4 @@
+from os.path import normcase
 import re
 import asyncio
 from src.api.printer.commands.querying import CheckLastOperation, ClearBuffer, EnsurePrintBuffer
@@ -7,7 +8,7 @@ from src.api.shtrih import logger
 from src.api.printer.commands import PrintBytes, CutPresent, PrintBuffer, PrintDeferredBytes, PrintGraphicLines
 from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 from src.db.models.receipt import Receipt
-
+from typing import Pattern, NoReturn
 
 class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
 
@@ -31,44 +32,29 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
         return arr
         
     class CustomHeader:
-        # No change
-        line1=r"^Невыданная сдача\W+"
-        line2=r"^\W+Банкноты\W+\d+\W+\d+\w+"
-        line3=r"^\W+Монеты\W+\d+\W+\d+\w+"
-        line4=r"^\W+Недоступно\W+\d+\W+\d+\w+"
-        # POS
-        line5=r"^Время операции:\W+\w+\W+\w+\W+\w+\W+\w+\W+\w+\W+\w+"
-        line6=r"^Тип операции:\W+\w+"
-        line7=r"^Сумма:\W+\d+\W+\w+\W+"
-        line8=r"^Номер карты:\W+\w+\w+\W+\w+"
-        line9=r"^RRN:\W+\w+"
-        line10=r"^RC:\W+\w+"
-        line11=r"^Auth:\W+\w+"
-        line12=r"^Application:\W+\w+\W+\w+"
-        line13=r"^AID:\W+\w+"
-        line14=r"^TC:\W+\w+"
-        lines = [line1, line2, line3, line4, line5, line6, line7, line8, line9, line10, line11, line12, line13, line14]
-
+        PATTERN:Pattern = re.compile('|'.join(config['webkassa']['receipt']['header_regex']))
 
     @classmethod
-    async def _parse_custom_line(cls, payload:bytearray) -> None:
+    async def _parse_custom_line(cls, payload:bytearray)->None:
         try:
             line_to_print = bytes(payload[5:]).decode('cp1251')
             # check if line consists ticket number
-            ticket = re.match(pattern=config['webkassa']['receipt']['regex'],  
-                            string=line_to_print, 
-                            flags=re.IGNORECASE)
-            if ticket:
-                num = ticket.group(2)
-                await Receipt.create(uid=uuid4(), ticket=num)
-            # check if line consists payment w/o change data
-            for line in cls.CustomHeader.lines:
-                data = re.match(pattern=line,string=line_to_print,flags=re.IGNORECASE)
-                if data:
-                    # store 
+            if config['webkassa']['receipt']['parse_ticket']:
+                ticket = re.match(pattern=config['webkassa']['receipt']['ticket_regex'],  
+                                string=line_to_print, 
+                                flags=re.IGNORECASE)
+                if ticket:
+                    num = ticket.group(2)
+                    await Receipt.create(uid=uuid4(), ticket=num)
+            # check if line consists custom header data
+            if not config['webkassa']['receipt']['header'] and config['webkassa']['receipt']['parse_header']:
+                if re.match(pattern=cls.CustomHeader.PATTERN,
+                            string=line_to_print,
+                            flags=re.IGNORECASE):
                     await PrintDeferredBytes.append(payload) 
         except Exception as e:
             logger.error(e)
+       
                 
 class PrintOneDimensionalBarcode(ShtrihCommand, ShtrihCommandInterface):
     _length =  bytearray((0x03,))
