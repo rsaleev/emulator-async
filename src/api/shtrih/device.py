@@ -21,7 +21,9 @@ class SerialDevice(DeviceImpl):
             dsrdtr=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))), 
             rtscts=bool(int(os.environ.get("PAYKIOSK_FLOW_CONTROL","0"))),
             timeout=float(int(os.environ.get("PAYKIOSK_READ_TIMEOUT",5000))/1000), #type_ignore
-            write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000))
+            write_timeout=float(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))/1000),
+            cancel_read_timeout=round(int(os.environ.get("PAYKIOSK_READ_TIMEOUT",5000))//1000,1),
+            cancel_write_timeout=round(int(os.environ.get("PAYKIOSK_WRITE_TIMEOUT",5000))//1000,1))
      
     @classmethod
     def _close(cls):
