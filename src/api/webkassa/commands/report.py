@@ -156,10 +156,9 @@ class WebkassaClientCloseShift(WebcassaCommand, WebcassaClient):
         except Exception as e:
             raise UnresolvedCommand(f'{cls.alias}:{repr(e)}')
         else:
-            shift_task = Shift.filter(id=1).update(open_date=timezone.now(),
-                                                   total_docs=0)
-            states_task = States.filter(id=1).update(mode=2)
-            await asyncio.gather(shift_task, states_task)
+            await asyncio.gather(Shift.filter(id=1).update(open_date=timezone.now(),
+                                                   total_docs=0),
+                                States.filter(id=1).update(mode=2))
             asyncio.create_task(cls._flush_receipts(response))
             return response
 
