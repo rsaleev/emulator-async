@@ -11,7 +11,8 @@ from src.db.connector import DBConnector
 from src.db.models import Shift, States, Token
 from src.api.printer.device import Printer
 from src.api.shtrih.device import Paykiosk
-from src.api.watchdog import Watchdog
+from src.api.watchdogs.shift import ShiftWatchdog
+from src.api.watchdogs.token import TokenWatchdog
 from src.api.webkassa.commands import WebkassaClientToken
 
 
@@ -20,14 +21,15 @@ class Application:
     db = DBConnector()
     printer = Printer()
     fiscalreg = Paykiosk()
-    watchdog = Watchdog()
+    shift_watchdog = ShiftWatchdog()
+    token_watchdog = TokenWatchdog()
     event = Event()
 
     @classmethod
     async def signal_handler(cls, signal, loop):
         cls.printer.event.set()
         cls.fiscalreg.event.set()
-        cls.watchdog.event.set()
+        cls.shift_watchdog.event.set()
         await logger.warning('Shutting down application')
         try:
             [task.cancel() for task in asyncio.all_tasks(loop)]
@@ -89,8 +91,10 @@ class Application:
         await logger.warning('Application initialized.Serving')
         try:
             #background task: watchdog poller
-            if config['emulator']['watchdog']:
-                asyncio.create_task(cls.watchdog.poll())
+            if config['emulator']['shift']['watchdog']:
+                asyncio.create_task(cls.token_watchdog.poll())
+            if config['webkassa']['token']['watchdog']:
+                asyncio.create_task(cls.shift_watchdog.poll())
             await cls.fiscalreg.poll()
         except Exception as e:
             raise SystemExit(f'Emergency shutdown: {e}')
