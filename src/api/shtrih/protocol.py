@@ -48,7 +48,7 @@ class ShtrihProtoInterface:
             elif payload == ShtrihProto.NAK:
                 await self._nak_handle()
             else:
-                logger.error(f'INPUT:{hexlify(payload, sep=":")}.Unknown bytes')
+                await logger.error(f'INPUT:{hexlify(payload, sep=":")}.Unknown bytes')
                 await self.write(ShtrihProto.NAK) 
         except Exception as e:
            logger.exception(e)
@@ -89,12 +89,12 @@ class ShtrihProtoInterface:
             crc_arr.extend(data)
             # if crc positive
             if ShtrihProto.payload_crc_calc(crc_arr) == crc:
-                logger.info('CRC:ACCEPTED')
+                await logger.info('CRC:ACCEPTED')
                 await self._cmd_handle(data)
 
             # # if crc negative
             else:
-                logger.error('CRC:DECLINED')
+                await logger.error('CRC:DECLINED')
                 await self.write(ShtrihProto.NAK)
 
 
