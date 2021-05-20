@@ -42,8 +42,6 @@ class SerialDevice(DeviceImpl):
             cls.device.flushOutput()
         except Exception as e:
             raise e
-        else:
-            cls.connected = True
 
     @classmethod
     async def _read(cls, size):
@@ -87,49 +85,44 @@ class Paykiosk(Device, ShtrihProtoInterface):
             self._impl = SerialDevice()
         elif os.environ['PAYKIOSK_TYPE'] != 'SERIAL':
             raise NotImplementedError
-        return self._impl
 
     async def connect(self):
         logger.info("Connecting to fiscalreg device...")
         if self._impl:
             while not self.event.is_set():
-                if not self._impl.connected:
-                    try:
-                        await self._impl._connect()
-                    except (asyncio.TimeoutError,DeviceConnectionError) as e:
-                        logger.error(f'Connection error: {e}.Continue after 1 second')
-                        await asyncio.sleep(1)
-                        continue
-                    else:
-                        try:
-                            self._impl.device.flushInput()
-                            self._impl.device.flushOutput()
-                        except:
-                            pass
-                        logger.info("Connecton to fiscalreg device established")
-                        break
+                try:
+                    await self._impl._connect()
+                except (asyncio.TimeoutError,DeviceConnectionError) as e:
+                    logger.error(f'Connection error: {e}.Continue after 1 second')
+                    await asyncio.sleep(1)
+                    continue
                 else:
+                    try:
+                        self._impl.device.flushInput()
+                        self._impl.device.flushOutput()
+                    except:
+                        pass
+                    logger.info("Connecton to fiscalreg device established")
                     break
             else:
                 logger.info("Connecton aborted")
         else:
             logger.error('Implementation not found')
-            raise DeviceConnectionError('Implementation not found')
+            raise DeviceConnectionError('Paykiosk device implementation not found')
 
     async def disconnect(self):
         await self._impl._disconnect()
 
     async def reconnect(self):
-        while not self._impl.connected:
-            if not self.event.is_set():
-                try:
-                    await self._impl._connect()
-                except:
-                    await asyncio.sleep(0.5)
-                    continue
-                else:
-                    break
+        await logger.warning('Reconnecting to device')
+        while not self.event.is_set():
+            try:
+                await self.connect()
+            except:
+                await asyncio.sleep(0.5)
+                continue
             else:
+                await logger.warning('Reconnected successfully')
                 break
         
     async def read(self, size:int):
@@ -179,8 +172,8 @@ class Paykiosk(Device, ShtrihProtoInterface):
                     await self.consume()
                 else:
                     await asyncio.sleep(0.02)
-            except (OSError, DeviceConnectionError, DeviceIOError):
-                self._impl.connected = False
+            except (OSError, DeviceConnectionError, DeviceIOError) as e:
+                await logger.error(e)
                 await self.reconnect()
                 if self._impl.connected:
                     continue
