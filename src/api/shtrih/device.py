@@ -1,5 +1,4 @@
 import asyncio
-import inspect
 from concurrent.futures.thread import ThreadPoolExecutor
 import aioserial
 import os
