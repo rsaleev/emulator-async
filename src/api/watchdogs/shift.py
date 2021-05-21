@@ -1,5 +1,6 @@
 import asyncio
 from src import config
+from datetime import datetime
 from tortoise import timezone
 from src.db.models import States, Shift
 from src.api.watchdogs import logger
@@ -45,7 +46,7 @@ class ShiftWatchdog:
 
 
     async def _check_shift_by_time(self, shift,states):
-        close_at = config['emulator']['shift']['close_at']
+        close_at = datetime.strptime(config['emulator']['shift']['close_at'], "%H:%M:%S")
         close_at_today = shift.open_date.replace(hour=close_at.hour, minute=close_at.minute, second=close_at.second)
         delta = (timezone.now()-close_at_today).total_seconds()
         if -1 <=delta <=1 and states.mode !=3:
