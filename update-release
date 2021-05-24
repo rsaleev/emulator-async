@@ -1,0 +1,84 @@
+#!/usr/bin/python3
+
+import shutil
+import os 
+import requests
+import tarfile
+import toml
+import sys
+
+URL = 'https://api.github.com'
+OWNER='rsaleev'
+REPO = 'emulator-async'
+TOKEN = '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' 
+HEADER = {'Authorization':f'token {TOKEN}',
+        'Accept': 'application/vnd.github.v3.raw'}
+
+
+def fetch_tarball_url(tag_version:str):
+    print(f'Поиск репозитория и релизов: {tag_version}')
+    with requests.get(url=f'{URL}/repos/{OWNER}/{REPO}/releases', headers=HEADER) as r:
+        if r.status_code == 200:
+            print('Репозиторий найден',flush=True)
+            data = r.json()
+            tarball_url = next((d['tarball_url'] for d in data if d['tag_name']==tag_version),None)
+            if tarball_url:
+                print('Архив дистрибутива надйен')
+                return tarball_url
+            else:
+                print('Архив дистрибутива не найден. Завершение.')
+                sys.exit(0)
+        else:
+            print(f'Ошибка запроса: {r.status_code}.Завершение')
+            sys.exit(0)
+
+def download_tarball(tarball_url:str, tag_version:str):
+    print('Загрузка архива исходников')
+    distr = f'{REPO}_{tag_version}.tar.gz'
+    with requests.get(url=tarball_url, headers=HEADER) as r:
+        r.raise_for_status()
+        if r.status_code ==200:
+            with open(distr, 'wb') as f:
+                f.write(r.content)
+            print('Архив загружен')
+            return distr
+        else:
+            print(f'Ошибка запроса: {r.status_code}.Завершение')
+            sys.exit(0)
+
+def extract_tarball(filename:str):
+    print('Распаковка архива')
+    with tarfile.open(filename) as archive:
+        archive.extractall()
+        extracted_archive_dir = archive.getnames()[0]
+    os.remove(filename)
+    print(f'Распаковка завершена в директорию {extracted_archive_dir}')
+    return extracted_archive_dir
+
+def replace_with_tarball(foldername:str):
+    print('Обновление файлов')
+    content = os.listdir(foldername)
+    for f in content:
+        if os.path.isdir(f'{foldername}/{f}'):
+            shutil.copytree(f'{foldername}/{f}', f'{os.getcwd()}/', dirs_exist_ok=True)
+        elif os.path.isfile(f'{foldername}/{f}'):
+            shutil.copyfile(f'{foldername}/{f}', f'{os.getcwd()}/{f}')
+    print('Обновление конфигурации')
+    old_config = toml.load('config.toml')
+    new_config = toml.load('default_config.toml')
+    d1_keys = set(old_config.keys())
+    d2_keys = set(new_config.keys())
+    intersect_keys = d1_keys.intersection(d2_keys)
+    for i in intersect_keys:
+        new_config[i] = old_config[i] 
+    with open('config.toml', 'w') as f:
+        toml.dump(new_config, f)
+    shutil.rmtree(foldername)
+    print('Очистка.Завершение')
+            
+    
+version = sys.argv[1]
+tarball_url = fetch_tarball_url(version)
+tarball_distro = download_tarball(tarball_url, version)
+foldername = extract_tarball(tarball_distro)
+replace_with_tarball(foldername)
