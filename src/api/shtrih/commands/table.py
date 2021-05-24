@@ -8,7 +8,7 @@ class SerialNumber(ShtrihCommand, ShtrihCommandInterface):
     _fn_number = struct.pack('<16B',*bytearray((0x30,))*16)
     
     @classmethod
-    async def handle(cls):
+    async def handle(cls,payload:bytearray):
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
@@ -21,7 +21,7 @@ class TableModify(ShtrihCommand, ShtrihCommandInterface):
     _command_code = bytearray((0x1E,))
 
     @classmethod
-    async def handle(cls):
+    async def handle(cls,payload:bytearray):
         arr = bytearray()
         arr.extend(cls._length)
         arr.extend(cls._command_code)
