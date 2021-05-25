@@ -6,6 +6,8 @@ import requests
 import tarfile
 import toml
 import sys
+from urllib import request
+import json
 
 URL = 'https://api.github.com'
 OWNER='rsaleev'
@@ -17,34 +19,36 @@ HEADER = {'Authorization':f'token {TOKEN}',
 
 def fetch_tarball_url(tag_version:str):
     print(f'Поиск репозитория и релизов: {tag_version}')
-    with requests.get(url=f'{URL}/repos/{OWNER}/{REPO}/releases', headers=HEADER) as r:
-        if r.status_code == 200:
-            print('Репозиторий найден',flush=True)
-            data = r.json()
-            tarball_url = next((d['tarball_url'] for d in data if d['tag_name']==tag_version),None)
-            if tarball_url:
-                print('Архив дистрибутива надйен')
-                return tarball_url
-            else:
-                print('Архив дистрибутива не найден. Завершение.')
-                sys.exit(0)
+    req = request.Request(url=f'{URL}/repos/{OWNER}/{REPO}/releases', headers=HEADER)
+    resp = request.urlopen(req)
+    data_raw = resp.read()
+    if resp.getcode() == 200:
+        data_json = json.loads(data_raw)
+        resp.close()
+        tarball_url = next((d['tarball_url'] for d in data_json if d['tag_name']==tag_version),None)
+        if tarball_url:
+            print('Архив дистрибутива надйен')
+            return tarball_url
         else:
-            print(f'Ошибка запроса: {r.status_code}.Завершение')
+            print('Архив дистрибутива не найден. Завершение.')
             sys.exit(0)
+    else:
+        print(f'Ошибка запроса: {resp.getcode()}.Завершение')
+        sys.exit(0)
 
 def download_tarball(tarball_url:str, tag_version:str):
     print('Загрузка архива исходников')
     distr = f'{REPO}_{tag_version}.tar.gz'
-    with requests.get(url=tarball_url, headers=HEADER) as r:
-        r.raise_for_status()
-        if r.status_code ==200:
-            with open(distr, 'wb') as f:
-                f.write(r.content)
-            print('Архив загружен')
-            return distr
-        else:
-            print(f'Ошибка запроса: {r.status_code}.Завершение')
-            sys.exit(0)
+    req = request.Request(url=tarball_url, headers=HEADER)
+    resp = request.urlopen(req)
+    if resp.getcode() ==200:
+        with open(distr, 'wb') as f:
+            f.write(resp.read())
+        print('Архив загружен')
+        return distr
+    else:
+        print(f'Ошибка запроса: {resp.getcode()}.Завершение')
+        sys.exit(0)
 
 def extract_tarball(filename:str):
     print('Распаковка архива')

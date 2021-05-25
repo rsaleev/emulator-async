@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ $1 = 'prod' ]; then
+    sed -i 's/Environment="ASPNETCORE_ENVIRONMENT=Development"/Environment="ASPNETCORE_ENVIRONMENT=Production"/' webkassa.service
+elif [ $1 = 'test' ]; then
+    sed -i 's/Environment="ASPNETCORE_ENVIRONMENT=Production"/Environment="ASPNETCORE_ENVIRONMENT=Development"/' webkassa.service
+fi
+
