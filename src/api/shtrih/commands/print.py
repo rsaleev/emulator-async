@@ -32,7 +32,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
         return arr
         
     class CustomHeader:
-        PATTERN:Pattern = re.compile('|'.join(config['webkassa']['receipt']['header_regex']))
+        PATTERN:Pattern = re.compile('|'.join(config['webkassa']['receipt']['header_regex']),re.IGNORECASE)
 
     @classmethod
     async def _parse_custom_line(cls, payload:bytearray)->None:
@@ -49,8 +49,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
             # check if line consists custom header data
             if not config['webkassa']['receipt']['header'] and config['webkassa']['receipt']['parse_header']:
                 if re.match(pattern=cls.CustomHeader.PATTERN,
-                            string=line_to_print,
-                            flags=re.IGNORECASE):
+                            string=line_to_print):
                     await PrintDeferredBytes.append(payload) 
         except Exception as e:
             logger.error(e)
