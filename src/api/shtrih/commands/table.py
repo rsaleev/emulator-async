@@ -3,7 +3,7 @@ from src.api.shtrih.command import ShtrihCommand, ShtrihCommandInterface
 
 class SerialNumber(ShtrihCommand, ShtrihCommandInterface):
    
-    _length = bytearray((0x17,))# B[1] LEN - 1 byte
+    _length = bytearray((0x13,))# B[1] LEN - 1 byte
     _command_code = bytearray((0xFF,0x02,)) #B[2] - 2 byte
     _fn_number = struct.pack('<16B',*bytearray((0x30,))*16)
     
