@@ -1,9 +1,9 @@
 import operator
 from functools import reduce
-import asyncio
 from binascii import hexlify
 from src.api.shtrih.commands import COMMANDS
 from src.api.shtrih import logger 
+from collections import deque
 
 class ShtrihProto:
 
@@ -27,7 +27,7 @@ class ShtrihProto:
 
 class ShtrihProtoInterface:
     def __init__(self):
-        self.buffer = asyncio.Queue()
+        self.buffer = deque()
         self.device = None 
 
     async def write(self, *args, **kwargs):
@@ -54,16 +54,14 @@ class ShtrihProtoInterface:
            logger.exception(e)
 
     async def _ack_handle(self):
-        while not self.buffer.empty(): 
-            self.buffer.get_nowait() 
+        self.buffer.clear()
     
     async def _nak_handle(self):
-        while not self.buffer.empty(): 
-            self.buffer.get_nowait() 
+        self.buffer.clear()
     
     async def _enq_handle(self):
-        if not self.buffer.empty(): 
-            queued = await self.buffer.get()
+        if self.buffer: 
+            queued = self.buffer[0]
             await self.write(ShtrihProto.ACK)
             await self.write(queued) 
         else:
