@@ -22,6 +22,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
             await PrintBytes.handle(payload=payload[4:])
             #asyncio.ensure_future(cls._parse_custom_line(payload))
             asyncio.create_task(cls._parse_custom_line(payload))
+            await asyncio.sleep(0.1)
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
         else:
