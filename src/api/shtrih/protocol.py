@@ -62,6 +62,11 @@ class ShtrihProtoInterface:
         self.buffer.clear()
     
     async def _enq_handle(self):
+        # clear output buffer
+        try:
+            self.device.flushOutput() #type: ignore
+        except:
+            pass
         if self.buffer: 
             queued = self.buffer[0]
             await self.write(ShtrihProto.ACK)
@@ -92,7 +97,6 @@ class ShtrihProtoInterface:
             if ShtrihProto.payload_crc_calc(crc_arr) == crc:
                 await logger.info('CRC:ACCEPTED')
                 await self._cmd_handle(data)
-
             # # if crc negative
             else:
                 await logger.error('CRC:DECLINED')
