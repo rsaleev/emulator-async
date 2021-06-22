@@ -62,10 +62,15 @@ class ShtrihProtoInterface:
         self.buffer.clear()
     
     async def _enq_handle(self):
+        # check if buffer is not empty
         if self.buffer: 
+            # get first element
             queued = self.buffer[0]
+            # send response that data is ready
             await self.write(ShtrihProto.ACK)
+            # send and wait
             await asyncio.sleep(0.05)
+            # send response
             await self.write(queued) 
         else:
             await self.write(ShtrihProto.NAK)
