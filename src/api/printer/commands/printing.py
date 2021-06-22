@@ -142,12 +142,12 @@ class PrintXML(Printer):
 class PrintDeferredBytes(Printer):
     """PrintDeferredBytes 
     
-    Storage for deffered printing.
+    Storage for deffered printing.vim 
 
     Args:
         Printer ([type]): [description]
     """
-    storage = deque([])
+    storage = deque()
 
     @classmethod
     async def handle(cls):
