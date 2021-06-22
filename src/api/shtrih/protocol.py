@@ -62,11 +62,6 @@ class ShtrihProtoInterface:
         self.buffer.clear()
     
     async def _enq_handle(self):
-        # clear output buffer
-        try:
-            self.device.flushOutput() #type: ignore
-        except:
-            pass
         if self.buffer: 
             queued = self.buffer[0]
             await self.write(ShtrihProto.ACK)
