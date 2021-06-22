@@ -65,7 +65,7 @@ class ShtrihProtoInterface:
         if self.buffer: 
             queued = self.buffer[0]
             await self.write(ShtrihProto.ACK)
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.05)
             await self.write(queued) 
         else:
             await self.write(ShtrihProto.NAK)
@@ -109,8 +109,10 @@ class ShtrihProtoInterface:
             await self.write(ShtrihProto.ACK)
             output = await hdlr.handle(data)
             payload_out = ShtrihProto.payload_pack(output)
-            await self.write(payload_out)
             self.buffer.append(payload_out)
+            # sleep before response
+            await asyncio.sleep(0.05)
+            await self.write(payload_out)
         else:
             logger.error(f"{cmd} not implemented in current build version ")
             await self.write(ShtrihProto.NAK)
