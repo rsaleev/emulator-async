@@ -70,7 +70,6 @@ class ShtrihProtoInterface:
             await self.write(ShtrihProto.ACK)
             # send and wait
             await asyncio.sleep(0.05)
-            # send response
             await self.write(queued) 
         else:
             await self.write(ShtrihProto.NAK)
