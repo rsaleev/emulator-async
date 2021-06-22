@@ -177,8 +177,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
             except (OSError, DeviceConnectionError, DeviceIOError) as e:
                 await logger.error(e)
                 await self.reconnect()
-                if self._impl.connected:
-                    continue
+                continue
     
           
         
