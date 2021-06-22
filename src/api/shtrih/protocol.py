@@ -54,7 +54,7 @@ class ShtrihProtoInterface:
            logger.exception(e)
 
     async def _ack_handle(self):
-        self.buffer.clear()
+        self.buffer.popleft()
     
     async def _nak_handle(self):
         self.buffer.clear()
@@ -108,7 +108,7 @@ class ShtrihProtoInterface:
             output = await hdlr.handle(data)
             payload_out = ShtrihProto.payload_pack(output)
             await self.write(payload_out)
-            await self.buffer.put(payload_out)
+            self.buffer.append(payload_out)
         else:
             logger.error(f"{cmd} not implemented in current build version ")
             await self.write(ShtrihProto.NAK)
