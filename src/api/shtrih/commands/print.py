@@ -18,9 +18,10 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
     @classmethod
     async def handle(cls, payload:bytearray) ->bytearray:
         try:
-            #asyncio.create_task(cls._parse_custom_line(payload))
+            #
             await PrintBytes.handle(payload=payload[4:])
-            asyncio.ensure_future(cls._parse_custom_line(payload))
+            #asyncio.ensure_future(cls._parse_custom_line(payload))
+            asyncio.create_task(cls._parse_custom_line(payload))
         except:
             cls.set_error(200) # printer error: no connection or no signal from sensors
         else:
@@ -54,6 +55,7 @@ class PrintDefaultLine(ShtrihCommand, ShtrihCommandInterface):
                     await PrintDeferredBytes.append(payload) 
         except Exception as e:
             logger.error(e)
+            raise e
        
                 
 class PrintOneDimensionalBarcode(ShtrihCommand, ShtrihCommandInterface):
