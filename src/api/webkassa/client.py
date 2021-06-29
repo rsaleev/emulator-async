@@ -98,13 +98,14 @@ class WebcassaClient:
         attempts = config['webkassa']['attempts']
         while counter <= attempts:
             try:
+                asyncio.ensure_future(logger.info(f'Dispatching to Webkassa: {endpoint}'\
+                                    f'{request_data.dict(by_alias=True,exclude_unset=True)}'))
                 response = await cls._send(endpoint=endpoint,
                                         payload=request_data.dict(
                                         by_alias=True,
                                         exclude_unset=True)) 
                 # assert status code 200 
-                asyncio.ensure_future(logger.info(f'Dispatching to Webkassa: {endpoint}'\
-                                    f'{request_data.dict(by_alias=True,exclude_unset=True)}')) 
+              
                 # convert dict to Pydantic model -> generates object
                 output = WebcassaOutput(**response)
                 asyncio.ensure_future(logger.info(
