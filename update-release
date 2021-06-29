@@ -63,7 +63,7 @@ def replace_with_tarball(foldername:str):
     content = os.listdir(foldername)
     for f in content:
         if os.path.isdir(f'{foldername}/{f}'):
-            shutil.copytree(f'{foldername}/{f}', f'{os.getcwd()}/', dirs_exist_ok=True)
+            shutil.copytree(f'{foldername}/{f}', f'{os.getcwd()}/{f}', dirs_exist_ok=True)
         elif os.path.isfile(f'{foldername}/{f}'):
             shutil.copyfile(f'{foldername}/{f}', f'{os.getcwd()}/{f}')
     print('Обновление конфигурации')
