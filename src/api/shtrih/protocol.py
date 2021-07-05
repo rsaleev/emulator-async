@@ -39,21 +39,19 @@ class ShtrihProtoInterface:
         raise NotImplementedError
 
     async def consume(self):
-        try:
-            payload = await self.read(1)
-            if payload == ShtrihProto.ENQ:
-                await self._enq_handle()
-            elif payload == ShtrihProto.ACK:
-                await self._ack_handle()
-            elif payload == ShtrihProto.STX:
-                await self._stx_handle()
-            elif payload == ShtrihProto.NAK:
-                await self._nak_handle()
-            else:
-                await logger.error(f'INPUT:{hexlify(payload, sep=":")}.Unknown bytes')
-                await self.write(ShtrihProto.NAK) 
-        except Exception as e:
-           logger.exception(e)
+        payload = await self.read(1)
+        if payload == ShtrihProto.ENQ:
+            await self._enq_handle()
+        elif payload == ShtrihProto.ACK:
+            await self._ack_handle()
+        elif payload == ShtrihProto.STX:
+            await self._stx_handle()
+        elif payload == ShtrihProto.NAK:
+            await self._nak_handle()
+        else:
+            await logger.error(f'INPUT:{hexlify(payload, sep=":")}.Unknown bytes')
+            await self.write(ShtrihProto.NAK) 
+        
 
     async def _ack_handle(self):
         self.buffer.popleft()

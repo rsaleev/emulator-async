@@ -139,7 +139,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 continue
             except DeviceTimeoutError as e:
                 logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.02)
                 count +=1
                 continue
             else:
@@ -159,7 +159,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
                 continue
             except DeviceTimeoutError as e:
                 logger.error(f'{e}. Counter={count}. Max attempts={attempts}')
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.02)
                 count+=1
                 continue
             else:
@@ -174,7 +174,7 @@ class Paykiosk(Device, ShtrihProtoInterface):
                     await self.consume()
                 else:
                     await asyncio.sleep(0.02)
-            except (OSError, DeviceConnectionError, DeviceIOError) as e:
+            except Exception as e:
                 await logger.error(e)
                 await self.reconnect()
                 continue
