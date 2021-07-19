@@ -22,6 +22,7 @@ class Withdraw(ShtrihCommand):
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
+        arr.extend(cls._password)
         arr.extend(cls._doc_number)
         return arr
 
@@ -43,6 +44,7 @@ class Deposit(ShtrihCommand):
         arr.extend(cls._length)
         arr.extend(cls._command_code)
         arr.extend(cls._error_code)
+        arr.extend(cls._password)
         arr.extend(cls._doc_number)
         return arr
 
